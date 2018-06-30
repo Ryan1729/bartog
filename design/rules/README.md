@@ -1,0 +1,1 @@
+This is an archive of some web pages on Bartog / Bartok/ Warthog. Each folder is named with the domain that the page(s) were found on and each folder should contain a `url.txt` file containing only the full URLs of the page(s).

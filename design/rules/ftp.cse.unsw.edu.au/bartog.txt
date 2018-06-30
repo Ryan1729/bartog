@@ -1,0 +1,310 @@
+Bartog Rules - by Malcolm Ryan (malcolmr@cse.unsw.edu.au)
+------------
+
+INITIAL:
+--------
+1) Players each begin with 5 cards
+2) The remaining cards are placed face down in the centre, forming "the pack". 
+   The dealer then turns over the top card from the pack, this card
+   has no effect on play. If a joker is turned up, then the dealer
+   may turn over another card, and so forth.
+   The first player is the first one to place an eligible card after 
+   the card is turned over.
+3) Play proceeds clockwise, unless any other rule states otherwise.
+4) When it is a certain players turn, e may either play an eligible card
+   from eir hand onto the face up pile (hereafter "the pile"), or pick up 
+   a card from the pack (not both). 
+   This play must be made within a reasonable time of it becoming eir turn 
+   (as judged by the other players.)
+5) Unless other rules state otherwise, an eligible card to play must be
+   of the same suit or the same value as the card on the top of the face
+   up pile.
+6) A joker is a wild card, and so may be played as any other eligible card.
+   The player playing the joker must announce which card it represents. 
+7) When any player's hand changes from containing two or more cards to only 
+   one card, e must say "Bartog".
+8) Players may not ask questions during play.
+9) Players may not make (provably) false statements during play.
+10) If any player is deemed (by general consensus) to have broken any rule 
+    the e must draw a card from the pack. Such a draw does NOT constitute 
+    a player's turn. 
+    This penalty may only be incurred if the breaking of the rule is 
+    announced within a reasonable time after the event.
+11) The winner of a round is the first player to have zero cards in eir
+    hand. Generally, a player is deemed to have won BEFORE the final card
+    played takes effect. 
+12) A round ends when the winner is decided. The winner shall then invent 
+    a new rule which will come into effect in the next round. New rules
+    may repeal or override older rules. New rules must not be obviously 
+    biased towards or against any player. New rules may not directly effect
+    the creation or content of later rules. Other players may express their
+    dissatisfaction with any new rule, but so long as the rule meets the 
+    previous guidelines, the winner's word is final.
+13) The winner then becomes the dealer for the next round. If e so desires
+    e may declare any other player to be dealer instead of em.
+14) During a round, timeout may be called by the players in order to 
+    clarify some aspect of a new rule which was not previously clear. During
+    this time questions may be asked of the player who created rule in 
+    question, without penalty. In all such cases, the word of the rule's
+    creator is final. If two or more rules conflict or combine with unclear
+    effect, the player who created the most recent of those rules may decide
+    the effect. Questions off the topic of rules clarification are not
+    allowed during timeout. Trivial questions, or questions which have 
+    already been clearly answered (to a majority of players) should not be 
+    tolerated.
+15) If any player enters the game and is unfamiliar with the rules in effect
+    at the time, the other players ought not explain any more than the very
+    general basics of the original rules. If ever the new player receives a
+    penalty for some reason, then a brief (and not necessarily clear) reason
+    for the penalty ought to be given. New players should be encouraged to
+    work out the current rules by their own ingenuity.
+
+SUGGESTED NEW RULES
+-------------------
+
+In any of the following, the following notation is used:
+
+"card(n)", where n is a number from 2 to 13
+        - Any of a set of about n cards, by value, regardless of suit. 
+          Good choices of sets of cards are: 
+          primes (not including 1), squares, cubes, odds, evens, 
+          multiples of x, court cards, or particular suits or colors.
+          In all such cases Jack, Queen, King are usually considered
+          to have values 11, 12 and 13 respectively. Ace has value 1.
+"card(1)"
+        - Any single card, by value, regardless of suit. (Generally a card
+          with does not already have a rule attached, altho overlap is 
+          allowed, even encouraged, on occasion).
+"card(1c)" (or "card(1s)")
+        - Any single card by value and by colour (or by suit). This is
+          generally recommended for rules which are considered to have
+          "dangerous" effect, and for which it is desirable to have apply
+          only rarely.
+
+These values are offered as guidelines only, and any rule may be applied to
+more or fewer cards than suggested, at the creator's discretion.
+
+After each rule's name, a guage of difficulty/nastiness is given: 
+* = beginner rule
+** = advanced beginner
+*** = experienced
+**** = experienced difficult
+***** = masochists only
+
+Note: This does not imply that beginner or advanced beginner rules are not fun 
+for expert players.
+
+1) SKIP X *
+
+        On card(3), play skips X (= 1,2...) people. 
+
+2) REVERSE *
+
+        On card(3-6), the direction of play changes.
+
+3) SWAP (LOCAL) **
+
+        On card(1-3), the current player swaps hands with a certain player.
+        (On eir left/right/opposite/in dirn of play/by choice etc.)
+
+4) SWAP (GLOBAL) **
+
+        On card(1-2), all players give their hands to another certain player.
+        (On eir left/right/opposite/in dirn of play etc.)
+
+5) SNAP **
+
+        (When more than one pack is being used.)
+        If a player has a card in eir hand, identical (same number AND suit)
+        to the card on the top of the pile then e may immediately play that 
+        card (regardless of whether it is eir turn or not), saying "SNAP" 
+        when doing so, and play continues as if it had been that player's 
+        turn.
+        When only one pack is being used, a card of the same number and 
+        colour may be snapped instead.
+
+5a) CRACKLE **
+
+	(When rule 5 is in use)
+	If a card has just been snapped, as per rule 5, and  a player has a
+	card in eir hand of the same suit and number _one_more_ than the
+	snapped card, e may play it immediately (regardless of turn) and 
+	say "CRACKLE" when doing so. Play continues from em.
+
+6) DRAW X (cumulative) **
+
+        On card(1), then next player has to pick up X cards. This
+        constitutes that players turn.
+        If the rule is declared to be cumulative then the next player may
+        play another (legal) draw card as eir turn, an the next player has
+        to draw 2X, and so forth, until some player cannot play.
+
+6a) BUCK STOPS HERE **
+
+        If a draw rule (6) is in effect, a card(1) may be played (if eligible)
+        as a "stop" card, instead on drawing. When this card is played, the
+        last player to have played a draw card has to draw (unavoidably).
+
+7) CHANGING PLACES *
+
+        On card(1) player changes position with a certain other player.
+        (as per swapping) Players may have to take their hands with them,
+        or leave them behind.
+
+8) REVERSE #2 **
+
+        Play goes cw after a red card and ccw after a black card.
+
+9) TOURNAMENT RULES ***
+
+        The winner of a round is dealt on fewer cards in future rounds.
+        If ever a player is to be dealt zero cards, then e is declared the
+        winner of the tournament, and the tournament ends. 
+
+9a) ANTI-TOURNAMENT RULES ***
+
+        Player with most cards at the end of round gets an extra card in
+        future rounds. (Difficult to stop players from throwing in their 
+        hands)
+
+10) RESET CARD ****
+
+        On card(1s) the rules are reset to the initial set, or some reduced
+        set, for the duration of the round (or even permanently). For use in
+        _very_ long games only.
+
+11) DANGER CARD ***
+
+        On card(1c) the player has to draw 2-3 cards from the pack.
+
+12) LAST CARD HAS EFFECT ***
+
+        The effect of the last card to be played is counted _before_ 
+        determining the winner.
+
+13) DOUBLE HANDS ***
+
+        All players are dealt two hands called "top" and "bottom".
+        Players may only ever look at their current "top" hand.
+        On card(1) all players swap their top and bottom hands.
+        The winner is now the first player to have zero cards in
+        eir TOP hand.
+
+13a) BOTTOM HAND SWAP **
+
+        Assorted swap rules (global/local) may be applied to players'
+        bottom hands, top hands, or both.
+
+14) BEEP/QUACK *
+
+        On card(1-6) player must say "BEEP" or "QUACK" etc...
+        (Multiples of these rules can be fun)
+
+15) ON YER BIKE *
+
+        On card(1) player must run to a certain landmark and back.
+        If it becomes eir turn again and e is not back yet, e can be
+        given a card for taking too long.
+
+16) TABOO ***
+
+        Certain words, eg "Yes","No","I", may not be spoken.
+
+17) THREE WORD RULE ***
+
+        On card(1) player may only speak in sets of three words at a time
+        (no more, no fewer) with reasonable pauses in between, until 
+        such time as another player players that card.
+
+18) UNDER THE INFLUENCE ****
+
+        On card(1) player is "under the influence" and may only speak in 
+        false-hoods. The player is exempt from any penalties for saying
+        false statements, but can be penalised for saying (provably) true
+        statements.
+        A player stays "under the influence" until another player plays
+        that card.
+
+19) STICKY HANDS/PLACES ***
+
+        The effect of rules such as 17 and 18 may be transferred when the
+        player swaps hands or places with another player.
+
+20) SNAP TO WIN ***
+
+        If a player can snap on the (otherwise) winning card, then e is
+        the winner instead. If three or more packs are used, then the last
+        player to snap (before throwing in their hand) wins.
+
+21) PARALLEL GAMES ****
+
+        If numbers permit, two or more separate games may be run, each with
+        its own set of players and rules. Each game acts as per usual for
+        a single game, with one extra rule: On card(1c) player must swap
+        places with a player of choice, in another game.
+
+22) NAME THAT TUNE *
+
+        On card(1-2) player must name a movie/song/commercial etc which
+        has not yet been mentioned.
+
+23) REVALUATION ***
+
+        Card(1) henceforth is considered to be have some other value
+        with respect to eligibility, effect and future play.
+
+23a) MASS REVALUATION *****
+
+        All cards henceforth have value one more than their face.
+        (Very Nasty, esp. with many rules in place!)
+
+24) DOUBLE PLAY **
+
+        On card(1) the current player has another turn.
+
+25) BILL (Ghost hand) ****
+
+        An extra hand is dealt, face up, to a ghost player called "Bill", 
+        who sits opposite the winner of the previous round, who is to be 
+        Bill's "caller". Bill has turns like any other player, but Bill's 
+        plays are decided by the caller.
+        If Bill has only one card left, then he automatically draws 
+        another card (for failing to say Bartog), but the caller must
+        make sure that Bill follows all the other rules (including Beeps,
+        Quacks, et al.). If Bill breaks a rule, then the caller has to draw
+        the penalty card.
+
+26) NAME OF THE GAME *
+
+	Change the name of the game (and hence, what players must say when
+	they have only one card in their hand) to something other than
+	"Bartog". Can cause much confusion (and fun) when played by
+	experienced players. Suggested names are "Vickie makes up silly rules"
+	and "Snap!".
+
+27) WRONG HAND ONLY *
+
+	Players must play cards using their non-writing hand.
+
+28) TAKE THAT *
+
+	When card(1) is played, the next player in dirn of play must pick up
+	that card.
+
+29) RUMMY RULES *
+
+       (i) If a player has several cards of the face value in their 
+           hand, and one of them is normally playable, then they may all
+	   be played at once. The first such card to be played must be 
+	   normally playable. Only the last card has effect.
+
+      (ii) If a player has a run of successive cards from a particular
+           suit in their hand, the lowest of which is playable, then
+	   they may all be played at once, in order from lowest to 
+           highest. Only the highest card takes effect.
+
+        These two rules are useful for getting rid of cards quickly in
+        games with lots of pickups.
+
+
+
