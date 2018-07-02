@@ -73,7 +73,7 @@ Here are some kinds, which may or may not overlap, along with comments regarding
 * Assigning states to players which confer extra restrictions and/or abilities.
     * ✔ Having a fixed number total of states, (say 8, including the empty state,) seems reasonable enough and it should be easy to plug in the other rule generation into this.
 
-* Assigning custom rules of which cards allowed to be played. Also includes changing those rules during the a single game.
+* Assigning custom rules of which cards are allowed to be played. Also includes changing those rules during the a single game.
     * ✔ Lots of interactions with other rules, and (hopefully) easy enough to implement with a bytecode approach.
 
 * Changing what in-game information is publicly visible, for example making certain cards in someone's hand visible.
@@ -81,3 +81,28 @@ Here are some kinds, which may or may not overlap, along with comments regarding
     
 * Rule hiding.
     * ❓ Technically easy to do but is it interesting?
+
+
+## Development plan
+
+* Write simple single player version of crazy eights. Might even skip making the 8 wild.
+* Add support for the kind of rule that gives the most possibilities on it's own. That kind appears to be "Assigning custom rules of which cards are allowed to be played."
+* Continue adding new kinds of rules until satisfied with the results.
+
+## Designing a bytecode
+
+We need to change which rules are active at run-time, so we need a representation of them as data. We would also like to be able to easily save that data to disk, in order to have long running games. This points to a bytecode as a good solution, assuming we can design one which can represent all the rules we want to represent, and is sufficiently easy to uniformly generate valid instances of it.
+
+The simplest way to represent rules, from the perspective of writing them, would be to assign a consecutive number to every possible permutation of each rule. This makes generating a random rule trivial: just pick number between 0 and the maximum rule number, inclusive. This has a few disadvantages though. Decoding which rule a given number refers to would require a massive lookup table which as the number of possible rules balloons, will likely exceed memory constraints. There's also the question of what the lookup table contains exactly. We will not be able to have a separate implementation of each rule because even if we generated them, they would be unlikely to fit in memory if we add as many rules as we want to.
+
+So we need something that we can examine and produce, at minimum a predicate which takes the card to be played and the top card of the discard pile. And it seems like we'd want it to be able to represent every pure function like that. Because there are 52 possibilities for each card, each function would need to respond to 52 ^ 2 = 2704 different possible inputs and if we're representing every possible predicate of that form that's equivalent to every 2704 bit number. That means there are 2^2704 which is approximately 9.66 * 10 ^ 813. Also it means that our instruction, for this severely reduced subset of the functionality we eventually would need to be at least 2704 bits long. 
+
+While we could probably work with that if that was all we needed to use, if other kinds of rules require similar amounts of storage then we'd probably run into speed problems. Luckily however, that proposed data format would represent a whole bunch of functions that we don't really want to allow anyway! For instance, we don't want to be able to represent the predicate that doesn't allow us to play any of the cards whatsoever. While not explicit in the rules of Bartog, when playing with actual humans, generally no one will choose a rule which will cause the game to potentially never end, given everyone understands the rule to produce that result. While restricting ourselves to only those predicates that allow every card to be played on at least one *other* card does technically disallow a some rules that peopel might reasonably make, (making a single card unplayable in a hand/card swapping heavy environment, for example) as a starting point, it seems reasonable. We can always add those possibilities in later if we want.
+
+So the question becomes how do we represent that subset of the possible functions? The functions we want are those that, (if we assume currying) for every first card parameter returns a function that returns at least one true for an input which is not the card itself. Assuming that we don't add a second deck, then that set of functions can be identified with the set of functions that return true in at least two cases. If we did decide to add more decks then <del>we can just restrict ourselves to the functions that return at least one true</del> ... it gets more complicated.
+
+Hold on, it still might be possible to have all players have an unwinnable hand with each card only playable on two cards. If every card can only be played on itself and another card and that card con only be played on itself and the first card, then only a single card can be played at all! I think in tis project we are going to have to decide between allowing unfinishable games and disallowing finishable games that we can't, or can't easily prove that they are finishable with every deal. (I wonder how hard it would be to prove whether or not a given bytecode is incomplete, given it doesn't allow unrestricted arithmetic so AFAIK Gödel's incompleteness theorems wouldn't apply.) If I wanted to just allow anything I'd use a language that had an `eval` function. So since I'm planning to compile Rust into WASM, I guess we're going with restricting the space of valid games. Other option include declaring the game a draw whenever all players pass in a row, or allowing a javascript escape hatch given we are running in the browser, if you really want to allow unwinnable games. Unfortunately I suspect that unwinnable games will creep in in the interactions between rule kinds. However, at least some of the time having fewer possibilities means less work, so trying to limit them might be worthwhile.
+
+Which predicates can we prove only result in finishable games? If the playable cards form two disconnected graphs, (where cards are nodes and the directed edges represent "can play on",) then if a player gets a single card of both graphs, assuming no card swapping rules, then they cannot win. (Maybe it would make sense to just add some card swapping rules?) So if there is a second graph which has a number of nodes greater than or equal to the number of players, then it's possible to have an unwinnable deal. (each player gets one of the smaller graph's cards.) It seems like it would be easier to just force there to be only one connected graph and only very few games would be disallowed that except for possibly some interesting hand/card swapping heavy things, wouldn't be that interesting anyway.
+
+Is having a single "can play on" graph *sufficient* to prevent unwinnable games or merely necessary? For that matter, are there unwinnable crazy-eights-without-wild-8s games? Regarding whether a single connected graph is suffiecnt, there also needs to be a path of at least length two from each node to itself. Isuspect that there also need to be a path from every node through every other card back to itself. The simplest graph, (as in least edges,) that satisfies this property is a ring of directed edges that passes through every card.
