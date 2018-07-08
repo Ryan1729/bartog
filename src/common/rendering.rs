@@ -403,7 +403,7 @@ impl Framebuffer {
             for x in d_x..d_x_max {
                 let colour = GFX[current_s_x + current_s_y * S_WIDTH] as usize;
                 //make purple transparent
-                if colour != 2 {
+                if colour != 4 {
                     let index = x + y * D_WIDTH;
                     if index < self.buffer.len() {
                         self.buffer[index] = PALETTE[colour];
@@ -516,6 +516,28 @@ impl Framebuffer {
             }
             current_s_y += 1;
         }
+    }
+
+    pub fn draw_card(&mut self, card: u8, x: u8, y: u8) {
+        self.sspr(
+            card::FRONT_SPRITE_X,
+            card::FRONT_SPRITE_Y,
+            card::WIDTH,
+            card::HEIGHT,
+            x,
+            y,
+        );
+    }
+
+    pub fn draw_card_back(&mut self, x: u8, y: u8) {
+        self.sspr(
+            card::BACK_SPRITE_X,
+            card::BACK_SPRITE_X,
+            card::WIDTH,
+            card::HEIGHT,
+            x,
+            y,
+        );
     }
 }
 
