@@ -1,4 +1,4 @@
-use inner_common::*;
+use inner_common::{Suits::*, *};
 
 pub struct Framebuffer {
     pub buffer: Vec<u32>,
@@ -467,15 +467,20 @@ impl Framebuffer {
         self.sspr_flip_both(sprite_x, sprite_y, 8, 8, x, y);
     }
 
-    pub fn print(&mut self, string: &str, mut x: u8, y: u8, colour: u8) {
-        for c in string.bytes() {
+    pub fn print(&mut self, bytes: &[u8], mut x: u8, y: u8, colour: u8) {
+        for &c in bytes {
             let (sprite_x, sprite_y) = get_char_xy(c);
-            self.print_char(sprite_x, sprite_y, 8, 8, x, y, colour);
+            self.print_char_raw(sprite_x, sprite_y, 8, 8, x, y, colour);
             x = x.saturating_add(4);
         }
     }
 
-    fn print_char(
+    pub fn print_char(&mut self, character: u8, mut x: u8, y: u8, colour: u8) {
+        let (sprite_x, sprite_y) = get_char_xy(character);
+        self.print_char_raw(sprite_x, sprite_y, 8, 8, x, y, colour);
+    }
+
+    fn print_char_raw(
         &mut self,
         sprite_x: u8,
         sprite_y: u8,
@@ -518,7 +523,7 @@ impl Framebuffer {
         }
     }
 
-    pub fn draw_card(&mut self, card: u8, x: u8, y: u8) {
+    pub fn draw_card(&mut self, card: Card, x: u8, y: u8) {
         self.sspr(
             card::FRONT_SPRITE_X,
             card::FRONT_SPRITE_Y,
@@ -526,6 +531,42 @@ impl Framebuffer {
             card::HEIGHT,
             x,
             y,
+        );
+
+        let (colour, suit_char) = match get_suit(card) {
+            CLUBS => (7, CLUB_CHAR),
+            DIAMONDS => (2, DIAMOND_CHAR),
+            HEARTS => (2, HEART_CHAR),
+            SPADES => (7, SPADE_CHAR),
+            _ => (4, 33), //purple "!"
+        };
+
+        let rank_char = get_rank_char(card);
+
+        self.print_char(
+            rank_char,
+            x + card::LEFT_RANK_X,
+            y + card::LEFT_RANK_Y,
+            colour,
+        );
+        self.print_char(
+            suit_char,
+            x + card::LEFT_SUIT_X,
+            y + card::LEFT_SUIT_Y,
+            colour,
+        );
+
+        self.print_char(
+            rank_char | FONT_FLIP,
+            x + card::RIGHT_RANK_X,
+            y + card::RIGHT_RANK_Y,
+            colour,
+        );
+        self.print_char(
+            suit_char | FONT_FLIP,
+            x + card::RIGHT_SUIT_X,
+            y + card::RIGHT_SUIT_Y,
+            colour,
         );
     }
 
@@ -551,11 +592,11 @@ pub fn get_sprite_xy(sprite_number: u8) -> (u8, u8) {
 }
 
 pub fn get_char_xy(sprite_number: u8) -> (u8, u8) {
-    const SPRITES_PER_ROW: u8 = FONT_WIDTH as u8 / 8;
+    const SPRITES_PER_ROW: u8 = FONT_WIDTH as u8 / FONT_SIZE;
 
     (
-        (sprite_number % SPRITES_PER_ROW) * 8,
-        (sprite_number / SPRITES_PER_ROW) * 8,
+        (sprite_number % SPRITES_PER_ROW) * FONT_SIZE,
+        (sprite_number / SPRITES_PER_ROW) * FONT_SIZE,
     )
 }
 
