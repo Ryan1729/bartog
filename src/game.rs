@@ -1,5 +1,7 @@
 use common::*;
 
+use std::cmp::min;
+
 fn draw_hand(framebuffer: &mut Framebuffer, hand: &Hand) {
     let len = hand.len() as u8;
     if len == 0 {
@@ -10,10 +12,9 @@ fn draw_hand(framebuffer: &mut Framebuffer, hand: &Hand) {
     let right_edge = SCREEN_WIDTH as u8 - card::X_EMPTY_SPACE;
     let full_width = right_edge.saturating_sub(left_edge);
     let usable_width = full_width.saturating_sub(card::WIDTH);
-    let offset = usable_width / len;
+    let offset = min(usable_width / len, card::WIDTH);
     let mut x = left_edge;
     for &card in hand.iter() {
-        console!(log, format!("card: {} x: {}", card, x));
         framebuffer.draw_card(card, x, PLAYER_HAND_HEIGHT);
 
         x += offset;

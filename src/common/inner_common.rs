@@ -115,7 +115,7 @@ pub fn get_rank_char(card: Card) -> u8 {
 }
 
 pub const DECK_SIZE: u8 = 52;
-pub const PLAYER_HAND_HEIGHT: u8 = (SCREEN_HEIGHT - (card::HEIGHT / 2) as usize) as u8;
+pub const PLAYER_HAND_HEIGHT: u8 = (SCREEN_HEIGHT - (card::HEIGHT * 5 / 9) as usize) as u8;
 
 /*
     A way to convert an image to an array of bytes:
