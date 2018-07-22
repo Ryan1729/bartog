@@ -97,7 +97,7 @@ pub fn get_rank(card: Card) -> Rank {
 
 pub fn get_rank_char(card: Card) -> u8 {
     match get_rank(card) {
-        0 => b'1',
+        0 => b'a',
         1 => b'2',
         2 => b'3',
         3 => b'4',
