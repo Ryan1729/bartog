@@ -8,24 +8,6 @@ pub use inner_common::*;
 pub mod game_state;
 pub use game_state::*;
 
-pub struct State {
-    pub game_state: GameState,
-    pub framebuffer: Framebuffer,
-    pub input: Input,
-}
-
-impl State {
-    pub fn new() -> State {
-        let framebuffer = Framebuffer::new();
-
-        State {
-            game_state: GameState::new(),
-            framebuffer,
-            input: Input::new(),
-        }
-    }
-}
-
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Input {
     pub gamepad: Button::Ty,
@@ -59,5 +41,13 @@ pub mod Button {
             const Left       = 1 << 6,
             const Right      = 1 << 7
         }
+    }
+}
+
+pub type Logger = Option<fn(&str) -> ()>;
+
+pub fn log(logger: Logger, s: &str) {
+    if let Some(l) = logger {
+        l(s);
     }
 }

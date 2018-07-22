@@ -339,6 +339,40 @@ impl PinkyWeb {
     }
 }
 
+pub struct State {
+    pub game_state: GameState,
+    pub framebuffer: Framebuffer,
+    pub input: Input,
+}
+
+#[inline]
+fn logger(s: &str) {
+    console!(log, s);
+}
+
+use std::mem;
+use stdweb::web::Date;
+
+impl State {
+    pub fn new() -> State {
+        let framebuffer = Framebuffer::new();
+
+        let seed = unsafe {
+            let time = Date::new().get_time();
+
+            mem::transmute::<[f64; 2], [u8; 16]>([time, 1.0 / time])
+        };
+
+        logger(&format!("{:?}", seed));
+
+        State {
+            game_state: GameState::new(seed, Some(logger)),
+            framebuffer,
+            input: Input::new(),
+        }
+    }
+}
+
 impl State {
     pub fn frame(&mut self) {
         update_and_render(&mut self.framebuffer, &mut self.game_state, self.input);

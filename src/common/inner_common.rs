@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //in pixels
 pub const SCREEN_WIDTH: usize = 128;
 pub const SCREEN_HEIGHT: usize = 128;
@@ -65,10 +66,6 @@ pub mod card {
 
 pub const MOVE_TIMER_MAX: u8 = 3;
 
-pub struct GameState {
-    pub count: u8,
-}
-
 pub const TEN_CHAR: u8 = 27;
 
 pub const CLUB_CHAR: u8 = 31;
@@ -116,6 +113,9 @@ pub fn get_rank_char(card: Card) -> u8 {
         _ => b'!',
     }
 }
+
+pub const DECK_SIZE: u8 = 52;
+pub const PLAYER_HAND_HEIGHT: u8 = (SCREEN_HEIGHT - (card::HEIGHT / 2) as usize) as u8;
 
 /*
     A way to convert an image to an array of bytes:

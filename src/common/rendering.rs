@@ -475,7 +475,7 @@ impl Framebuffer {
         }
     }
 
-    pub fn print_char(&mut self, character: u8, mut x: u8, y: u8, colour: u8) {
+    pub fn print_char(&mut self, character: u8, x: u8, y: u8, colour: u8) {
         let (sprite_x, sprite_y) = get_char_xy(character);
         self.print_char_raw(sprite_x, sprite_y, 8, 8, x, y, colour);
     }
