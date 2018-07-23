@@ -381,6 +381,12 @@ impl State {
     }
 
     pub fn press(&mut self, button: Button::Ty) {
+        if self.input.previous_gamepad.contains(button) {
+            //This is meant to pass along the key repeat, if any.
+            //Not sure if rewriting history is the best way to do this.
+            self.input.previous_gamepad.remove(button);
+        }
+
         self.input.gamepad.insert(button);
     }
 

@@ -81,8 +81,6 @@ pub mod cursor {
     pub const ALT_SPRITE_Y: u8 = 0;
 }
 
-pub const MOVE_TIMER_MAX: u8 = 3;
-
 pub const TEN_CHAR: u8 = 27;
 
 pub const CLUB_CHAR: u8 = 31;

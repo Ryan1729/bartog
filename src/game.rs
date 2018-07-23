@@ -53,9 +53,31 @@ fn draw_hand_with_cursor(framebuffer: &mut Framebuffer, hand: &Hand, index: usiz
     }
 }
 
+fn update(state: &mut GameState, input: Input) {
+    if input.pressed_this_frame(Button::Right) {
+        if (state.hand_index as usize) < state.hand.len() - 1 {
+            state.hand_index = state.hand_index.saturating_add(1);
+        }
+    } else if input.pressed_this_frame(Button::Left) {
+        state.hand_index = state.hand_index.saturating_sub(1);
+    } else if input.pressed_this_frame(Button::A) {
+        state
+            .hand
+            .discard_to(&mut state.discard, state.hand_index as usize);
+    } else if input.pressed_this_frame(Button::Down) {
+        state.hand.draw_from(&mut state.deck);
+    } else if input.pressed_this_frame(Button::Up) {
+        state
+            .hand
+            .discard_randomly_to(&mut state.deck, &mut state.rng);
+    }
+}
+
 #[inline]
 pub fn update_and_render(framebuffer: &mut Framebuffer, state: &mut GameState, input: Input) {
-    framebuffer.clear();
+    update(state, input);
+
+    framebuffer.clearTo(GREEN);
 
     state
         .deck
@@ -69,22 +91,4 @@ pub fn update_and_render(framebuffer: &mut Framebuffer, state: &mut GameState, i
         .map(|&c| framebuffer.draw_card(c, 40 + card::WIDTH + card::WIDTH / 2, 32));
 
     draw_hand_with_cursor(framebuffer, &state.hand, state.hand_index as usize);
-
-    if input.gamepad.contains(Button::Right) {
-        if (state.hand_index as usize) < state.hand.len() - 1 {
-            state.hand_index = state.hand_index.saturating_add(1);
-        }
-    } else if input.gamepad.contains(Button::Left) {
-        state.hand_index = state.hand_index.saturating_sub(1);
-    } else if input.gamepad.contains(Button::A) {
-        state
-            .hand
-            .discard_to(&mut state.discard, state.hand_index as usize);
-    } else if input.gamepad.contains(Button::Down) {
-        state.hand.draw_from(&mut state.deck);
-    } else if input.gamepad.contains(Button::Up) {
-        state
-            .hand
-            .discard_randomly_to(&mut state.deck, &mut state.rng);
-    }
 }
