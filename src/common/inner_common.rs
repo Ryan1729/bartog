@@ -64,6 +64,23 @@ pub mod card {
     pub const RIGHT_SUIT_Y: u8 = HEIGHT - (LEFT_SUIT_Y + FONT_SIZE);
 }
 
+pub mod cursor {
+    pub const X_EMPTY_SPACE: u8 = 1;
+    pub const Y_EMPTY_SPACE: u8 = 0;
+
+    pub const WIDTH: u8 = 24;
+    pub const HEIGHT: u8 = 32;
+
+    pub const WIDTH_PLUS_SPACE: u8 = WIDTH + X_EMPTY_SPACE + X_EMPTY_SPACE;
+    pub const HEIGHT_PLUS_SPACE: u8 = HEIGHT + Y_EMPTY_SPACE + Y_EMPTY_SPACE;
+
+    pub const SPRITE_X: u8 = 49;
+    pub const SPRITE_Y: u8 = 0;
+
+    pub const ALT_SPRITE_X: u8 = 73;
+    pub const ALT_SPRITE_Y: u8 = 0;
+}
+
 pub const MOVE_TIMER_MAX: u8 = 3;
 
 pub const TEN_CHAR: u8 = 27;

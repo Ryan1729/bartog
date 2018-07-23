@@ -57,7 +57,9 @@ impl Hand {
 
 pub struct GameState {
     pub deck: Hand,
+    pub discard: Hand,
     pub hand: Hand,
+    pub hand_index: u8,
     pub rng: XorShiftRng,
     logger: Logger,
 }
@@ -67,6 +69,8 @@ impl GameState {
         let mut rng = rand::XorShiftRng::from_seed(seed);
 
         let mut deck = Hand::new_shuffled_deck(&mut rng);
+
+        let discard = Hand::new();
 
         let mut hand = Hand::new();
 
@@ -78,7 +82,9 @@ impl GameState {
 
         GameState {
             deck,
+            discard,
             hand,
+            hand_index: 0,
             rng,
             logger,
         }

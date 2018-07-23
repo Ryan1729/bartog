@@ -570,6 +570,19 @@ impl Framebuffer {
         );
     }
 
+    pub fn draw_highlighted_card(&mut self, card: Card, x: u8, y: u8) {
+        self.draw_card(card, x, y);
+
+        self.sspr(
+            cursor::SPRITE_X,
+            cursor::SPRITE_Y,
+            cursor::WIDTH,
+            cursor::HEIGHT,
+            x.wrapping_sub(1),
+            y.wrapping_sub(1),
+        );
+    }
+
     pub fn draw_card_back(&mut self, x: u8, y: u8) {
         self.sspr(
             card::BACK_SPRITE_X,
