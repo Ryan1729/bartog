@@ -586,7 +586,7 @@ impl Framebuffer {
     pub fn draw_card_back(&mut self, x: u8, y: u8) {
         self.sspr(
             card::BACK_SPRITE_X,
-            card::BACK_SPRITE_X,
+            card::BACK_SPRITE_Y,
             card::WIDTH,
             card::HEIGHT,
             x,

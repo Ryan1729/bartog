@@ -48,8 +48,8 @@ pub mod card {
     pub const FRONT_SPRITE_X: u8 = 2;
     pub const FRONT_SPRITE_Y: u8 = 1;
 
-    pub const BACK_SPRITE_X: u8 = 2;
-    pub const BACK_SPRITE_Y: u8 = 26;
+    pub const BACK_SPRITE_X: u8 = 26;
+    pub const BACK_SPRITE_Y: u8 = 1;
 
     pub const LEFT_RANK_X: u8 = 3;
     pub const LEFT_RANK_Y: u8 = 3;
@@ -131,6 +131,20 @@ pub fn get_rank_char(card: Card) -> u8 {
 
 pub const DECK_SIZE: u8 = 52;
 pub const PLAYER_HAND_HEIGHT: u8 = (SCREEN_HEIGHT - (card::HEIGHT * 5 / 9) as usize) as u8;
+pub const MIDDLE_CPU_HAND_HEIGHT: u8 = card::Y_EMPTY_SPACE;
+pub const LEFT_CPU_HAND_X: u8 = card::X_EMPTY_SPACE;
+pub const RIGHT_CPU_HAND_X: u8 =
+    (SCREEN_WIDTH - (card::WIDTH as usize + card::X_EMPTY_SPACE as usize)) as u8;
+
+pub const LEFT_AND_RIGHT_HAND_EDGES: (u8, u8) = (
+    card::HEIGHT + (card::Y_EMPTY_SPACE * 2),
+    SCREEN_HEIGHT as u8 - (card::HEIGHT + card::Y_EMPTY_SPACE),
+);
+
+pub const TOP_AND_BOTTOM_HAND_EDGES: (u8, u8) = (
+    card::X_EMPTY_SPACE,
+    SCREEN_WIDTH as u8 - card::X_EMPTY_SPACE,
+);
 
 /*
     A way to convert an image to an array of bytes:

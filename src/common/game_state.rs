@@ -58,10 +58,25 @@ impl Hand {
 pub struct GameState {
     pub deck: Hand,
     pub discard: Hand,
+    pub cpu_hands: [Hand; 3],
     pub hand: Hand,
     pub hand_index: u8,
     pub rng: XorShiftRng,
     logger: Logger,
+}
+
+macro_rules! dealt_hand {
+    ($deck:expr) => {{
+        let mut hand = Hand::new();
+
+        hand.draw_from($deck);
+        hand.draw_from($deck);
+        hand.draw_from($deck);
+        hand.draw_from($deck);
+        hand.draw_from($deck);
+
+        hand
+    }};
 }
 
 impl GameState {
@@ -72,17 +87,17 @@ impl GameState {
 
         let discard = Hand::new();
 
-        let mut hand = Hand::new();
-
-        hand.draw_from(&mut deck);
-        hand.draw_from(&mut deck);
-        hand.draw_from(&mut deck);
-        hand.draw_from(&mut deck);
-        hand.draw_from(&mut deck);
+        let hand = dealt_hand!(&mut deck);
+        let cpu_hands = [
+            dealt_hand!(&mut deck),
+            dealt_hand!(&mut deck),
+            dealt_hand!(&mut deck),
+        ];
 
         GameState {
             deck,
             discard,
+            cpu_hands,
             hand,
             hand_index: 0,
             rng,

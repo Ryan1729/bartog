@@ -2,34 +2,93 @@ use common::*;
 
 use std::cmp::min;
 
-#[allow(dead_code)]
-fn draw_hand(framebuffer: &mut Framebuffer, hand: &Hand) {
+enum Face {
+    Up,
+    Down,
+}
+
+fn draw_hand_ltr(
+    framebuffer: &mut Framebuffer,
+    hand: &Hand,
+    (left_edge, right_edge): (u8, u8),
+    y: u8,
+    face: Face,
+) {
     let len = hand.len() as u8;
     if len == 0 {
         return;
     }
 
-    let left_edge = card::X_EMPTY_SPACE;
-    let right_edge = SCREEN_WIDTH as u8 - card::X_EMPTY_SPACE;
     let full_width = right_edge.saturating_sub(left_edge);
     let usable_width = full_width.saturating_sub(card::WIDTH);
     let offset = min(usable_width / len, card::WIDTH);
     let mut x = left_edge;
-    for &card in hand.iter() {
-        framebuffer.draw_card(card, x, PLAYER_HAND_HEIGHT);
 
-        x += offset;
+    match face {
+        Face::Up => {
+            for &card in hand.iter() {
+                framebuffer.draw_card(card, x, y);
+
+                x += offset;
+            }
+        }
+        Face::Down => {
+            for &card in hand.iter() {
+                framebuffer.draw_card_back(x, y);
+
+                x += offset;
+            }
+        }
     }
 }
 
-fn draw_hand_with_cursor(framebuffer: &mut Framebuffer, hand: &Hand, index: usize) {
+fn draw_hand_ttb(
+    framebuffer: &mut Framebuffer,
+    hand: &Hand,
+    (top_edge, bottom_edge): (u8, u8),
+    x: u8,
+    face: Face,
+) {
     let len = hand.len() as u8;
     if len == 0 {
         return;
     }
 
-    let left_edge = card::X_EMPTY_SPACE;
-    let right_edge = SCREEN_WIDTH as u8 - card::X_EMPTY_SPACE;
+    let full_height = bottom_edge.saturating_sub(top_edge);
+    let usable_height = full_height.saturating_sub(card::HEIGHT);
+    let offset = min(usable_height / len, card::HEIGHT);
+    let mut y = top_edge;
+
+    match face {
+        Face::Up => {
+            for &card in hand.iter() {
+                framebuffer.draw_card(card, x, y);
+
+                y += offset;
+            }
+        }
+        Face::Down => {
+            for &card in hand.iter() {
+                framebuffer.draw_card_back(x, y);
+
+                y += offset;
+            }
+        }
+    }
+}
+
+fn draw_hand_with_cursor(
+    framebuffer: &mut Framebuffer,
+    hand: &Hand,
+    (left_edge, right_edge): (u8, u8),
+    y: u8,
+    index: usize,
+) {
+    let len = hand.len() as u8;
+    if len == 0 {
+        return;
+    }
+
     let full_width = right_edge.saturating_sub(left_edge);
     let usable_width = full_width.saturating_sub(card::WIDTH);
     let offset = min(usable_width / len, card::WIDTH);
@@ -43,13 +102,13 @@ fn draw_hand_with_cursor(framebuffer: &mut Framebuffer, hand: &Hand, index: usiz
 
             continue;
         }
-        framebuffer.draw_card(card, x, PLAYER_HAND_HEIGHT);
+        framebuffer.draw_card(card, x, y);
 
         x += offset;
     }
 
     if let Some((card, cursor_offset)) = selected_card_and_offset {
-        framebuffer.draw_highlighted_card(card, cursor_offset, PLAYER_HAND_HEIGHT);
+        framebuffer.draw_highlighted_card(card, cursor_offset, y);
     }
 }
 
@@ -79,6 +138,30 @@ pub fn update_and_render(framebuffer: &mut Framebuffer, state: &mut GameState, i
 
     framebuffer.clearTo(GREEN);
 
+    draw_hand_ttb(
+        framebuffer,
+        &state.cpu_hands[0],
+        LEFT_AND_RIGHT_HAND_EDGES,
+        LEFT_CPU_HAND_X,
+        Face::Down,
+    );
+
+    draw_hand_ltr(
+        framebuffer,
+        &state.cpu_hands[1],
+        TOP_AND_BOTTOM_HAND_EDGES,
+        MIDDLE_CPU_HAND_HEIGHT,
+        Face::Down,
+    );
+
+    draw_hand_ttb(
+        framebuffer,
+        &state.cpu_hands[2],
+        LEFT_AND_RIGHT_HAND_EDGES,
+        RIGHT_CPU_HAND_X,
+        Face::Down,
+    );
+
     state
         .deck
         .iter()
@@ -90,5 +173,11 @@ pub fn update_and_render(framebuffer: &mut Framebuffer, state: &mut GameState, i
         .last()
         .map(|&c| framebuffer.draw_card(c, 40 + card::WIDTH + card::WIDTH / 2, 32));
 
-    draw_hand_with_cursor(framebuffer, &state.hand, state.hand_index as usize);
+    draw_hand_with_cursor(
+        framebuffer,
+        &state.hand,
+        TOP_AND_BOTTOM_HAND_EDGES,
+        PLAYER_HAND_HEIGHT,
+        state.hand_index as usize,
+    );
 }
