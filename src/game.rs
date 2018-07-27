@@ -112,7 +112,7 @@ fn draw_hand_with_cursor(
     }
 }
 
-fn update(state: &mut GameState, input: Input) {
+fn player_turn(state: &mut GameState, input: Input) {
     if input.pressed_this_frame(Button::Right) {
         if (state.hand_index as usize) < state.hand.len() - 1 {
             state.hand_index = state.hand_index.saturating_add(1);
@@ -130,6 +130,30 @@ fn update(state: &mut GameState, input: Input) {
             .hand
             .discard_randomly_to(&mut state.deck, &mut state.rng);
     }
+}
+
+fn cpu_would_play(state: &GameState) -> Option<Card> {
+
+}
+
+fn update(state: &mut GameState, input: Input) {
+    let player = state.turn.player as usize;
+
+    state.turn.animation = match player {
+        t if t < state.cpu_hands.len() => {
+            if let Some(card) = cpu_would_play(&state) {
+                let (x, y) = unimplemented!();
+
+                Discard(PositionedCard{card, x, y})
+            } else {
+                if let
+
+                Draw(PositionedCard{card, x, y})
+            }
+        }
+        _ => player_turn(state, input)
+    }
+
 }
 
 #[inline]

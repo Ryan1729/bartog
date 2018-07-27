@@ -7,8 +7,6 @@ use self::rand::{Rng, SeedableRng, XorShiftRng};
 
 pub struct Hand(Vec<Card>);
 
-/// There should be no operations that can cause cards not to be conserved between all Hand
-/// instances.
 impl Hand {
     pub fn new() -> Self {
         Hand(Vec::with_capacity(DECK_SIZE as usize))
@@ -55,12 +53,38 @@ impl Hand {
     }
 }
 
+#[derive(Default)]
+pub struct PositionedCard {
+    card: Card,
+    x: u8,
+    y: u8,
+}
+
+pub enum CardAnimation {
+    None,
+    Draw(PositionedCard),
+    Discard(PositionedCard),
+}
+
+impl Default for CardAnimation {
+    fn default() -> Self {
+        CardAnimation::None
+    }
+}
+
+#[derive(Default)]
+pub struct Turn {
+    player: u8,
+    animation: CardAnimation,
+}
+
 pub struct GameState {
     pub deck: Hand,
     pub discard: Hand,
     pub cpu_hands: [Hand; 3],
     pub hand: Hand,
     pub hand_index: u8,
+    pub turn: Turn,
     pub rng: XorShiftRng,
     logger: Logger,
 }
@@ -94,12 +118,15 @@ impl GameState {
             dealt_hand!(&mut deck),
         ];
 
+        let turn = rng.gen_range(0, cpu_hands.len() as u8 + 1);
+
         GameState {
             deck,
             discard,
             cpu_hands,
             hand,
             hand_index: 0,
+            turn: Default::default(),
             rng,
             logger,
         }
