@@ -112,48 +112,120 @@ fn draw_hand_with_cursor(
     }
 }
 
-fn player_turn(state: &mut GameState, input: Input) {
+fn move_cursor(state: &mut GameState, input: Input) -> bool {
     if input.pressed_this_frame(Button::Right) {
         if (state.hand_index as usize) < state.hand.len() - 1 {
             state.hand_index = state.hand_index.saturating_add(1);
         }
+        true
     } else if input.pressed_this_frame(Button::Left) {
         state.hand_index = state.hand_index.saturating_sub(1);
-    } else if input.pressed_this_frame(Button::A) {
-        state
-            .hand
-            .discard_to(&mut state.discard, state.hand_index as usize);
-    } else if input.pressed_this_frame(Button::Down) {
-        state.hand.draw_from(&mut state.deck);
-    } else if input.pressed_this_frame(Button::Up) {
-        state
-            .hand
-            .discard_randomly_to(&mut state.deck, &mut state.rng);
+        true
+    } else {
+        false
     }
 }
 
-fn cpu_would_play(state: &GameState) -> Option<Card> {
+fn cpu_would_play(state: &GameState) -> Option<usize> {
+    unimplemented!()
+}
 
+fn perform_action(state: &mut GameState, action: Action) {
+    unimplemented!()
+}
+
+fn advance_card_animations(state: &mut GameState) {
+    // I should really be able to use `Vec::retain` here,
+    // but that passes a `&T` insteead of a `&mut T`.
+
+    let mut i = state.card_animations.len() - 1;
+    loop {
+        let remove = {
+            let action = {
+                let animation = &mut state.card_animations[i];
+
+                animation.approach_target();
+
+                if animation.is_complete() {
+                    Some(animation.completion_action)
+                } else {
+                    None
+                }
+            };
+
+            if let Some(action) = action {
+                perform_action(state, action);
+                false
+            } else {
+                true
+            }
+        };
+
+        if remove {
+            state.card_animations.remove(i);
+        }
+
+        if i == 0 {
+            break;
+        }
+        i -= 1;
+    }
+}
+
+fn get_discard_animation(
+    state: &mut GameState,
+    player: PlayerID,
+    card_index: usize,
+) -> CardAnimation {
+    unimplemented!()
+}
+
+fn get_draw_animation(state: &mut GameState, player: PlayerID, card: Card) -> CardAnimation {
+    unimplemented!()
+}
+
+fn take_turn(state: &mut GameState, input: Input) {
+    let player = state.current_player;
+    match player {
+        t if (t as usize) < state.cpu_hands.len() => {
+            if let Some(card_index) = cpu_would_play(&state) {
+                let animation = get_discard_animation(state, player, card_index);
+                state.card_animations.push(animation);
+            } else if let Some(card) = state.deck.draw() {
+                let animation = get_draw_animation(state, player, card);
+                state.card_animations.push(animation);
+            }
+
+            state.current_player += 1;
+        }
+        _ => {
+            if move_cursor(state, input) {
+                //Already handled.
+            } else if input.pressed_this_frame(Button::A) {
+                let index = state.hand_index as usize;
+                let animation = get_discard_animation(state, player, index);
+                state.card_animations.push(animation);
+                state.current_player = 0;
+            } else if input.pressed_this_frame(Button::B) {
+                if let Some(card) = state.deck.draw() {
+                    let animation = get_draw_animation(state, player, card);
+                    state.card_animations.push(animation);
+
+                    state.current_player = 0;
+                }
+            }
+        }
+    }
 }
 
 fn update(state: &mut GameState, input: Input) {
-    let player = state.turn.player as usize;
+    if state.card_animations.len() == 0 {
+        take_turn(state, input);
+    } else {
+        advance_card_animations(state);
 
-    state.turn.animation = match player {
-        t if t < state.cpu_hands.len() => {
-            if let Some(card) = cpu_would_play(&state) {
-                let (x, y) = unimplemented!();
-
-                Discard(PositionedCard{card, x, y})
-            } else {
-                if let
-
-                Draw(PositionedCard{card, x, y})
-            }
-        }
-        _ => player_turn(state, input)
+        move_cursor(state, input);
     }
-
 }
 
 #[inline]
@@ -190,12 +262,12 @@ pub fn update_and_render(framebuffer: &mut Framebuffer, state: &mut GameState, i
         .deck
         .iter()
         .last()
-        .map(|&c| framebuffer.draw_card(c, 40, 32));
+        .map(|&c| framebuffer.draw_card(c, DECK_X, DECK_Y));
     state
         .discard
         .iter()
         .last()
-        .map(|&c| framebuffer.draw_card(c, 40 + card::WIDTH + card::WIDTH / 2, 32));
+        .map(|&c| framebuffer.draw_card(c, DISCARD_X, DISCARD_Y));
 
     draw_hand_with_cursor(
         framebuffer,

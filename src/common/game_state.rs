@@ -32,6 +32,10 @@ impl Hand {
         self.0.iter()
     }
 
+    pub fn draw(&mut self) -> Option<Card> {
+        self.0.pop()
+    }
+
     pub fn draw_from(&mut self, other: &mut Hand) {
         if let Some(card) = other.0.pop() {
             self.0.push(card);
@@ -53,6 +57,12 @@ impl Hand {
     }
 }
 
+#[derive(Copy, Clone)]
+pub enum Action {
+    MoveToDiscard,
+    MoveToHand(PlayerID),
+}
+
 #[derive(Default)]
 pub struct PositionedCard {
     card: Card,
@@ -60,22 +70,69 @@ pub struct PositionedCard {
     y: u8,
 }
 
-pub enum CardAnimation {
-    None,
-    Draw(PositionedCard),
-    Discard(PositionedCard),
+pub struct CardAnimation {
+    pub card: PositionedCard,
+    pub x: u8,
+    pub y: u8,
+    pub completion_action: Action,
 }
 
-impl Default for CardAnimation {
-    fn default() -> Self {
-        CardAnimation::None
+impl CardAnimation {
+    pub fn is_complete(&self) -> bool {
+        self.card.x == self.x && self.card.x == self.y
     }
-}
 
-#[derive(Default)]
-pub struct Turn {
-    player: u8,
-    animation: CardAnimation,
+    pub fn approach_target(&mut self) {
+        let (d_x, d_y) = self.get_delta();
+
+        self.card.x = (self.card.x as i8).saturating_add(d_x) as _;
+        self.card.y = (self.card.y as i8).saturating_add(d_y) as _;
+    }
+
+    fn get_delta(&self) -> (i8, i8) {
+        // TODO is this faster, slower, or equivalent to Bresenham?
+        // https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
+        let both = (
+            if self.x == self.card.x {
+                0
+            } else if self.x > self.card.x {
+                1
+            } else {
+                -1
+            },
+            if self.y == self.card.y {
+                0
+            } else if self.y > self.card.y {
+                1
+            } else {
+                -1
+            },
+        );
+
+        let x_diff = if self.card.x > self.x {
+            self.card.x - self.x
+        } else {
+            self.x - self.card.x
+        };
+        let y_diff = if self.card.y > self.y {
+            self.card.y - self.y
+        } else {
+            self.y - self.card.y
+        };
+
+        let furthest_only = if x_diff == y_diff {
+            return both;
+        } else if x_diff > y_diff {
+            (both.0, 0)
+        } else {
+            (0, both.0)
+        };
+
+        (
+            (both.0 + furthest_only.0) / 2,
+            (both.0 + furthest_only.0) / 2,
+        )
+    }
 }
 
 pub struct GameState {
@@ -84,7 +141,8 @@ pub struct GameState {
     pub cpu_hands: [Hand; 3],
     pub hand: Hand,
     pub hand_index: u8,
-    pub turn: Turn,
+    pub current_player: PlayerID,
+    pub card_animations: Vec<CardAnimation>,
     pub rng: XorShiftRng,
     logger: Logger,
 }
@@ -118,7 +176,9 @@ impl GameState {
             dealt_hand!(&mut deck),
         ];
 
-        let turn = rng.gen_range(0, cpu_hands.len() as u8 + 1);
+        let current_player = rng.gen_range(0, cpu_hands.len() as u8 + 1);
+
+        let card_animations = Vec::with_capacity(DECK_SIZE as _);
 
         GameState {
             deck,
@@ -126,7 +186,8 @@ impl GameState {
             cpu_hands,
             hand,
             hand_index: 0,
-            turn: Default::default(),
+            current_player,
+            card_animations,
             rng,
             logger,
         }
