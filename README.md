@@ -1,8 +1,10 @@
 # Bartog
 
-This is a single player only implementation of Bartok, A.K.A. Bartok, A.K.A. Warthog.
+This is a single player only implementation of Bartog, A.K.A. Bartok, A.K.A. Warthog.
 
 See [the included rules folder](./design/rules/README.md) for more info on the game.
+
+Because of the extremely flexible nature of Bartog, in some sense this project may never be truly complete. It is presented here in it's current form, and I make no promises about where it will eventually get.
 
 ### Building (using Rust's native WebAssembly backend)
 
