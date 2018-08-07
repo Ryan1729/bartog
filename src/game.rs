@@ -1,7 +1,5 @@
 use common::*;
 
-use std::cmp::min;
-
 enum Face {
     Up,
     Down,
@@ -10,20 +8,10 @@ enum Face {
 fn draw_hand_ltr(
     framebuffer: &mut Framebuffer,
     hand: &Hand,
-    (left_edge, right_edge): (u8, u8),
-    y: u8,
+    offset: u8,
+    (mut x, y): (u8, u8),
     face: Face,
 ) {
-    let len = hand.len() as u8;
-    if len == 0 {
-        return;
-    }
-
-    let full_width = right_edge.saturating_sub(left_edge);
-    let usable_width = full_width.saturating_sub(card::WIDTH);
-    let offset = min(usable_width / len, card::WIDTH);
-    let mut x = left_edge;
-
     match face {
         Face::Up => {
             for &card in hand.iter() {
@@ -45,20 +33,10 @@ fn draw_hand_ltr(
 fn draw_hand_ttb(
     framebuffer: &mut Framebuffer,
     hand: &Hand,
-    (top_edge, bottom_edge): (u8, u8),
-    x: u8,
+    offset: u8,
+    (x, mut y): (u8, u8),
     face: Face,
 ) {
-    let len = hand.len() as u8;
-    if len == 0 {
-        return;
-    }
-
-    let full_height = bottom_edge.saturating_sub(top_edge);
-    let usable_height = full_height.saturating_sub(card::HEIGHT);
-    let offset = min(usable_height / len, card::HEIGHT);
-    let mut y = top_edge;
-
     match face {
         Face::Up => {
             for &card in hand.iter() {
@@ -77,23 +55,26 @@ fn draw_hand_ttb(
     }
 }
 
-fn draw_hand_with_cursor(
+fn draw_hand(framebuffer: &mut Framebuffer, hand: &Hand, face: Face) {
+    let offset = get_card_offset(hand.spread, hand.len());
+
+    match hand.spread {
+        Spread::LTR((x, _), y) => {
+            draw_hand_ltr(framebuffer, hand, offset, (x, y), Face::Down);
+        }
+        Spread::TTB((y, _), x) => {
+            draw_hand_ttb(framebuffer, hand, offset, (x, y), Face::Down);
+        }
+    }
+}
+
+fn draw_hand_with_cursor_ltr(
     framebuffer: &mut Framebuffer,
     hand: &Hand,
-    (left_edge, right_edge): (u8, u8),
-    y: u8,
+    offset: u8,
+    (mut x, y): (u8, u8),
     index: usize,
 ) {
-    let len = hand.len() as u8;
-    if len == 0 {
-        return;
-    }
-
-    let full_width = right_edge.saturating_sub(left_edge);
-    let usable_width = full_width.saturating_sub(card::WIDTH);
-    let offset = min(usable_width / len, card::WIDTH);
-
-    let mut x = left_edge;
     let mut selected_card_and_offset = None;
     for (i, &card) in hand.iter().enumerate() {
         if i == index {
@@ -112,9 +93,47 @@ fn draw_hand_with_cursor(
     }
 }
 
+fn draw_hand_with_cursor_ttb(
+    framebuffer: &mut Framebuffer,
+    hand: &Hand,
+    offset: u8,
+    (x, mut y): (u8, u8),
+    index: usize,
+) {
+    let mut selected_card_and_offset = None;
+    for (i, &card) in hand.iter().enumerate() {
+        if i == index {
+            selected_card_and_offset = Some((card, y));
+            y += offset;
+
+            continue;
+        }
+        framebuffer.draw_card(card, x, y);
+
+        y += offset;
+    }
+
+    if let Some((card, cursor_offset)) = selected_card_and_offset {
+        framebuffer.draw_highlighted_card(card, x, cursor_offset);
+    }
+}
+
+fn draw_hand_with_cursor(framebuffer: &mut Framebuffer, hand: &Hand, index: usize) {
+    let offset = get_card_offset(hand.spread, hand.len());
+
+    match hand.spread {
+        Spread::LTR((x, _), y) => {
+            draw_hand_with_cursor_ltr(framebuffer, hand, offset, (x, y), index);
+        }
+        Spread::TTB((y, _), x) => {
+            draw_hand_with_cursor_ttb(framebuffer, hand, offset, (x, y), index);
+        }
+    }
+}
+
 fn move_cursor(state: &mut GameState, input: Input) -> bool {
     if input.pressed_this_frame(Button::Right) {
-        if (state.hand_index as usize) < state.hand.len() - 1 {
+        if state.hand_index < state.hand.len().saturating_sub(1) {
             state.hand_index = state.hand_index.saturating_add(1);
         }
         true
@@ -126,7 +145,7 @@ fn move_cursor(state: &mut GameState, input: Input) -> bool {
     }
 }
 
-fn cpu_would_play(state: &GameState) -> Option<usize> {
+fn cpu_would_play(state: &GameState) -> Option<u8> {
     unimplemented!()
 }
 
@@ -175,25 +194,57 @@ fn advance_card_animations(state: &mut GameState) {
 fn get_discard_animation(
     state: &mut GameState,
     player: PlayerID,
-    card_index: usize,
-) -> CardAnimation {
-    unimplemented!()
+    card_index: u8,
+) -> Option<CardAnimation> {
+    state
+        .remove_positioned_card(player, card_index)
+        .map(|card| CardAnimation {
+            card,
+            x: DISCARD_X,
+            y: DISCARD_Y,
+            completion_action: Action::MoveToDiscard,
+        })
 }
 
-fn get_draw_animation(state: &mut GameState, player: PlayerID, card: Card) -> CardAnimation {
-    unimplemented!()
+fn get_draw_animation(state: &mut GameState, player: PlayerID) -> Option<CardAnimation> {
+    let (spread, len) = {
+        let hand = state.get_hand(player)?;
+
+        (hand.spread, hand.len())
+    };
+    let card = state.deck.draw()?;
+
+    let (x, y) = get_card_position(spread, len + 1, len);
+
+    Some(CardAnimation {
+        card: PositionedCard {
+            card,
+            x: DECK_X,
+            y: DECK_Y,
+        },
+        x,
+        y,
+        completion_action: Action::MoveToHand(player),
+    })
+}
+
+#[inline]
+fn push_if<T>(vec: &mut Vec<T>, op: Option<T>) {
+    if let Some(t) = op {
+        vec.push(t);
+    }
 }
 
 fn take_turn(state: &mut GameState, input: Input) {
     let player = state.current_player;
     match player {
         t if (t as usize) < state.cpu_hands.len() => {
-            if let Some(card_index) = cpu_would_play(&state) {
-                let animation = get_discard_animation(state, player, card_index);
-                state.card_animations.push(animation);
-            } else if let Some(card) = state.deck.draw() {
-                let animation = get_draw_animation(state, player, card);
-                state.card_animations.push(animation);
+            if let Some(index) = cpu_would_play(&state) {
+                let animation = get_discard_animation(state, player, index);
+                push_if(&mut state.card_animations, animation);
+            } else {
+                let animation = get_draw_animation(state, player);
+                push_if(&mut state.card_animations, animation);
             }
 
             state.current_player += 1;
@@ -202,17 +253,17 @@ fn take_turn(state: &mut GameState, input: Input) {
             if move_cursor(state, input) {
                 //Already handled.
             } else if input.pressed_this_frame(Button::A) {
-                let index = state.hand_index as usize;
+                let index = state.hand_index;
                 let animation = get_discard_animation(state, player, index);
-                state.card_animations.push(animation);
+
+                push_if(&mut state.card_animations, animation);
+
                 state.current_player = 0;
             } else if input.pressed_this_frame(Button::B) {
-                if let Some(card) = state.deck.draw() {
-                    let animation = get_draw_animation(state, player, card);
-                    state.card_animations.push(animation);
+                let animation = get_draw_animation(state, player);
+                push_if(&mut state.card_animations, animation);
 
-                    state.current_player = 0;
-                }
+                state.current_player = 0;
             }
         }
     }
@@ -234,29 +285,9 @@ pub fn update_and_render(framebuffer: &mut Framebuffer, state: &mut GameState, i
 
     framebuffer.clearTo(GREEN);
 
-    draw_hand_ttb(
-        framebuffer,
-        &state.cpu_hands[0],
-        LEFT_AND_RIGHT_HAND_EDGES,
-        LEFT_CPU_HAND_X,
-        Face::Down,
-    );
-
-    draw_hand_ltr(
-        framebuffer,
-        &state.cpu_hands[1],
-        TOP_AND_BOTTOM_HAND_EDGES,
-        MIDDLE_CPU_HAND_HEIGHT,
-        Face::Down,
-    );
-
-    draw_hand_ttb(
-        framebuffer,
-        &state.cpu_hands[2],
-        LEFT_AND_RIGHT_HAND_EDGES,
-        RIGHT_CPU_HAND_X,
-        Face::Down,
-    );
+    for hand in state.cpu_hands.iter() {
+        draw_hand(framebuffer, hand, Face::Down);
+    }
 
     state
         .deck
@@ -269,11 +300,5 @@ pub fn update_and_render(framebuffer: &mut Framebuffer, state: &mut GameState, i
         .last()
         .map(|&c| framebuffer.draw_card(c, DISCARD_X, DISCARD_Y));
 
-    draw_hand_with_cursor(
-        framebuffer,
-        &state.hand,
-        TOP_AND_BOTTOM_HAND_EDGES,
-        PLAYER_HAND_HEIGHT,
-        state.hand_index as usize,
-    );
+    draw_hand_with_cursor(framebuffer, &state.hand, state.hand_index as usize);
 }

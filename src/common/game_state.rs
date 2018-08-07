@@ -5,11 +5,56 @@ extern crate rand;
 
 use self::rand::{Rng, SeedableRng, XorShiftRng};
 
-pub struct Hand(Vec<Card>);
+#[derive(Clone, Copy)]
+pub enum Spread {
+    LTR((u8, u8), u8),
+    TTB((u8, u8), u8),
+}
+
+impl Spread {
+    fn stack(x: u8, y: u8) -> Self {
+        Spread::LTR((x, x.saturating_add(card::WIDTH)), y)
+    }
+}
+
+use std::cmp::min;
+
+pub fn get_card_offset(spread: Spread, len: u8) -> u8 {
+    if len == 0 {
+        return 0;
+    }
+
+    let ((min_edge, max_edge), span) = match spread {
+        Spread::LTR(edges, _) => (edges, card::WIDTH),
+        Spread::TTB(edges, _) => (edges, card::HEIGHT),
+    };
+
+    let full_width = max_edge.saturating_sub(min_edge);
+    let usable_width = full_width.saturating_sub(span);
+
+    min(usable_width / len, span)
+}
+
+pub fn get_card_position(spread: Spread, len: u8, index: u8) -> (u8, u8) {
+    let offset = get_card_offset(spread, len);
+
+    match spread {
+        Spread::LTR((min_edge, _), y) => (min_edge.saturating_add(offset.saturating_mul(index)), y),
+        Spread::TTB((min_edge, _), x) => (x, min_edge.saturating_add(offset.saturating_mul(index))),
+    }
+}
+
+pub struct Hand {
+    cards: Vec<Card>,
+    pub spread: Spread,
+}
 
 impl Hand {
-    pub fn new() -> Self {
-        Hand(Vec::with_capacity(DECK_SIZE as usize))
+    pub fn new(spread: Spread) -> Self {
+        Hand {
+            cards: Vec::with_capacity(DECK_SIZE as usize),
+            spread,
+        }
     }
 
     pub fn new_shuffled_deck<R: Rng>(rng: &mut R) -> Self {
@@ -21,38 +66,61 @@ impl Hand {
 
         rng.shuffle(&mut deck);
 
-        Hand(deck)
+        Hand {
+            cards: deck,
+            spread: Spread::stack(DECK_X, DECK_Y),
+        }
     }
 
-    pub fn len(&self) -> usize {
-        self.0.len()
+    pub fn len(&self) -> u8 {
+        let len = self.cards.len();
+
+        if len >= 255 {
+            255
+        } else {
+            len as u8
+        }
     }
 
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a Card> {
-        self.0.iter()
+        self.cards.iter()
     }
 
     pub fn draw(&mut self) -> Option<Card> {
-        self.0.pop()
+        self.cards.pop()
     }
 
     pub fn draw_from(&mut self, other: &mut Hand) {
-        if let Some(card) = other.0.pop() {
-            self.0.push(card);
+        if let Some(card) = other.cards.pop() {
+            self.cards.push(card);
         }
     }
 
     pub fn discard_to(&mut self, other: &mut Hand, index: usize) {
-        if index < self.0.len() {
-            other.0.push(self.0.remove(index));
+        if index < self.cards.len() {
+            other.cards.push(self.cards.remove(index));
         }
     }
 
     pub fn discard_randomly_to<R: Rng>(&mut self, other: &mut Hand, rng: &mut R) {
-        let len = self.0.len();
+        let len = self.cards.len();
         if len > 0 {
             let index = rng.gen_range(0, len);
-            other.0.push(self.0.remove(index));
+            other.cards.push(self.cards.remove(index));
+        }
+    }
+
+    pub fn remove_if_present(&mut self, index: u8) -> Option<PositionedCard> {
+        let len = self.len();
+        let cards = &mut self.cards;
+
+        if index < len {
+            let (x, y) = get_card_position(self.spread, len, index);
+            let card = cards.remove(index as usize);
+
+            Some(PositionedCard { card, x, y })
+        } else {
+            None
         }
     }
 }
@@ -65,9 +133,9 @@ pub enum Action {
 
 #[derive(Default)]
 pub struct PositionedCard {
-    card: Card,
-    x: u8,
-    y: u8,
+    pub card: Card,
+    pub x: u8,
+    pub y: u8,
 }
 
 pub struct CardAnimation {
@@ -135,6 +203,41 @@ impl CardAnimation {
     }
 }
 
+impl GameState {
+    pub fn remove_positioned_card(
+        &mut self,
+        playerId: PlayerID,
+        card_index: u8,
+    ) -> Option<PositionedCard> {
+        self.get_hand_mut(playerId)
+            .and_then(|hand| hand.remove_if_present(card_index))
+    }
+
+    pub fn get_hand(&self, playerId: PlayerID) -> Option<&Hand> {
+        let index = playerId as usize;
+        let len = self.cpu_hands.len();
+        if index < len {
+            Some(&self.cpu_hands[index])
+        } else if index == len {
+            Some(&self.hand)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_hand_mut(&mut self, playerId: PlayerID) -> Option<&mut Hand> {
+        let index = playerId as usize;
+        let len = self.cpu_hands.len();
+        if index < len {
+            Some(&mut self.cpu_hands[index])
+        } else if index == len {
+            Some(&mut self.hand)
+        } else {
+            None
+        }
+    }
+}
+
 pub struct GameState {
     pub deck: Hand,
     pub discard: Hand,
@@ -148,8 +251,8 @@ pub struct GameState {
 }
 
 macro_rules! dealt_hand {
-    ($deck:expr) => {{
-        let mut hand = Hand::new();
+    ($deck:expr, $spread:expr) => {{
+        let mut hand = Hand::new($spread);
 
         hand.draw_from($deck);
         hand.draw_from($deck);
@@ -167,16 +270,28 @@ impl GameState {
 
         let mut deck = Hand::new_shuffled_deck(&mut rng);
 
-        let discard = Hand::new();
+        let discard = Hand::new(Spread::stack(DISCARD_X, DISCARD_Y));
 
-        let hand = dealt_hand!(&mut deck);
+        let hand = dealt_hand!(
+            &mut deck,
+            Spread::LTR(TOP_AND_BOTTOM_HAND_EDGES, PLAYER_HAND_HEIGHT)
+        );
         let cpu_hands = [
-            dealt_hand!(&mut deck),
-            dealt_hand!(&mut deck),
-            dealt_hand!(&mut deck),
+            dealt_hand!(
+                &mut deck,
+                Spread::TTB(LEFT_AND_RIGHT_HAND_EDGES, LEFT_CPU_HAND_X)
+            ),
+            dealt_hand!(
+                &mut deck,
+                Spread::LTR(TOP_AND_BOTTOM_HAND_EDGES, MIDDLE_CPU_HAND_HEIGHT,)
+            ),
+            dealt_hand!(
+                &mut deck,
+                Spread::TTB(LEFT_AND_RIGHT_HAND_EDGES, RIGHT_CPU_HAND_X)
+            ),
         ];
 
-        let current_player = rng.gen_range(0, cpu_hands.len() as u8 + 1);
+        let current_player = cpu_hands.len() as u8 + 1; //rng.gen_range(0, cpu_hands.len() as u8 + 1);
 
         let card_animations = Vec::with_capacity(DECK_SIZE as _);
 
