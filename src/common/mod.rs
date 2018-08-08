@@ -40,6 +40,18 @@ macro_rules! invariant_assert {
     ($($whatever:tt)*) => {};
 }
 
+#[cfg(feature = "invariant-checking")]
+macro_rules! invariant_assert_eq {
+    ($($arg:tt)+) => ({
+        assert_eq!($($arg)*)
+    });
+}
+
+#[cfg(not(feature = "invariant-checking"))]
+macro_rules! invariant_assert_eq {
+    ($($whatever:tt)*) => {};
+}
+
 pub mod rendering;
 pub use rendering::draw_winning_screen;
 pub use rendering::Framebuffer;

@@ -277,6 +277,8 @@ fn update(state: &mut GameState, input: Input) {
 pub fn update_and_render(framebuffer: &mut Framebuffer, state: &mut GameState, input: Input) {
     update(state, input);
 
+    invariant_assert_eq!(state.missing_cards(), vec![0; 0]);
+
     framebuffer.clearTo(GREEN);
 
     for hand in state.cpu_hands.iter() {

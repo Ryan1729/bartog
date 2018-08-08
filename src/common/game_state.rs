@@ -49,6 +49,16 @@ pub struct Hand {
     pub spread: Spread,
 }
 
+fn fresh_deck() -> Vec<Card> {
+    let mut deck = Vec::with_capacity(DECK_SIZE as usize);
+
+    for i in 0..DECK_SIZE {
+        deck.push(i);
+    }
+
+    deck
+}
+
 impl Hand {
     pub fn new(spread: Spread) -> Self {
         Hand {
@@ -58,11 +68,7 @@ impl Hand {
     }
 
     pub fn new_shuffled_deck<R: Rng>(rng: &mut R) -> Self {
-        let mut deck = Vec::with_capacity(DECK_SIZE as usize);
-
-        for i in 0..DECK_SIZE {
-            deck.push(i);
-        }
+        let mut deck = fresh_deck();
 
         rng.shuffle(&mut deck);
 
@@ -316,5 +322,26 @@ impl GameState {
             rng,
             logger,
         }
+    }
+
+    pub fn missing_cards(&self) -> Vec<Card> {
+        use std::collections::BTreeSet;
+
+        let example_deck: BTreeSet<Card> = fresh_deck().into_iter().collect();
+
+        let mut observed_deck = BTreeSet::new();
+
+        let card_iter = self
+            .deck
+            .iter()
+            .chain(self.discard.iter())
+            .chain(self.cpu_hands.iter().flat_map(|h| h.iter()))
+            .chain(self.hand.iter());
+
+        for c in card_iter {
+            observed_deck.insert(c.clone());
+        }
+
+        example_deck.difference(&observed_deck).cloned().collect()
     }
 }
