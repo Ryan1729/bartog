@@ -301,7 +301,7 @@ impl GameState {
 
         let current_player = cpu_hands.len() as u8; //rng.gen_range(0, cpu_hands.len() as u8 + 1);
 
-        invariant_assert!(current_player > cpu_hands.len() as u8);
+        invariant_assert!(current_player <= cpu_hands.len() as u8);
 
         let card_animations = Vec::with_capacity(DECK_SIZE as _);
 
