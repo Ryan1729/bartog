@@ -90,6 +90,10 @@ impl Hand {
         self.cards.pop()
     }
 
+    pub fn push(&mut self, card: Card) {
+        self.cards.push(card);
+    }
+
     pub fn draw_from(&mut self, other: &mut Hand) {
         if let Some(card) = other.cards.pop() {
             self.cards.push(card);
@@ -209,31 +213,35 @@ impl GameState {
         playerId: PlayerID,
         card_index: u8,
     ) -> Option<PositionedCard> {
-        self.get_hand_mut(playerId)
-            .and_then(|hand| hand.remove_if_present(card_index))
+        let hand = self.get_hand_mut(playerId);
+        hand.remove_if_present(card_index)
     }
 
-    pub fn get_hand(&self, playerId: PlayerID) -> Option<&Hand> {
+    pub fn get_hand(&self, playerId: PlayerID) -> &Hand {
         let index = playerId as usize;
         let len = self.cpu_hands.len();
         if index < len {
-            Some(&self.cpu_hands[index])
+            &self.cpu_hands[index]
         } else if index == len {
-            Some(&self.hand)
+            &self.hand
         } else {
-            None
+            invariant_violation!({ &self.discard }, "Could not find hand for {:?}", playerId)
         }
     }
 
-    pub fn get_hand_mut(&mut self, playerId: PlayerID) -> Option<&mut Hand> {
+    pub fn get_hand_mut(&mut self, playerId: PlayerID) -> &mut Hand {
         let index = playerId as usize;
         let len = self.cpu_hands.len();
         if index < len {
-            Some(&mut self.cpu_hands[index])
+            &mut self.cpu_hands[index]
         } else if index == len {
-            Some(&mut self.hand)
+            &mut self.hand
         } else {
-            None
+            invariant_violation!(
+                { &mut self.discard },
+                "Could not find hand for {:?}",
+                playerId
+            )
         }
     }
 }
@@ -291,7 +299,9 @@ impl GameState {
             ),
         ];
 
-        let current_player = cpu_hands.len() as u8 + 1; //rng.gen_range(0, cpu_hands.len() as u8 + 1);
+        let current_player = cpu_hands.len() as u8; //rng.gen_range(0, cpu_hands.len() as u8 + 1);
+
+        invariant_assert!(current_player > cpu_hands.len() as u8);
 
         let card_animations = Vec::with_capacity(DECK_SIZE as _);
 

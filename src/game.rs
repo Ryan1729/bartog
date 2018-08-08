@@ -149,39 +149,33 @@ fn cpu_would_play(state: &GameState) -> Option<u8> {
     unimplemented!()
 }
 
-fn perform_action(state: &mut GameState, action: Action) {
-    unimplemented!()
-}
-
 fn advance_card_animations(state: &mut GameState) {
     // I should really be able to use `Vec::retain` here,
     // but that passes a `&T` insteead of a `&mut T`.
 
     let mut i = state.card_animations.len() - 1;
     loop {
-        let remove = {
-            let action = {
-                let animation = &mut state.card_animations[i];
+        let is_complete = {
+            let animation = &mut state.card_animations[i];
 
-                animation.approach_target();
+            animation.approach_target();
 
-                if animation.is_complete() {
-                    Some(animation.completion_action)
-                } else {
-                    None
-                }
-            };
-
-            if let Some(action) = action {
-                perform_action(state, action);
-                false
-            } else {
-                true
-            }
+            animation.is_complete()
         };
 
-        if remove {
-            state.card_animations.remove(i);
+        if is_complete {
+            let animation = state.card_animations.remove(i);
+
+            let card = animation.card.card;
+
+            match animation.completion_action {
+                Action::MoveToDiscard => {
+                    state.discard.push(card);
+                }
+                Action::MoveToHand(player) => {
+                    state.get_hand_mut(player).push(card);
+                }
+            }
         }
 
         if i == 0 {
@@ -208,7 +202,7 @@ fn get_discard_animation(
 
 fn get_draw_animation(state: &mut GameState, player: PlayerID) -> Option<CardAnimation> {
     let (spread, len) = {
-        let hand = state.get_hand(player)?;
+        let hand = state.get_hand(player);
 
         (hand.spread, hand.len())
     };

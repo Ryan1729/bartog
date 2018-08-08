@@ -1,3 +1,45 @@
+#[cfg(feature = "invariant-checking")]
+macro_rules! invariant_violation {
+    () => ({
+        console!(error, "invariant was violated!", &format!("{}:{}", file!(), line!()));
+        panic!("invariant was violated!")
+    });
+    ($code:block, $($rest:tt)*) => {
+        invariant_violation!($($rest)*)
+    };
+    ($msg:expr) => ({
+        console!(error, $msg, &format!("{}:{}", file!(), line!()));
+        panic!($msg)
+    });
+    ($msg:expr,) => (
+        invariant_violation!($msg)
+    );
+    ($fmt:expr, $($arg:tt)+) => ({
+        console!(error, $fmt, $($arg)*, &format!("{}:{}", file!(), line!()));
+        panic!($fmt, $($arg)*)
+    });
+}
+
+#[cfg(not(feature = "invariant-checking"))]
+macro_rules! invariant_violation {
+    ($code:block, $($rest:tt)*) => {
+        $code
+    };
+    ($($whatever:tt)*) => {};
+}
+
+#[cfg(feature = "invariant-checking")]
+macro_rules! invariant_assert {
+    ($($arg:tt)+) => ({
+        assert!($($arg)*)
+    });
+}
+
+#[cfg(not(feature = "invariant-checking"))]
+macro_rules! invariant_assert {
+    ($($whatever:tt)*) => {};
+}
+
 pub mod rendering;
 pub use rendering::draw_winning_screen;
 pub use rendering::Framebuffer;

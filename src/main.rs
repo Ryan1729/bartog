@@ -17,6 +17,7 @@ use stdweb::web::{self, Element, IElement, IEventTarget, INode, INonElementParen
 
 use stdweb::{UnsafeTypedArray, Value};
 
+#[macro_use]
 mod common;
 use common::*;
 

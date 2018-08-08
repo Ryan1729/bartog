@@ -35,6 +35,15 @@ if you want to build it using another backend. You will also have to install the
 corresponding targets with `rustup` - `wasm32-unknown-emscripten` and `asmjs-unknown-emscripten`
 respectively.
 
+### Extra build options
+
+Extra invariant checking can be activated with by building with the following command
+
+```
+       $ cargo web start --target=wasm32-unknown-unknown --release --features="invariant-checking"
+```
+
+With this enabled violations of certain invariants will result in a panic. These checks are disabled in default mode since (presumably) a player would prefer the game doing something weird to outright crashing.
 ___
 
 licensed under Apache or MIT, at your option.
