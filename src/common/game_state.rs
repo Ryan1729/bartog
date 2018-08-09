@@ -135,19 +135,20 @@ impl Hand {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Action {
     MoveToDiscard,
     MoveToHand(PlayerID),
 }
 
-#[derive(Default)]
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct PositionedCard {
     pub card: Card,
     pub x: u8,
     pub y: u8,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CardAnimation {
     pub card: PositionedCard,
     pub x: u8,
@@ -210,6 +211,94 @@ impl CardAnimation {
             (both.0 + furthest_only.0) / 2,
             (both.0 + furthest_only.0) / 2,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quickcheck::*;
+
+    #[test]
+    fn test_approach_target_does_not_get_stuck() {
+        quickcheck(approach_target_does_not_get_stuck as fn(CardAnimation) -> TestResult)
+    }
+    fn approach_target_does_not_get_stuck(mut animation: CardAnimation) -> TestResult {
+        if animation.is_complete() {
+            return TestResult::discard();
+        }
+
+        let before = animation.clone();
+
+        animation.approach_target();
+
+        TestResult::from_bool(before != animation)
+    }
+
+    impl Arbitrary for CardAnimation {
+        fn arbitrary<G: Gen>(g: &mut G) -> Self {
+            CardAnimation {
+                card: PositionedCard {
+                    card: g.gen_range(0, DECK_SIZE),
+                    x: g.gen(),
+                    y: g.gen(),
+                },
+                x: g.gen(),
+                y: g.gen(),
+                completion_action: Action::arbitrary(g),
+            }
+        }
+
+        fn shrink(&self) -> Box<Iterator<Item = CardAnimation>> {
+            let animation = self.clone();
+            let card = animation.card.card;
+
+            let tuple = (
+                animation.card.x,
+                animation.card.y,
+                animation.x,
+                animation.y,
+                animation.completion_action,
+            );
+
+            Box::new(
+                tuple
+                    .shrink()
+                    .map(
+                        move |(card_x, card_y, x, y, completion_action)| CardAnimation {
+                            card: PositionedCard {
+                                card,
+                                x: card_x,
+                                y: card_y,
+                            },
+                            x,
+                            y,
+                            completion_action,
+                        },
+                    ),
+            )
+        }
+    }
+
+    impl Arbitrary for Action {
+        fn arbitrary<G: Gen>(g: &mut G) -> Self {
+            if g.gen() {
+                Action::MoveToHand(g.gen_range(0, 10))
+            } else {
+                Action::MoveToDiscard
+            }
+        }
+
+        fn shrink(&self) -> Box<Iterator<Item = Action>> {
+            match *self {
+                Action::MoveToDiscard => empty_shrinker(),
+                Action::MoveToHand(n) => {
+                    let chain = single_shrinker(Action::MoveToDiscard)
+                        .chain(n.shrink().map(Action::MoveToHand));
+                    Box::new(chain)
+                }
+            }
+        }
     }
 }
 
@@ -336,7 +425,8 @@ impl GameState {
             .iter()
             .chain(self.discard.iter())
             .chain(self.cpu_hands.iter().flat_map(|h| h.iter()))
-            .chain(self.hand.iter());
+            .chain(self.hand.iter())
+            .chain(self.card_animations.iter().map(|a| &a.card.card));
 
         for c in card_iter {
             observed_deck.insert(c.clone());

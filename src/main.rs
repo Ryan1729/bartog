@@ -8,6 +8,10 @@ extern crate bitflags;
 #[macro_use]
 extern crate stdweb;
 
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck;
+
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;

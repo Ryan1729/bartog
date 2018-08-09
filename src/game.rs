@@ -248,9 +248,12 @@ fn take_turn(state: &mut GameState, input: Input) {
                 //Already handled.
             } else if input.pressed_this_frame(Button::A) {
                 let index = state.hand_index;
+
                 let animation = get_discard_animation(state, player, index);
+                console!(log, &format!("{:?}", animation));
 
                 push_if(&mut state.card_animations, animation);
+                console!(log, &format!("{:?}", state.card_animations));
 
                 state.current_player = 0;
             } else if input.pressed_this_frame(Button::B) {
