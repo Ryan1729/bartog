@@ -159,6 +159,7 @@ fn advance_card_animations(state: &mut GameState) {
             let animation = &mut state.card_animations[i];
 
             animation.approach_target();
+            console!(log, &format!("{:#?}", animation));
 
             animation.is_complete()
         };

@@ -158,7 +158,7 @@ pub struct CardAnimation {
 
 impl CardAnimation {
     pub fn is_complete(&self) -> bool {
-        self.card.x == self.x && self.card.x == self.y
+        self.card.x == self.x && self.card.y == self.y
     }
 
     pub fn approach_target(&mut self) {
@@ -207,10 +207,18 @@ impl CardAnimation {
             (0, both.0)
         };
 
-        (
-            (both.0 + furthest_only.0) / 2,
-            (both.0 + furthest_only.0) / 2,
-        )
+        let result_x = match (both.0, furthest_only.0) {
+            (1, 0) | (0, 1) => 1,
+            (-1, 0) | (0, -1) => -1,
+            _ => (both.0 + furthest_only.0) / 2,
+        };
+        let result_y = match (both.1, furthest_only.1) {
+            (1, 0) | (0, 1) => 1,
+            (-1, 0) | (0, -1) => -1,
+            _ => (both.1 + furthest_only.1) / 2,
+        };
+
+        (result_x, result_y)
     }
 }
 
@@ -223,16 +231,16 @@ mod tests {
     fn test_approach_target_does_not_get_stuck() {
         quickcheck(approach_target_does_not_get_stuck as fn(CardAnimation) -> TestResult)
     }
-    fn approach_target_does_not_get_stuck(mut animation: CardAnimation) -> TestResult {
+    fn approach_target_does_not_get_stuck(animation: CardAnimation) -> TestResult {
         if animation.is_complete() {
             return TestResult::discard();
         }
 
-        let before = animation.clone();
+        let mut after = animation.clone();
 
-        animation.approach_target();
+        after.approach_target();
 
-        TestResult::from_bool(before != animation)
+        TestResult::from_bool(after != animation)
     }
 
     impl Arbitrary for CardAnimation {
