@@ -164,8 +164,16 @@ impl CardAnimation {
     pub fn approach_target(&mut self) {
         let (d_x, d_y) = self.get_delta();
 
-        self.card.x = (self.card.x as i8).saturating_add(d_x) as _;
-        self.card.y = (self.card.y as i8).saturating_add(d_y) as _;
+        self.card.x = match d_x {
+            x if x > 0 => self.card.x.saturating_add(1),
+            x if x < 0 => self.card.x.saturating_sub(1),
+            _ => self.card.x,
+        };
+        self.card.y = match d_y {
+            y if y > 0 => self.card.y.saturating_add(1),
+            y if y < 0 => self.card.y.saturating_sub(1),
+            _ => self.card.y,
+        };
     }
 
     fn get_delta(&self) -> (i8, i8) {
@@ -241,6 +249,28 @@ mod tests {
         after.approach_target();
 
         TestResult::from_bool(after != animation)
+    }
+
+    #[test]
+    fn test_approach_target_reaches_target() {
+        quickcheck(approach_target_reaches_target as fn(CardAnimation) -> TestResult)
+    }
+    fn approach_target_reaches_target(animation: CardAnimation) -> TestResult {
+        if animation.is_complete() {
+            return TestResult::discard();
+        }
+
+        let mut temp = animation.clone();
+
+        for _ in 0..SCREEN_LENGTH + 1 {
+            temp.approach_target();
+
+            if temp.is_complete() {
+                return TestResult::from_bool(true);
+            }
+        }
+
+        TestResult::from_bool(false)
     }
 
     impl Arbitrary for CardAnimation {
