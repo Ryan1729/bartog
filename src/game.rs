@@ -301,4 +301,8 @@ pub fn update_and_render(framebuffer: &mut Framebuffer, state: &mut GameState, i
         .map(|&c| framebuffer.draw_card(c, DISCARD_X, DISCARD_Y));
 
     draw_hand_with_cursor(framebuffer, &state.hand, state.hand_index as usize);
+
+    for &CardAnimation { card, .. } in state.card_animations.iter() {
+        framebuffer.draw_pos_card(card);
+    }
 }

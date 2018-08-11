@@ -141,13 +141,6 @@ pub enum Action {
     MoveToHand(PlayerID),
 }
 
-#[derive(Clone, Default, Debug, PartialEq, Eq)]
-pub struct PositionedCard {
-    pub card: Card,
-    pub x: u8,
-    pub y: u8,
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CardAnimation {
     pub card: PositionedCard,

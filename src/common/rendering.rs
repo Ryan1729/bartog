@@ -523,6 +523,9 @@ impl Framebuffer {
         }
     }
 
+    pub fn draw_pos_card(&mut self, PositionedCard { card, x, y }: PositionedCard) {
+        self.draw_card(card, x, y);
+    }
     pub fn draw_card(&mut self, card: Card, x: u8, y: u8) {
         self.sspr(
             card::FRONT_SPRITE_X,

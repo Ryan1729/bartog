@@ -129,6 +129,13 @@ pub fn get_rank_char(card: Card) -> u8 {
     }
 }
 
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq)]
+pub struct PositionedCard {
+    pub card: Card,
+    pub x: u8,
+    pub y: u8,
+}
+
 pub type PlayerID = u8;
 
 pub const DECK_SIZE: u8 = 52;
