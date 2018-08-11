@@ -12,6 +12,8 @@ extern crate stdweb;
 #[macro_use]
 extern crate quickcheck;
 
+extern crate rand;
+
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;

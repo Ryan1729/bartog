@@ -1,5 +1,7 @@
 use common::*;
 
+use rand::Rng;
+
 enum Face {
     Up,
     Down,
@@ -21,7 +23,7 @@ fn draw_hand_ltr(
             }
         }
         Face::Down => {
-            for &card in hand.iter() {
+            for &_card in hand.iter() {
                 framebuffer.draw_card_back(x, y);
 
                 x += offset;
@@ -46,7 +48,7 @@ fn draw_hand_ttb(
             }
         }
         Face::Down => {
-            for &card in hand.iter() {
+            for &_card in hand.iter() {
                 framebuffer.draw_card_back(x, y);
 
                 y += offset;
@@ -60,10 +62,10 @@ fn draw_hand(framebuffer: &mut Framebuffer, hand: &Hand, face: Face) {
 
     match hand.spread {
         Spread::LTR((x, _), y) => {
-            draw_hand_ltr(framebuffer, hand, offset, (x, y), Face::Down);
+            draw_hand_ltr(framebuffer, hand, offset, (x, y), face);
         }
         Spread::TTB((y, _), x) => {
-            draw_hand_ttb(framebuffer, hand, offset, (x, y), Face::Down);
+            draw_hand_ttb(framebuffer, hand, offset, (x, y), face);
         }
     }
 }
@@ -145,8 +147,28 @@ fn move_cursor(state: &mut GameState, input: Input) -> bool {
     }
 }
 
-fn cpu_would_play(state: &GameState) -> Option<u8> {
-    unimplemented!()
+fn can_play(state: &GameState, &card: &Card) -> bool {
+    if let Some(&top_of_discard) = state.discard.last() {
+        get_rank(card) == 8 //TODO player who played an 8 choosing a suit for it
+            || get_suit(top_of_discard) == get_suit(card)
+            || get_rank(top_of_discard) == get_rank(card)
+    } else {
+        true
+    }
+}
+
+//Since tyhis uses rng, callling this in response to repeatable user input allows rng manipulation.
+fn cpu_would_play(state: &mut GameState, playerId: PlayerID) -> Option<u8> {
+    let playable: Vec<(usize, Card)> = {
+        let hand = state.get_hand(playerId);
+        hand.iter()
+            .cloned()
+            .enumerate()
+            .filter(|(_, card)| can_play(state, card))
+            .collect()
+    };
+
+    state.rng.choose(&playable).map(|&(i, _)| i as u8)
 }
 
 fn advance_card_animations(state: &mut GameState) {
@@ -228,8 +250,8 @@ fn push_if<T>(vec: &mut Vec<T>, op: Option<T>) {
 fn take_turn(state: &mut GameState, input: Input) {
     let player = state.current_player;
     match player {
-        t if (t as usize) < state.cpu_hands.len() => {
-            if let Some(index) = cpu_would_play(&state) {
+        p if (p as usize) < state.cpu_hands.len() => {
+            if let Some(index) = cpu_would_play(state, p) {
                 let animation = get_discard_animation(state, player, index);
                 push_if(&mut state.card_animations, animation);
             } else {
@@ -245,13 +267,25 @@ fn take_turn(state: &mut GameState, input: Input) {
             } else if input.pressed_this_frame(Button::A) {
                 let index = state.hand_index;
 
-                let animation = get_discard_animation(state, player, index);
-                console!(log, &format!("{:?}", animation));
+                let can_play_it = {
+                    state
+                        .hand
+                        .get(index)
+                        .map(|card| can_play(&state, card))
+                        .unwrap_or(false)
+                };
 
-                push_if(&mut state.card_animations, animation);
-                console!(log, &format!("{:?}", state.card_animations));
+                if can_play_it {
+                    let animation = get_discard_animation(state, player, index);
+                    console!(log, &format!("{:?}", animation));
 
-                state.current_player = 0;
+                    push_if(&mut state.card_animations, animation);
+                    console!(log, &format!("{:?}", state.card_animations));
+
+                    state.current_player = 0;
+                } else {
+                    //TODO good feedback. Tint the card red or shake it or something?
+                }
             } else if input.pressed_this_frame(Button::B) {
                 let animation = get_draw_animation(state, player);
                 push_if(&mut state.card_animations, animation);

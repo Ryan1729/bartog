@@ -62,6 +62,9 @@ pub use inner_common::*;
 pub mod game_state;
 pub use game_state::*;
 
+pub mod animation;
+pub use animation::*;
+
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Input {
     pub gamepad: Button::Ty,
