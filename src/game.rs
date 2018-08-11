@@ -193,12 +193,7 @@ fn get_discard_animation(
 ) -> Option<CardAnimation> {
     state
         .remove_positioned_card(player, card_index)
-        .map(|card| CardAnimation {
-            card,
-            x: DISCARD_X,
-            y: DISCARD_Y,
-            completion_action: Action::MoveToDiscard,
-        })
+        .map(|card| CardAnimation::new(card, DISCARD_X, DISCARD_Y, Action::MoveToDiscard))
 }
 
 fn get_draw_animation(state: &mut GameState, player: PlayerID) -> Option<CardAnimation> {
@@ -211,16 +206,16 @@ fn get_draw_animation(state: &mut GameState, player: PlayerID) -> Option<CardAni
 
     let (x, y) = get_card_position(spread, len + 1, len);
 
-    Some(CardAnimation {
-        card: PositionedCard {
+    Some(CardAnimation::new(
+        PositionedCard {
             card,
             x: DECK_X,
             y: DECK_Y,
         },
         x,
         y,
-        completion_action: Action::MoveToHand(player),
-    })
+        Action::MoveToHand(player),
+    ))
 }
 
 #[inline]

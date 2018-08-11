@@ -5,6 +5,8 @@ extern crate rand;
 
 use self::rand::{Rng, SeedableRng, XorShiftRng};
 
+use std::cmp::max;
+
 #[derive(Clone, Copy)]
 pub enum Spread {
     LTR((u8, u8), u8),
@@ -146,80 +148,82 @@ pub struct CardAnimation {
     pub card: PositionedCard,
     pub x: u8,
     pub y: u8,
+    pub x_rate: u8,
+    pub y_rate: u8,
     pub completion_action: Action,
 }
 
+const DELAY_FACTOR: u8 = 16;
+
 impl CardAnimation {
+    pub fn new(card: PositionedCard, x: u8, y: u8, completion_action: Action) -> Self {
+        let (x_diff, y_diff) = (
+            if x == card.x {
+                0
+            } else if card.x > x {
+                card.x - x
+            } else {
+                x - card.x
+            },
+            if y == card.y {
+                0
+            } else if card.y > y {
+                card.y - y
+            } else {
+                y - card.y
+            },
+        );
+
+        CardAnimation {
+            card,
+            x,
+            y,
+            x_rate: max(x_diff / DELAY_FACTOR, 1),
+            y_rate: max(y_diff / DELAY_FACTOR, 1),
+            completion_action,
+        }
+    }
+
     pub fn is_complete(&self) -> bool {
         self.card.x == self.x && self.card.y == self.y
     }
 
     pub fn approach_target(&mut self) {
         let (d_x, d_y) = self.get_delta();
-
+        console!(log, &format!("{:?}", (d_x, d_y)));
         self.card.x = match d_x {
-            x if x > 0 => self.card.x.saturating_add(1),
-            x if x < 0 => self.card.x.saturating_sub(1),
+            x if x > 0 => self.card.x.saturating_add(x as u8),
+            x if x < 0 => self.card.x.saturating_sub(x.abs() as u8),
             _ => self.card.x,
         };
         self.card.y = match d_y {
-            y if y > 0 => self.card.y.saturating_add(1),
-            y if y < 0 => self.card.y.saturating_sub(1),
+            y if y > 0 => self.card.y.saturating_add(y as u8),
+            y if y < 0 => self.card.y.saturating_sub(y.abs() as u8),
             _ => self.card.y,
         };
     }
 
     fn get_delta(&self) -> (i8, i8) {
-        // TODO is this faster, slower, or equivalent to Bresenham?
-        // https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
-        let both = (
+        (
             if self.x == self.card.x {
                 0
-            } else if self.x > self.card.x {
-                1
+            } else if self.card.x > self.x {
+                let x_diff = self.card.x - self.x;
+                -(min(x_diff, self.x_rate) as i8)
             } else {
-                -1
+                let x_diff = self.x - self.card.x;
+                min(x_diff, self.x_rate) as i8
             },
             if self.y == self.card.y {
                 0
-            } else if self.y > self.card.y {
-                1
+            } else if self.card.y > self.y {
+                let y_diff = self.card.y - self.y;
+                -(min(y_diff, self.y_rate) as i8)
             } else {
-                -1
+                let y_diff = self.y - self.card.y;
+                min(y_diff, self.y_rate) as i8
             },
-        );
-
-        let x_diff = if self.card.x > self.x {
-            self.card.x - self.x
-        } else {
-            self.x - self.card.x
-        };
-        let y_diff = if self.card.y > self.y {
-            self.card.y - self.y
-        } else {
-            self.y - self.card.y
-        };
-
-        let furthest_only = if x_diff == y_diff {
-            return both;
-        } else if x_diff > y_diff {
-            (both.0, 0)
-        } else {
-            (0, both.0)
-        };
-
-        let result_x = match (both.0, furthest_only.0) {
-            (1, 0) | (0, 1) => 1,
-            (-1, 0) | (0, -1) => -1,
-            _ => (both.0 + furthest_only.0) / 2,
-        };
-        let result_y = match (both.1, furthest_only.1) {
-            (1, 0) | (0, 1) => 1,
-            (-1, 0) | (0, -1) => -1,
-            _ => (both.1 + furthest_only.1) / 2,
-        };
-
-        (result_x, result_y)
+        )
     }
 }
 
@@ -276,6 +280,8 @@ mod tests {
                 },
                 x: g.gen(),
                 y: g.gen(),
+                x_rate: g.gen_range(1, 255),
+                y_rate: g.gen_range(1, 255),
                 completion_action: Action::arbitrary(g),
             }
         }
@@ -304,6 +310,8 @@ mod tests {
                             },
                             x,
                             y,
+                            x_rate: animation.x_rate,
+                            y_rate: animation.y_rate,
                             completion_action,
                         },
                     ),
