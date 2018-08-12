@@ -596,6 +596,8 @@ impl Framebuffer {
             y,
         );
     }
+
+    pub fn text_window<T: AsRef<str>>(&mut self, text: T) {}
 }
 
 pub fn get_sprite_xy(sprite_number: u8) -> (u8, u8) {

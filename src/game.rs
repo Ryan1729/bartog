@@ -157,7 +157,7 @@ fn can_play(state: &GameState, &card: &Card) -> bool {
     }
 }
 
-//Since tyhis uses rng, callling this in response to repeatable user input allows rng manipulation.
+//Since this uses rng, callling this in response to repeatable user input allows rng manipulation.
 fn cpu_would_play(state: &mut GameState, playerId: PlayerID) -> Option<u8> {
     let playable: Vec<(usize, Card)> = {
         let hand = state.get_hand(playerId);
@@ -294,11 +294,25 @@ fn take_turn(state: &mut GameState, input: Input) {
             }
         }
     }
+
+    let player_ids: Vec<PlayerID> = state.player_ids();
+
+    let winners: Vec<PlayerID> = player_ids
+        .iter()
+        .filter(|&&player| state.get_hand(player).len() == 0)
+        .cloned()
+        .collect();
+
+    if winners.len() > 0 {
+        state.winners = winners;
+    }
 }
 
 fn update(state: &mut GameState, input: Input) {
     if state.card_animations.len() == 0 {
-        take_turn(state, input);
+        if state.winners.len() == 0 {
+            take_turn(state, input);
+        }
     } else {
         advance_card_animations(state);
 
@@ -333,5 +347,12 @@ pub fn update_and_render(framebuffer: &mut Framebuffer, state: &mut GameState, i
 
     for &CardAnimation { card, .. } in state.card_animations.iter() {
         framebuffer.draw_pos_card(card);
+    }
+
+    framebuffer.text_window("HOI! i'm temmie.");
+
+    let len = state.winners.len();
+    if len > 0 {
+        framebuffer.text_window(state.get_winner_text());
     }
 }

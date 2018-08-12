@@ -179,6 +179,101 @@ impl GameState {
             )
         }
     }
+
+    pub fn player_ids(&self) -> Vec<PlayerID> {
+        (0..self.cpu_hands.len()).map(|id| id as u8).collect()
+    }
+
+    pub fn player_name(&self, playerId: PlayerID) -> String {
+        let len = self.cpu_hands.len() as PlayerID;
+
+        if playerId < len {
+            format!("CPU {}", playerId)
+        } else if playerId == len {
+            "you".to_string()
+        } else {
+            "???".to_string()
+        }
+    }
+
+    pub fn get_winner_text(&self) -> String {
+        let winner_names: Vec<_> = self
+            .winners
+            .iter()
+            .map(|&player| self.player_name(player))
+            .collect();
+
+        let mut winner_text = get_sentence_list(&winner_names);
+
+        winner_text.push_str(if self.winners.len() > 3 {
+            " all win."
+        } else {
+            " win."
+        });
+
+        winner_text
+    }
+}
+
+pub fn get_sentence_list<T: AsRef<str>>(elements: &[T]) -> String {
+    let mut text = String::new();
+
+    let len = elements.len();
+    if len >= 2 {
+        for i in 0..len {
+            text.push_str(elements[i].as_ref());
+
+            if i == len - 2 {
+                text.push_str(", and ");
+            } else if i < len - 2 {
+                text.push_str(", ");
+            }
+        }
+    } else if len == 1 {
+        text.push_str(elements[0].as_ref());
+    }
+
+    text
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quickcheck::*;
+
+    #[ignore]
+    #[test]
+    fn test_get_sentence_list() {
+        quickcheck(get_sentence_list_produces_expected_results as fn(Vec<String>) -> TestResult)
+    }
+    fn get_sentence_list_produces_expected_results(elements: Vec<String>) -> TestResult {
+        if elements
+            .iter()
+            .any(|s| s.is_empty() || s.contains("and") || s.contains(","))
+        {
+            return TestResult::discard();
+        }
+
+        let result = get_sentence_list(&elements);
+
+        let len = elements.len();
+        let passes = if len == 0 {
+            result.is_empty()
+        } else if len == 1 {
+            result == elements[0]
+        } else if len == 2 {
+            assert_eq!(result, format!("{}, and {}", elements[0], elements[1]));
+            result == format!("{}, and {}", elements[0], elements[1])
+        } else {
+            result.matches(",").count() == len - 1 && result.matches(", and").count() == 1
+        };
+
+        if !passes {
+            println!("{}", result);
+        }
+
+        TestResult::from_bool(passes)
+    }
 }
 
 pub struct GameState {
@@ -189,6 +284,7 @@ pub struct GameState {
     pub hand_index: u8,
     pub current_player: PlayerID,
     pub card_animations: Vec<CardAnimation>,
+    pub winners: Vec<PlayerID>,
     pub rng: XorShiftRng,
     logger: Logger,
 }
@@ -240,6 +336,9 @@ impl GameState {
 
         let card_animations = Vec::with_capacity(DECK_SIZE as _);
 
+        //We expect this to be replaced with a new vector when ever it it changed.
+        let winners = Vec::with_capacity(0);
+
         GameState {
             deck,
             discard,
@@ -248,6 +347,7 @@ impl GameState {
             hand_index: 0,
             current_player,
             card_animations,
+            winners,
             rng,
             logger,
         }
