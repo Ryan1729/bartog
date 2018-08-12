@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
         ),
     };
 
-    let mut output = Vec::with_capacity(buf.len() / pixel_width);
+    let mut colour_indices = Vec::with_capacity(buf.len() / pixel_width);
 
     for colour in buf.chunks(pixel_width) {
         let index = match (colour[0], colour[1], colour[2]) {
@@ -54,10 +54,20 @@ fn main() -> Result<(), Box<std::error::Error>> {
             _ => 255,
         };
 
-        output.push(index);
+        colour_indices.push(index);
     }
 
-    file.write_all(&format!("{:?}", output).as_bytes())?;
+    let mut output = String::with_capacity(colour_indices.len() * 3 + 256);
+    output.push_str("[\n");
+    for chunk in colour_indices.chunks(128) {
+        for colour in chunk.iter() {
+            output.push_str(&format!("{}, ", colour));
+        }
+        output.push('\n');
+    }
+    output.push_str("]\n");
+
+    file.write_all(output.as_bytes())?;
 
     Ok(())
 }
