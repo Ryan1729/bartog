@@ -163,6 +163,28 @@ pub const DISCARD_X: u8 = DECK_X + card::WIDTH + card::WIDTH / 2;
 pub const DISCARD_Y: u8 = DECK_Y;
 pub const DISCARD_XY: (u8, u8) = (DISCARD_X, DISCARD_Y);
 
+pub mod window {
+    use super::*;
+
+    pub const TOP_LEFT: u8 = 64;
+    pub const TOP: u8 = TOP_LEFT + 1;
+    pub const TOP_RIGHT: u8 = TOP + 1;
+
+    pub const MIDDLE_LEFT: u8 = TOP_LEFT + SPRITES_PER_ROW;
+    pub const MIDDLE: u8 = TOP + SPRITES_PER_ROW;
+    pub const MIDDLE_RIGHT: u8 = TOP_RIGHT + SPRITES_PER_ROW;
+
+    pub const BOTTOM_LEFT: u8 = MIDDLE_LEFT + SPRITES_PER_ROW;
+    pub const BOTTOM: u8 = MIDDLE + SPRITES_PER_ROW;
+    pub const BOTTOM_RIGHT: u8 = MIDDLE_RIGHT + SPRITES_PER_ROW;
+
+    pub const MAX_INTERIOR_WIDTH_IN_CHARS: u8 =
+        ((SCREEN_WIDTH - 2 * SPRITE_SIZE as usize) / FONT_ADVANCE as usize) as u8;
+}
+
+pub const SPRITE_SIZE: u8 = 8;
+pub const SPRITES_PER_ROW: u8 = (GFX_WIDTH / SPRITE_SIZE as usize) as u8;
+
 /*
     A way to convert an image to an array of bytes:
     Given an image called `image.png` use the following imagemagick command:
@@ -316,6 +338,7 @@ pub const FONT_HEIGHT: usize = 128;
 pub const FONT_LENGTH: usize = FONT_WIDTH * FONT_HEIGHT;
 
 pub const FONT_SIZE: u8 = 8;
+pub const FONT_ADVANCE: u8 = 4;
 pub const FONT_FLIP: u8 = 128;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]

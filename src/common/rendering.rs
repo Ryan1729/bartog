@@ -1,4 +1,6 @@
 use inner_common::{Suits::*, *};
+use std::cmp::max;
+use text::bytes_lines;
 
 pub struct Framebuffer {
     pub buffer: Vec<u32>,
@@ -256,10 +258,10 @@ impl Framebuffer {
                     self.blend_xy((xm + x2 + 1) as usize, (ym - y) as usize, new_colour);
                     self.blend_xy((xm + y) as usize, (ym + x2 + 1) as usize, new_colour);
                 }
+
                 y += 1;
                 err += y * 2 + 1;
             }
-
             x < 0
         } {}
     }
@@ -459,25 +461,34 @@ impl Framebuffer {
 
     pub fn spr(&mut self, sprite_number: u8, x: u8, y: u8) {
         let (sprite_x, sprite_y) = get_sprite_xy(sprite_number);
-        self.sspr(sprite_x, sprite_y, 8, 8, x, y);
+        self.sspr(sprite_x, sprite_y, SPRITE_SIZE, SPRITE_SIZE, x, y);
     }
 
     pub fn spr_flip_both(&mut self, sprite_number: u8, x: u8, y: u8) {
         let (sprite_x, sprite_y) = get_sprite_xy(sprite_number);
-        self.sspr_flip_both(sprite_x, sprite_y, 8, 8, x, y);
+        self.sspr_flip_both(sprite_x, sprite_y, SPRITE_SIZE, SPRITE_SIZE, x, y);
     }
 
-    pub fn print(&mut self, bytes: &[u8], mut x: u8, y: u8, colour: u8) {
+    pub fn print(&mut self, bytes: &[u8], x: u8, mut y: u8, colour: u8) {
+        let lines = bytes_lines(bytes);
+
+        for line in lines {
+            self.print_line(line, x, y, colour);
+            y = y.saturating_add(FONT_SIZE);
+        }
+    }
+
+    pub fn print_line(&mut self, bytes: &[u8], mut x: u8, y: u8, colour: u8) {
         for &c in bytes {
             let (sprite_x, sprite_y) = get_char_xy(c);
-            self.print_char_raw(sprite_x, sprite_y, 8, 8, x, y, colour);
-            x = x.saturating_add(4);
+            self.print_char_raw(sprite_x, sprite_y, FONT_SIZE, FONT_SIZE, x, y, colour);
+            x = x.saturating_add(FONT_ADVANCE);
         }
     }
 
     pub fn print_char(&mut self, character: u8, x: u8, y: u8, colour: u8) {
         let (sprite_x, sprite_y) = get_char_xy(character);
-        self.print_char_raw(sprite_x, sprite_y, 8, 8, x, y, colour);
+        self.print_char_raw(sprite_x, sprite_y, FONT_SIZE, FONT_SIZE, x, y, colour);
     }
 
     fn print_char_raw(
@@ -597,15 +608,74 @@ impl Framebuffer {
         );
     }
 
-    pub fn text_window<T: AsRef<str>>(&mut self, text: T) {}
+    pub fn text_window(&mut self, bytes: &[u8]) {
+        let lines = bytes_lines(bytes);
+
+        let mut width: u8 = 0;
+        let mut height: u8 = 0;
+        for line in lines {
+            height = height.saturating_add(1);
+            width = max(width, line.len() as u8);
+        }
+
+        width = width.saturating_mul(FONT_ADVANCE);
+        height = height.saturating_mul(FONT_SIZE);
+
+        //one sprite of padding on each side
+        let window_width = width.saturating_add(2 * SPRITE_SIZE);
+        let window_height = height.saturating_add(2 * SPRITE_SIZE);
+
+        let x = (SCREEN_WIDTH as u8 - window_width) / 2;
+        let y = (SCREEN_HEIGHT as u8 - window_height) / 2;
+
+        self.window(x, y, window_width, window_height);
+
+        self.print(
+            bytes,
+            x.saturating_add(SPRITE_SIZE),
+            y.saturating_add(SPRITE_SIZE),
+            6,
+        );
+    }
+
+    pub fn window(&mut self, x: u8, y: u8, w: u8, h: u8) {
+        let after_left_corner = x.saturating_add(SPRITE_SIZE);
+        let before_right_corner = x.saturating_add(w).saturating_sub(SPRITE_SIZE);
+
+        let below_top_corner = y.saturating_add(SPRITE_SIZE);
+        let above_bottom_corner = y.saturating_add(h).saturating_sub(SPRITE_SIZE);
+
+        for fill_y in (below_top_corner..above_bottom_corner).step_by(SPRITE_SIZE as _) {
+            for fill_x in (after_left_corner..before_right_corner).step_by(SPRITE_SIZE as _) {
+                self.spr(window::MIDDLE, fill_x, fill_y);
+            }
+        }
+
+        for fill_x in (after_left_corner..before_right_corner).step_by(SPRITE_SIZE as _) {
+            self.spr(window::TOP, fill_x, y);
+            self.spr(window::BOTTOM, fill_x, above_bottom_corner);
+        }
+
+        for fill_y in (below_top_corner..above_bottom_corner).step_by(SPRITE_SIZE as _) {
+            self.spr(window::MIDDLE_LEFT, x, fill_y);
+            self.spr(window::MIDDLE_RIGHT, before_right_corner, fill_y);
+        }
+
+        self.spr(window::TOP_LEFT, x, y);
+        self.spr(window::TOP_RIGHT, before_right_corner, y);
+        self.spr(window::BOTTOM_LEFT, x, above_bottom_corner);
+        self.spr(
+            window::BOTTOM_RIGHT,
+            before_right_corner,
+            above_bottom_corner,
+        );
+    }
 }
 
 pub fn get_sprite_xy(sprite_number: u8) -> (u8, u8) {
-    const SPRITES_PER_ROW: u8 = GFX_WIDTH as u8 / 8;
-
     (
-        (sprite_number % SPRITES_PER_ROW) * 8,
-        (sprite_number / SPRITES_PER_ROW) * 8,
+        (sprite_number % SPRITES_PER_ROW) * SPRITE_SIZE,
+        (sprite_number / SPRITES_PER_ROW) * SPRITE_SIZE,
     )
 }
 

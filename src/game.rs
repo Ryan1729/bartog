@@ -349,10 +349,20 @@ pub fn update_and_render(framebuffer: &mut Framebuffer, state: &mut GameState, i
         framebuffer.draw_pos_card(card);
     }
 
-    framebuffer.text_window("HOI! i'm temmie.");
+    let reflowed = reflow(
+        "CPU 0, CPU 1, CPU 2, and you all win.",
+        window::MAX_INTERIOR_WIDTH_IN_CHARS as usize,
+    );
+
+    framebuffer.text_window(reflowed.as_bytes());
 
     let len = state.winners.len();
     if len > 0 {
-        framebuffer.text_window(state.get_winner_text());
+        framebuffer.text_window(
+            reflow(
+                &state.get_winner_text(),
+                window::MAX_INTERIOR_WIDTH_IN_CHARS as usize,
+            ).as_bytes(),
+        );
     }
 }
