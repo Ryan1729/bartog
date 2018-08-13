@@ -26,8 +26,6 @@ pub fn reflow(s: &str, width: usize) -> String {
         output.push_str(word);
     }
 
-    output.trim_right();
-
     output
 }
 
