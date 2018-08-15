@@ -350,6 +350,7 @@ pub struct State {
     pub game_state: GameState,
     pub framebuffer: Framebuffer,
     pub input: Input,
+    pub speaker: Speaker,
 }
 
 #[inline]
@@ -376,13 +377,19 @@ impl State {
             game_state: GameState::new(seed, Some(logger)),
             framebuffer,
             input: Input::new(),
+            speaker: Speaker::new(),
         }
     }
 }
 
 impl State {
     pub fn frame(&mut self) {
-        update_and_render(&mut self.framebuffer, &mut self.game_state, self.input);
+        update_and_render(
+            &mut self.framebuffer,
+            &mut self.game_state,
+            self.input,
+            &mut self.speaker,
+        );
 
         self.input.previous_gamepad = self.input.gamepad;
     }

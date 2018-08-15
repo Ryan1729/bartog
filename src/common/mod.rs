@@ -87,6 +87,34 @@ impl Input {
     }
 }
 
+//TODO more meaningful names for these?
+//TODO clear out unused sound effects
+
+#[derive(Clone, Copy, Debug)]
+pub enum SFX {
+    CardPlace,
+    CardSlide,
+    ChipsCollide,
+    DieShuffle,
+    DieThrow,
+}
+
+pub struct Speaker {
+    requests: Vec<SFX>,
+}
+
+impl Speaker {
+    pub fn new() -> Self {
+        Speaker {
+            requests: Vec::with_capacity(8),
+        }
+    }
+
+    pub fn request_sfx(&mut self, sfx: SFX) {
+        self.requests.push(sfx);
+    }
+}
+
 // These values are deliberately picked to be the same as the ones in NES' input registers.
 pub mod Button {
     bitflags! {

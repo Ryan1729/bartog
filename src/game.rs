@@ -133,14 +133,16 @@ fn draw_hand_with_cursor(framebuffer: &mut Framebuffer, hand: &Hand, index: usiz
     }
 }
 
-fn move_cursor(state: &mut GameState, input: Input) -> bool {
+fn move_cursor(state: &mut GameState, input: Input, speaker: &mut Speaker) -> bool {
     if input.pressed_this_frame(Button::Right) {
         if state.hand_index < state.hand.len().saturating_sub(1) {
             state.hand_index = state.hand_index.saturating_add(1);
         }
+        speaker.request_sfx(SFX::CardSlide);
         true
     } else if input.pressed_this_frame(Button::Left) {
         state.hand_index = state.hand_index.saturating_sub(1);
+        speaker.request_sfx(SFX::CardSlide);
         true
     } else {
         false
@@ -247,7 +249,7 @@ fn push_if<T>(vec: &mut Vec<T>, op: Option<T>) {
     }
 }
 
-fn take_turn(state: &mut GameState, input: Input) {
+fn take_turn(state: &mut GameState, input: Input, speaker: &mut Speaker) {
     let player = state.current_player;
     match player {
         p if (p as usize) < state.cpu_hands.len() => {
@@ -262,7 +264,7 @@ fn take_turn(state: &mut GameState, input: Input) {
             state.current_player += 1;
         }
         _ => {
-            if move_cursor(state, input) {
+            if move_cursor(state, input, speaker) {
                 //Already handled.
             } else if input.pressed_this_frame(Button::A) {
                 let index = state.hand_index;
@@ -308,21 +310,26 @@ fn take_turn(state: &mut GameState, input: Input) {
     }
 }
 
-fn update(state: &mut GameState, input: Input) {
+fn update(state: &mut GameState, input: Input, speaker: &mut Speaker) {
     if state.card_animations.len() == 0 {
         if state.winners.len() == 0 {
-            take_turn(state, input);
+            take_turn(state, input, speaker);
         }
     } else {
         advance_card_animations(state);
 
-        move_cursor(state, input);
+        move_cursor(state, input, speaker);
     }
 }
 
 #[inline]
-pub fn update_and_render(framebuffer: &mut Framebuffer, state: &mut GameState, input: Input) {
-    update(state, input);
+pub fn update_and_render(
+    framebuffer: &mut Framebuffer,
+    state: &mut GameState,
+    input: Input,
+    speaker: &mut Speaker,
+) {
+    update(state, input, speaker);
 
     invariant_assert_eq!(state.missing_cards(), vec![0; 0]);
 
@@ -348,13 +355,6 @@ pub fn update_and_render(framebuffer: &mut Framebuffer, state: &mut GameState, i
     for &CardAnimation { card, .. } in state.card_animations.iter() {
         framebuffer.draw_pos_card(card);
     }
-
-    let reflowed = reflow(
-        "CPU 0, CPU 1, CPU 2, and you all win.",
-        window::MAX_INTERIOR_WIDTH_IN_CHARS as usize,
-    );
-
-    framebuffer.text_window(reflowed.as_bytes());
 
     let len = state.winners.len();
     if len > 0 {
