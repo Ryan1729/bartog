@@ -99,6 +99,18 @@ pub enum SFX {
     DieThrow,
 }
 
+impl SFX {
+    pub fn to_sound_key(&self) -> &'static str {
+        match *self {
+            SFX::CardPlace => "cardPlace",
+            SFX::CardSlide => "cardSlide",
+            SFX::ChipsCollide => "chipsCollide",
+            SFX::DieShuffle => "dieShuffle",
+            SFX::DieThrow => "dieThrow",
+        }
+    }
+}
+
 pub struct Speaker {
     requests: Vec<SFX>,
 }
@@ -112,6 +124,10 @@ impl Speaker {
 
     pub fn request_sfx(&mut self, sfx: SFX) {
         self.requests.push(sfx);
+    }
+
+    pub fn drain<'a>(&'a mut self) -> impl Iterator<Item = SFX> + 'a {
+        self.requests.drain(..)
     }
 }
 

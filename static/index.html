@@ -145,7 +145,56 @@
             <p>Sorry about that!</p>
         </div>
     </div>
-
+    <audio id="cardPlace1" src="sounds/cardPlace1.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="cardPlace2" src="sounds/cardPlace2.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="cardPlace3" src="sounds/cardPlace3.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="cardSlide1" src="sounds/cardSlide1.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="cardSlide2" src="sounds/cardSlide2.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="cardSlide3" src="sounds/cardSlide3.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="chipsCollide1" src="sounds/chipsCollide1.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="chipsCollide2" src="sounds/chipsCollide2.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="chipsCollide3" src="sounds/chipsCollide3.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="dieShuffle1" src="sounds/dieShuffle1.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="dieThrow1" src="sounds/dieThrow1.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="dieThrow2" src="sounds/dieThrow2.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="spare" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="spare2" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+  <script>
+    var gEBI = document.getElementById.bind(document);
+    var sounds = {
+        cardPlace: [gEBI("cardPlace1"), gEBI("cardPlace2"), gEBI("cardPlace3")],
+        cardSlide: [gEBI("cardSlide1"), gEBI("cardSlide2"), gEBI("cardSlide3")],
+        chipsCollide: [gEBI("chipsCollide1"), gEBI("chipsCollide2"), gEBI("chipsCollide3")],
+        dieShuffle: [gEBI("dieShuffle1")],
+        dieThrow: [gEBI("dieThrow1"), gEBI("dieThrow1")],
+        spares: [gEBI("spare"), gEBI("spare2")],
+    }
+    Object.values(sounds).forEach((arr) => arr.forEach(audio => audio.volume = 0.375))
+    var soundHandler = function(name) {
+        var currentSounds = sounds[name]
+        if (currentSounds) {
+            var currentSound =
+                currentSounds[Math.floor(Math.random() * currentSounds.length)];
+            if (currentSound) {
+                if (currentSound.paused) {
+                    currentSound.play()
+                } else {
+                    var spare = sounds["spares"][0]
+                    if (spare != null && spare.paused) {
+                      spare.src = currentSound.src
+                      spare.play()
+                    } else {
+                        spare = sounds["spares"][1]
+                        if (spare != null && spare.paused) {
+                            spare.src = currentSound.src
+                            spare.play()
+                        }
+                    }
+                }
+            }
+        }
+    }
+    </script>
     <script src="js/app.js"></script>
     <script>
         if( typeof Module !== "object" ) { // If not running under Emscripten.

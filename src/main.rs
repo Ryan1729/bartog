@@ -392,6 +392,16 @@ impl State {
         );
 
         self.input.previous_gamepad = self.input.gamepad;
+
+        for request in self.speaker.drain() {
+            let request_string = request.to_sound_key();
+
+            js! {
+                if (soundHandler) {
+                    soundHandler(@{request_string});
+                }
+            };
+        }
     }
 
     pub fn press(&mut self, button: Button::Ty) {
