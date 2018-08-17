@@ -339,11 +339,8 @@ pub fn update_and_render(
         draw_hand(framebuffer, hand, Face::Down);
     }
 
-    state
-        .deck
-        .iter()
-        .last()
-        .map(|&c| framebuffer.draw_card(c, DECK_X, DECK_Y));
+    framebuffer.draw_card_back(DECK_X, DECK_Y);
+
     state
         .discard
         .iter()
@@ -353,7 +350,7 @@ pub fn update_and_render(
     draw_hand_with_cursor(framebuffer, &state.hand, state.hand_index as usize);
 
     for &CardAnimation { card, .. } in state.card_animations.iter() {
-        framebuffer.draw_pos_card(card);
+        framebuffer.draw_card_back(card.x, card.y);
     }
 
     let len = state.winners.len();
