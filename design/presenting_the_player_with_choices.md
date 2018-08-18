@@ -87,3 +87,34 @@ let result = get_bool_choice(/*...*/).and_then(|b| {
 This would work, but it implies that I have to define enums for each type *combination* and I cannot have trees where the leaves are the same type without adding newtypes. 
 
 While I have not used it before this, I think this might be a job for [std::Any](https://doc.rust-lang.org/std/any/index.html).
+
+____
+
+Another issue to do with presenting choices is drawing order, and getting a reference to the framebuffer. While it would be most convenient in some ways to simply make the choice at the point we want to, that requires us to drag the framebuffer into the update call, and we would need to ensure that the updates happen after the draw or something. Instead, if we store the currently wanted choice and then draw it after the rest of the graphics, that solves both problems.
+
+With the current choice stored on the state, for multi state choices we could, instead of switching to `None`, we could store what was chosen and what needs to be chosen still. The question is, can we also use a version of the monadic chaining above to create the choice? We want an API like the following, if we can get it:
+
+```rust
+let result = /*...*/;
+
+if let Chose(choice) = result {
+    //Do the thing
+} else {
+    //Come around next frame and do this again
+}
+```
+
+This seems straight forward enough for a single choice. Simply make the result expression a function of the state, (Or a method, whatever.):
+
+```
+let result = choose(state, /*...*/);
+```
+
+Then since we store the same thing to the state every frame, we'll keep drawing the same image/presenting the same choice.
+
+But if we have a multi-part choice, how does that work?
+
+My first guess would be that we need some way to detect that a previous choice was made which matches the current one. If we do, then we assume the current data is correct and present it. But ... would it ever break if we just assumed that when we had a previous choice that it was the one we should use? Assuming that we clear out the choice whenever we return the choice, or cancel a choice then I think so! I haven't thought deeply about how canceling a choice would work, but I think just clearing the current choice, if any, might work.
+
+Assuming that all works out as I suspect, there's still the issue of storing what will be a functionally infinite amount of possible choices in a finite space. I think we would need to use std::any, unless we figure that there's actually only a small number of types of choices, in which case we can use an enum.
+
