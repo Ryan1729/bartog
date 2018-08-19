@@ -118,3 +118,71 @@ My first guess would be that we need some way to detect that a previous choice w
 
 Assuming that all works out as I suspect, there's still the issue of storing what will be a functionally infinite amount of possible choices in a finite space. I think we would need to use std::any, unless we figure that there's actually only a small number of types of choices, in which case we can use an enum.
 
+____
+
+One issue with this API as proposed so far is that code like the following will not work:
+
+```rust
+if let Chose(choiceA) = /*Choice A ...*/ {
+    //Do the thing
+    if let Chose(choiceB) = /*Choice B ...*/ {
+        //Do the thing with both choices
+        //except...
+    } else {
+        //Come around next frame and do this again
+        //except...
+    }
+} else {
+    //Come around next frame and do this again
+}
+```
+
+If the code is written this way, given the assumption that there is only one choice, then after the player makes the first choice, they *will* be prompted with the second one, but then the first `if let Chose(/**/)` will have to handle it!
+One way around this is to require that is to disallow nested choice like this, and instead making an expressive enough choice construction API that anything you could do with an API like the above that actually worked, you could do "in one go" by making a single choice expression. So the nested choice would need to be written something like this:
+
+```rust
+let choice = make_A_choice().map(|choiceA| {
+    //could choose the choice type as a result of previous choice
+    make_B_choice()
+});
+
+if let Chose(chose) = present_choice(state, choice) {
+    if let Some((choiceA, choiceB)) = /* chose ...*/ {
+        //Do the thing
+        
+        //Do the thing with both choices
+    } else {
+        //panic?
+    }
+} else {
+    //Come around next frame and do this again
+}
+```
+Note: `/* chose ...*/` would need to involve std::any (or "just" unsafely accessing unions,) since we want to be able to store any possible choice in the same place in the state.
+
+However, I'm not certain this is sufficiently expressive. What would be more expressive is if the user could return arbitrary things from the callback to examine later and if we could examine and even mutate the state as a result of those changes. That is, something like this:
+```rust
+let choice = make_A_choice().and_then(|chose, state| {
+    //Do the thing
+    //could choose the choice type as a result of previous choice
+    make_B_choice()
+});
+
+if let Chose((choiceA, choiceB)) = present_choice(state, choice) {
+    //Do the thing with both choices
+} else {
+    //Come around next frame and do this again
+}
+```
+I hope I won't need to use std::any in the `and_then` callback, but I'm not sure. I should at least be able to pass in a typeId as a second parameter to `and_then` or something.
+This code example makes me wonder whether the final `if let Chose((choiceA, choiceB))` part could be done inside a callback and to stop then we would just need to return a unit "choice", (since there's only one option it's not really a choice!) to finish it. Then the code could be something like:
+```rust
+let choice = /*...*/;
+
+present_choice(state, choice);
+```
+...with the extra complications inside the `/*...*/` expression.
+
+Another way would be to restructure the way the choices are stored such that the nested if version of the API actually works! I think that implies that the leaf nodes of the `if tree` would all need to reset the stored choice back to `None` which doesn't sound great.
+
+Of all of these I think the deciding factor will be, "Which is easiest to generate at run-time?" 
