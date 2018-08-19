@@ -149,9 +149,14 @@ fn move_cursor(state: &mut GameState, input: Input, speaker: &mut Speaker) -> bo
     }
 }
 
+fn is_wild(card: Card) -> bool {
+    get_rank(card) == 8
+}
+
 fn can_play(state: &GameState, &card: &Card) -> bool {
     if let Some(&top_of_discard) = state.discard.last() {
-        get_rank(card) == 8 //TODO player who played an 8 choosing a suit for it
+        is_wild(card)
+            || (is_wild(top_of_discard) && state.top_wild_declared_as == Some(get_suit(card)))
             || get_suit(top_of_discard) == get_suit(card)
             || get_rank(top_of_discard) == get_rank(card)
     } else {
@@ -173,23 +178,32 @@ fn cpu_would_play(state: &mut GameState, playerId: PlayerID) -> Option<u8> {
     state.rng.choose(&playable).map(|&(i, _)| i as u8)
 }
 
+fn choose_suit(state: &mut GameState) -> Option<Suit> {
+    unimplemented!()
+}
+fn choose_play_again(state: &mut GameState) -> Option<bool> {
+    unimplemented!()
+}
+
 fn advance_card_animations(state: &mut GameState) {
     // I should really be able to use `Vec::retain` here,
     // but that passes a `&T` insteead of a `&mut T`.
 
     let mut i = state.card_animations.len() - 1;
     loop {
-        let is_complete = {
+        let (is_complete, last_pos) = {
             let animation = &mut state.card_animations[i];
+
+            let last_pos = (animation.card.x, animation.card.y);
 
             animation.approach_target();
             console!(log, &format!("{:#?}", animation));
 
-            animation.is_complete()
+            (animation.is_complete(), last_pos)
         };
 
         if is_complete {
-            let animation = state.card_animations.remove(i);
+            let mut animation = state.card_animations.remove(i);
 
             let card = animation.card.card;
 
@@ -197,8 +211,28 @@ fn advance_card_animations(state: &mut GameState) {
                 Action::MoveToDiscard => {
                     state.discard.push(card);
                 }
-                Action::MoveToHand(player) => {
-                    state.get_hand_mut(player).push(card);
+                Action::SelectWild(playerId) => {
+                    if is_cpu_player(&state, playerId) {
+                        state.top_wild_declared_as = {
+                            let hand = state.get_hand(playerId);
+                            hand.most_common_suit()
+                        };
+                        state.discard.push(card);
+                    } else {
+                        if let Some(suit) = choose_suit(state) {
+                            state.top_wild_declared_as = Some(suit);
+                            state.discard.push(card);
+                            state.get_hand_mut(playerId).push(card);
+                        } else {
+                            //wait until they choose
+                            animation.card.x = last_pos.0;
+                            animation.card.y = last_pos.1;
+                            state.card_animations.push(animation);
+                        }
+                    }
+                }
+                Action::MoveToHand(playerId) => {
+                    state.get_hand_mut(playerId).push(card);
                 }
             }
         }
@@ -217,7 +251,13 @@ fn get_discard_animation(
 ) -> Option<CardAnimation> {
     state
         .remove_positioned_card(player, card_index)
-        .map(|card| CardAnimation::new(card, DISCARD_X, DISCARD_Y, Action::MoveToDiscard))
+        .map(|card| {
+            if is_wild(card.card) {
+                CardAnimation::new(card, DISCARD_X, DISCARD_Y, Action::MoveToDiscard)
+            } else {
+                CardAnimation::new(card, DISCARD_X, DISCARD_Y, Action::MoveToDiscard)
+            }
+        })
 }
 
 fn get_draw_animation(state: &mut GameState, player: PlayerID) -> Option<CardAnimation> {
@@ -249,10 +289,14 @@ fn push_if<T>(vec: &mut Vec<T>, op: Option<T>) {
     }
 }
 
+fn is_cpu_player(state: &GameState, playerId: PlayerID) -> bool {
+    (playerId as usize) < state.cpu_hands.len()
+}
+
 fn take_turn(state: &mut GameState, input: Input, speaker: &mut Speaker) {
     let player = state.current_player;
     match player {
-        p if (p as usize) < state.cpu_hands.len() => {
+        p if is_cpu_player(&state, p) => {
             if let Some(index) = cpu_would_play(state, p) {
                 let animation = get_discard_animation(state, player, index);
                 push_if(&mut state.card_animations, animation);
@@ -361,5 +405,11 @@ pub fn update_and_render(
                 window::MAX_INTERIOR_WIDTH_IN_CHARS as usize,
             ).as_bytes(),
         );
+
+        if let Some(again) = choose_play_again(state) {
+            if again {
+                state.reset();
+            }
+        }
     }
 }

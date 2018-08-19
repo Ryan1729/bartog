@@ -140,6 +140,10 @@ impl Hand {
             None
         }
     }
+
+    pub fn most_common_suit(&self) -> Option<Suit> {
+        unimplemented!()
+    }
 }
 
 impl GameState {
@@ -285,6 +289,7 @@ pub struct GameState {
     pub current_player: PlayerID,
     pub card_animations: Vec<CardAnimation>,
     pub winners: Vec<PlayerID>,
+    pub top_wild_declared_as: Option<Suit>,
     pub rng: XorShiftRng,
     logger: Logger,
 }
@@ -348,9 +353,14 @@ impl GameState {
             current_player,
             card_animations,
             winners,
+            top_wild_declared_as: None,
             rng,
             logger,
         }
+    }
+
+    pub fn reset(&mut self) {
+        *self = GameState::new(self.rng.gen(), self.logger);
     }
 
     pub fn missing_cards(&self) -> Vec<Card> {

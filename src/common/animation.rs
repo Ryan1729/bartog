@@ -4,6 +4,7 @@ use inner_common::*;
 pub enum Action {
     MoveToDiscard,
     MoveToHand(PlayerID),
+    SelectWild(PlayerID),
 }
 
 use std::cmp::{max, min};
