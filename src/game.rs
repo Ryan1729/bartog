@@ -179,10 +179,30 @@ fn cpu_would_play(state: &mut GameState, playerId: PlayerID) -> Option<u8> {
 }
 
 fn choose_suit(state: &mut GameState) -> Option<Suit> {
-    unimplemented!()
+    match state.choice {
+        Choice::NoChoice => {
+            state.choice = Choice::OfSuit;
+            None
+        }
+        Choice::Already(Chosen::Suit(suit)) => {
+            state.choice = Choice::NoChoice;
+            Some(suit)
+        }
+        _ => None,
+    }
 }
 fn choose_play_again(state: &mut GameState) -> Option<bool> {
-    unimplemented!()
+    match state.choice {
+        Choice::NoChoice => {
+            state.choice = Choice::OfBool;
+            None
+        }
+        Choice::Already(Chosen::Bool(b)) => {
+            state.choice = Choice::NoChoice;
+            Some(b)
+        }
+        _ => None,
+    }
 }
 
 fn advance_card_animations(state: &mut GameState) {
@@ -367,6 +387,25 @@ fn update(state: &mut GameState, input: Input, speaker: &mut Speaker) {
 }
 
 #[inline]
+pub fn do_suit_choice(
+    framebuffer: &mut Framebuffer,
+    state: &mut GameState,
+    input: Input,
+    speaker: &mut Speaker,
+) {
+    //TODO render 4 buttons and set choice based upon them
+}
+#[inline]
+pub fn do_bool_choice(
+    framebuffer: &mut Framebuffer,
+    state: &mut GameState,
+    input: Input,
+    speaker: &mut Speaker,
+) {
+    //TODO render 2 buttons and set choice based upon them
+}
+
+#[inline]
 pub fn update_and_render(
     framebuffer: &mut Framebuffer,
     state: &mut GameState,
@@ -411,5 +450,11 @@ pub fn update_and_render(
                 state.reset();
             }
         }
+    }
+
+    match state.choice {
+        Choice::OfSuit => do_suit_choice(framebuffer, state, input, speaker),
+        Choice::OfBool => do_bool_choice(framebuffer, state, input, speaker),
+        _ => {}
     }
 }

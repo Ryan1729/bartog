@@ -280,6 +280,20 @@ mod tests {
     }
 }
 
+#[derive(Clone, Copy)]
+pub enum Choice {
+    NoChoice,
+    Already(Chosen),
+    OfSuit,
+    OfBool,
+}
+
+#[derive(Clone, Copy)]
+pub enum Chosen {
+    Suit(Suit),
+    Bool(bool),
+}
+
 pub struct GameState {
     pub deck: Hand,
     pub discard: Hand,
@@ -290,6 +304,7 @@ pub struct GameState {
     pub card_animations: Vec<CardAnimation>,
     pub winners: Vec<PlayerID>,
     pub top_wild_declared_as: Option<Suit>,
+    pub choice: Choice,
     pub rng: XorShiftRng,
     logger: Logger,
 }
@@ -354,6 +369,7 @@ impl GameState {
             card_animations,
             winners,
             top_wild_declared_as: None,
+            choice: Choice::NoChoice,
             rng,
             logger,
         }
