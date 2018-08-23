@@ -186,3 +186,12 @@ present_choice(state, choice);
 Another way would be to restructure the way the choices are stored such that the nested if version of the API actually works! I think that implies that the leaf nodes of the `if tree` would all need to reset the stored choice back to `None` which doesn't sound great.
 
 Of all of these I think the deciding factor will be, "Which is easiest to generate at run-time?" 
+
+___
+
+While beginning to implement a fixed number of choice types version of choices, for the plain crazy eights version, I've noticed that there the issue of where to store the UI state of the choice. For example, in the case of a yes/no choice which is implemented by presenting two buttons to the user, where should which button is currently highlighted be stored? If we were using the mouse, we could simply "re-discover" which button is highlighted every frame. Also, if we were uniquely identifying each button then we could store the id. But, at least so far we have not been uniquely identifying each button, since we figure that we will only be presenting one window to the player at a time, and we have not implemented card selection as a special case of button pressing. However, we might want to break one or both of those two assumptions at some point. Of the two of them, it seems more likely, if we develop a good button system, that we might want to re-implement card selecting as buttons, (implying we'd want some way of uniquely identifying buttons,) instead of displaying multiple windows. 
+
+So it seems that there are essentially two paths:
+    * Store the state for a given choice only when there is a choice. So we might as well put it on the choice. Then each type of choice can have input update logic defined for it.
+    * Uniquely, (at least for each frame,) identify each UI element. Have a global UI context which will keep track of which UI element is selected. Then each choice type will need to handle states that are outside their expected range. That's not too hard though, just map to some valid id. The input logic would need to know  where the UI elements are positioned relative to each other, (at least in some relative sense,) so when the player presses in a direction, the correct element is selected.
+
