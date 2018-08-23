@@ -393,6 +393,7 @@ pub fn do_suit_choice(
     input: Input,
     speaker: &mut Speaker,
 ) {
+    framebuffer.full_window();
     //TODO render 4 buttons and set choice based upon them
 }
 #[inline]
@@ -402,6 +403,7 @@ pub fn do_bool_choice(
     input: Input,
     speaker: &mut Speaker,
 ) {
+    framebuffer.full_window();
     //TODO render 2 buttons and set choice based upon them
 }
 
@@ -457,4 +459,7 @@ pub fn update_and_render(
         Choice::OfBool => do_bool_choice(framebuffer, state, input, speaker),
         _ => {}
     }
+
+    //For testing
+    do_bool_choice(framebuffer, state, input, speaker);
 }

@@ -638,6 +638,10 @@ impl Framebuffer {
         );
     }
 
+    pub fn full_window(&mut self) {
+        self.window(0, 0, SCREEN_WIDTH as u8, SCREEN_WIDTH as u8);
+    }
+
     pub fn window(&mut self, x: u8, y: u8, w: u8, h: u8) {
         let after_left_corner = x.saturating_add(SPRITE_SIZE);
         let before_right_corner = x.saturating_add(w).saturating_sub(SPRITE_SIZE);
