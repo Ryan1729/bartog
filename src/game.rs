@@ -404,6 +404,19 @@ pub fn do_bool_choice(
     speaker: &mut Speaker,
 ) {
     framebuffer.full_window();
+    framebuffer.button(SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE * 6, SPRITE_SIZE * 6);
+    framebuffer.button_hot(
+        SPRITE_SIZE * 7,
+        SPRITE_SIZE,
+        SPRITE_SIZE * 6,
+        SPRITE_SIZE * 6,
+    );
+    framebuffer.button_pressed(
+        SPRITE_SIZE,
+        SPRITE_SIZE * 7,
+        SPRITE_SIZE * 6,
+        SPRITE_SIZE * 6,
+    );
     //TODO render 2 buttons and set choice based upon them
 }
 
@@ -443,7 +456,7 @@ pub fn update_and_render(
         framebuffer.text_window(
             reflow(
                 &state.get_winner_text(),
-                window::MAX_INTERIOR_WIDTH_IN_CHARS as usize,
+                NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as usize,
             ).as_bytes(),
         );
 

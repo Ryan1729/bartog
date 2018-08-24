@@ -85,6 +85,10 @@ impl Input {
     pub fn pressed_this_frame(&self, buttons: Button::Ty) -> bool {
         !self.previous_gamepad.contains(buttons) && self.gamepad.contains(buttons)
     }
+
+    pub fn released_this_frame(&self, buttons: Button::Ty) -> bool {
+        self.previous_gamepad.contains(buttons) && !self.gamepad.contains(buttons)
+    }
 }
 
 //TODO more meaningful names for these?
