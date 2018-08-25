@@ -145,6 +145,9 @@
             <p>Sorry about that!</p>
         </div>
     </div>
+    <audio id="buttonPress1" src="sounds/buttonPress1.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="buttonPress2" src="sounds/buttonPress2.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
+    <audio id="buttonPress3" src="sounds/buttonPress3.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
     <audio id="cardPlace1" src="sounds/cardPlace1.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
     <audio id="cardPlace2" src="sounds/cardPlace2.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
     <audio id="cardPlace3" src="sounds/cardPlace3.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
@@ -162,6 +165,7 @@
   <script>
     var gEBI = document.getElementById.bind(document);
     var sounds = {
+        buttonPress: [gEBI("buttonPress1"), gEBI("buttonPress2"), gEBI("buttonPress3")],
         cardPlace: [gEBI("cardPlace1"), gEBI("cardPlace2"), gEBI("cardPlace3")],
         cardSlide: [gEBI("cardSlide1"), gEBI("cardSlide2"), gEBI("cardSlide3")],
         chipsCollide: [gEBI("chipsCollide1"), gEBI("chipsCollide2"), gEBI("chipsCollide3")],

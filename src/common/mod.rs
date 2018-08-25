@@ -101,6 +101,7 @@ pub enum SFX {
     ChipsCollide,
     DieShuffle,
     DieThrow,
+    ButtonPress,
 }
 
 impl SFX {
@@ -111,6 +112,7 @@ impl SFX {
             SFX::ChipsCollide => "chipsCollide",
             SFX::DieShuffle => "dieShuffle",
             SFX::DieThrow => "dieThrow",
+            SFX::ButtonPress => "buttonPress",
         }
     }
 }
