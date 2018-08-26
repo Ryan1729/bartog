@@ -386,6 +386,48 @@ fn update(state: &mut GameState, input: Input, speaker: &mut Speaker) {
     }
 }
 
+//calling this once will swallow multiple presses on the button. We could either
+//pass in and return the number of presses to fix that, or this could simply be
+//called multiple times per frame (once for each click).
+fn do_button(
+    framebuffer: &mut Framebuffer,
+    context: &mut UIContext,
+    input: Input,
+    speaker: &mut Speaker,
+    spec: &ButtonSpec,
+) -> bool {
+    let mut result = false;
+
+    let id = spec.id;
+
+    if context.active == id {
+        if input.released_this_frame(Button::A) {
+            result = context.hot == id;
+
+            context.set_not_active();
+        }
+        context.set_next_hot(id);
+    } else if context.hot == id {
+        if input.pressed_this_frame(Button::A) {
+            context.set_active(id);
+            speaker.request_sfx(SFX::ButtonPress);
+        }
+        context.set_next_hot(id);
+    }
+
+    if context.active == id && input.gamepad.contains(Button::A) {
+        framebuffer.button_pressed(spec.x, spec.y, spec.w, spec.h);
+    } else if context.hot == id {
+        framebuffer.button_hot(spec.x, spec.y, spec.w, spec.h);
+    } else {
+        framebuffer.button(spec.x, spec.y, spec.w, spec.h);
+    }
+
+    //TODO render text label
+
+    return result;
+}
+
 #[inline]
 pub fn do_suit_choice(
     framebuffer: &mut Framebuffer,
@@ -403,20 +445,44 @@ pub fn do_bool_choice(
     input: Input,
     speaker: &mut Speaker,
 ) {
+    console!(log, format!("{:?}", state.context));
     framebuffer.full_window();
-    framebuffer.button(SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE * 6, SPRITE_SIZE * 6);
-    framebuffer.button_hot(
-        SPRITE_SIZE * 7,
-        SPRITE_SIZE,
-        SPRITE_SIZE * 6,
-        SPRITE_SIZE * 6,
-    );
-    framebuffer.button_pressed(
-        SPRITE_SIZE,
-        SPRITE_SIZE * 7,
-        SPRITE_SIZE * 6,
-        SPRITE_SIZE * 6,
-    );
+
+    let spec1 = ButtonSpec {
+        x: SPRITE_SIZE,
+        y: SPRITE_SIZE,
+        w: SPRITE_SIZE * 6,
+        h: SPRITE_SIZE * 6,
+        id: 1,
+        text: "\"\".to_owned()".to_owned(),
+    };
+
+    if do_button(framebuffer, &mut state.context, input, speaker, &spec1) {
+        state.choice = Choice::Already(Chosen::Bool(true));
+    }
+
+    let spec2 = ButtonSpec {
+        x: SPRITE_SIZE * 6,
+        y: SPRITE_SIZE,
+        w: SPRITE_SIZE * 6,
+        h: SPRITE_SIZE * 6,
+        id: 2,
+        text: "\"\".to_owned()".to_owned(),
+    };
+
+    if do_button(framebuffer, &mut state.context, input, speaker, &spec2) {
+        state.choice = Choice::Already(Chosen::Bool(false));
+    }
+
+    if state.context.hot != 1 && state.context.hot != 2 {
+        state.context.set_next_hot(1);
+    } else if input.pressed_this_frame(Button::Left) || input.pressed_this_frame(Button::Right) {
+        if state.context.hot == 1 {
+            state.context.set_next_hot(2);
+        } else {
+            state.context.set_next_hot(1);
+        }
+    }
     //TODO render 2 buttons and set choice based upon them
 }
 
@@ -427,7 +493,20 @@ pub fn update_and_render(
     input: Input,
     speaker: &mut Speaker,
 ) {
-    update(state, input, speaker);
+    state.context.frame_init();
+
+    if let Choice::NoChoice = state.choice {
+        update(state, input, speaker);
+    }
+
+    //For testing
+    if input.gamepad.contains(Button::Select) {
+        console!(log, "input.gamepad.contains(Button::Select)");
+    } else {
+        if let Some(again) = choose_play_again(state) {
+            console!(log, format!("chose {}", again));
+        }
+    }
 
     invariant_assert_eq!(state.missing_cards(), vec![0; 0]);
 
@@ -472,7 +551,4 @@ pub fn update_and_render(
         Choice::OfBool => do_bool_choice(framebuffer, state, input, speaker),
         _ => {}
     }
-
-    //For testing
-    do_bool_choice(framebuffer, state, input, speaker);
 }

@@ -1,5 +1,5 @@
 use animation::CardAnimation;
-use common::Logger;
+use common::{Logger, UIContext};
 use inner_common::*;
 
 use rand::{Rng, SeedableRng, XorShiftRng};
@@ -305,6 +305,7 @@ pub struct GameState {
     pub winners: Vec<PlayerID>,
     pub top_wild_declared_as: Option<Suit>,
     pub choice: Choice,
+    pub context: UIContext,
     pub rng: XorShiftRng,
     logger: Logger,
 }
@@ -370,6 +371,7 @@ impl GameState {
             winners,
             top_wild_declared_as: None,
             choice: Choice::NoChoice,
+            context: UIContext::new(),
             rng,
             logger,
         }
