@@ -423,7 +423,13 @@ fn do_button(
         framebuffer.button(spec.x, spec.y, spec.w, spec.h);
     }
 
-    //TODO render text label
+    let middle_x = spec.x + (spec.w / 2);
+    let middle_y = spec.y + (spec.h / 2) - (FONT_SIZE / 4);
+
+    let text_x = middle_x - ((spec.text.len() * FONT_ADVANCE as usize) / 2) as u8;
+
+    //Long labels aren't great UX anyway, I think.
+    framebuffer.print(spec.text.as_bytes(), text_x, middle_y, WHITE_INDEX);
 
     return result;
 }
@@ -445,16 +451,19 @@ pub fn do_bool_choice(
     input: Input,
     speaker: &mut Speaker,
 ) {
+    let w = SPRITE_SIZE * 5;
+    let h = SPRITE_SIZE * 3;
+    let y = SCREEN_HEIGHT as u8 - (h + SPRITE_SIZE);
     console!(log, format!("{:?}", state.context));
     framebuffer.full_window();
 
     let spec1 = ButtonSpec {
         x: SPRITE_SIZE,
-        y: SPRITE_SIZE,
-        w: SPRITE_SIZE * 6,
-        h: SPRITE_SIZE * 6,
+        y,
+        w,
+        h,
         id: 1,
-        text: "\"\".to_owned()".to_owned(),
+        text: "yes".to_owned(),
     };
 
     if do_button(framebuffer, &mut state.context, input, speaker, &spec1) {
@@ -462,12 +471,12 @@ pub fn do_bool_choice(
     }
 
     let spec2 = ButtonSpec {
-        x: SPRITE_SIZE * 6,
-        y: SPRITE_SIZE,
-        w: SPRITE_SIZE * 6,
-        h: SPRITE_SIZE * 6,
+        x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
+        y,
+        w,
+        h,
         id: 2,
-        text: "\"\".to_owned()".to_owned(),
+        text: "no".to_owned(),
     };
 
     if do_button(framebuffer, &mut state.context, input, speaker, &spec2) {

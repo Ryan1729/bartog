@@ -31,6 +31,15 @@ pub const PALETTE: [u32; 8] = [
     BLACK,
 ];
 
+pub const BLUE_INDEX: u8 = 0;
+pub const GREEN_INDEX: u8 = 1;
+pub const RED_INDEX: u8 = 2;
+pub const YELLOW_INDEX: u8 = 3;
+pub const PURPLE_INDEX: u8 = 4;
+pub const GREY_INDEX: u8 = 5;
+pub const WHITE_INDEX: u8 = 6;
+pub const BLACK_INDEX: u8 = 7;
+
 pub mod card {
     use super::*;
 
