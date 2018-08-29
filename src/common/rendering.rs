@@ -547,13 +547,7 @@ impl Framebuffer {
             y,
         );
 
-        let (colour, suit_char) = match get_suit(card) {
-            CLUBS => (7, CLUB_CHAR),
-            DIAMONDS => (2, DIAMOND_CHAR),
-            HEARTS => (2, HEART_CHAR),
-            SPADES => (7, SPADE_CHAR),
-            _ => (4, 33), //purple "!"
-        };
+        let (colour, suit_char) = get_suit_colour_and_char(get_suit(card));
 
         let rank_char = get_rank_char(card);
 

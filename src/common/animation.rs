@@ -200,6 +200,11 @@ mod tests {
                         .chain(n.shrink().map(Action::MoveToHand));
                     Box::new(chain)
                 }
+                Action::SelectWild(n) => {
+                    let chain = single_shrinker(Action::MoveToDiscard)
+                        .chain(n.shrink().map(Action::SelectWild));
+                    Box::new(chain)
+                }
             }
         }
     }

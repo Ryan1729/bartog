@@ -386,6 +386,15 @@ fn update(state: &mut GameState, input: Input, speaker: &mut Speaker) {
     }
 }
 
+fn center_line_in_rect(text_length: u8, (x, y): (u8, u8), (w, h): (u8, u8)) -> (u8, u8) {
+    let middle_x = x + (w / 2);
+    let middle_y = y + (h / 2) - (FONT_SIZE / 4);
+
+    let text_x = middle_x - ((text_length as usize * FONT_ADVANCE as usize) / 2) as u8;
+
+    (text_x, middle_y)
+}
+
 //calling this once will swallow multiple presses on the button. We could either
 //pass in and return the number of presses to fix that, or this could simply be
 //called multiple times per frame (once for each click).
@@ -423,13 +432,12 @@ fn do_button(
         framebuffer.button(spec.x, spec.y, spec.w, spec.h);
     }
 
-    let middle_x = spec.x + (spec.w / 2);
-    let middle_y = spec.y + (spec.h / 2) - (FONT_SIZE / 4);
+    let text = spec.text.as_bytes();
 
-    let text_x = middle_x - ((spec.text.len() * FONT_ADVANCE as usize) / 2) as u8;
+    let (x, y) = center_line_in_rect(text.len() as u8, (spec.x, spec.y), (spec.w, spec.h));
 
     //Long labels aren't great UX anyway, I think.
-    framebuffer.print(spec.text.as_bytes(), text_x, middle_y, WHITE_INDEX);
+    framebuffer.print(spec.text.as_bytes(), x, y, WHITE_INDEX);
 
     return result;
 }
@@ -442,7 +450,50 @@ pub fn do_suit_choice(
     speaker: &mut Speaker,
 ) {
     framebuffer.full_window();
-    //TODO render 4 buttons and set choice based upon them
+    {
+        let text = b"choose a suit for the 8 to be";
+
+        let (x, y) = center_line_in_rect(
+            text.len() as u8,
+            (SPRITE_SIZE, SPRITE_SIZE),
+            (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+        );
+
+        framebuffer.print(text, x, y, WHITE_INDEX);
+    }
+
+    let w = NINE_SLICE_MAX_INTERIOR_SIZE;
+    let h = SPRITE_SIZE * 3;
+    let x = SPRITE_SIZE;
+
+    for (i, suit) in Suits::ALL.iter().cloned().enumerate() {
+        let i = (i + 1) as u8;
+
+        let (_, suit_char) = get_suit_colour_and_char(suit);
+
+        let spec = ButtonSpec {
+            x,
+            y: SPRITE_SIZE * 5 + h * i,
+            w,
+            h,
+            id: i,
+            text: suit_char.to_string(),
+        };
+
+        if do_button(framebuffer, &mut state.context, input, speaker, &spec) {
+            state.choice = Choice::Already(Chosen::Suit(suit));
+        }
+    }
+
+    if state.context.hot == 0 || state.context.hot > 4 {
+        state.context.set_next_hot(1);
+    } else if input.pressed_this_frame(Button::Up) || input.pressed_this_frame(Button::Right) {
+        if state.context.hot == 1 {
+            state.context.set_next_hot(2);
+        } else {
+            state.context.set_next_hot(1);
+        }
+    }
 }
 #[inline]
 pub fn do_bool_choice(
@@ -451,11 +502,22 @@ pub fn do_bool_choice(
     input: Input,
     speaker: &mut Speaker,
 ) {
+    framebuffer.full_window();
+    {
+        let question = b"would you like to play again?";
+
+        let (x, y) = center_line_in_rect(
+            question.len() as u8,
+            (SPRITE_SIZE, SPRITE_SIZE),
+            (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+        );
+
+        framebuffer.print(question, x, y, WHITE_INDEX);
+    }
+
     let w = SPRITE_SIZE * 5;
     let h = SPRITE_SIZE * 3;
     let y = SCREEN_HEIGHT as u8 - (h + SPRITE_SIZE);
-    console!(log, format!("{:?}", state.context));
-    framebuffer.full_window();
 
     let spec1 = ButtonSpec {
         x: SPRITE_SIZE,
@@ -492,7 +554,6 @@ pub fn do_bool_choice(
             state.context.set_next_hot(1);
         }
     }
-    //TODO render 2 buttons and set choice based upon them
 }
 
 #[inline]
@@ -506,15 +567,6 @@ pub fn update_and_render(
 
     if let Choice::NoChoice = state.choice {
         update(state, input, speaker);
-    }
-
-    //For testing
-    if input.gamepad.contains(Button::Select) {
-        console!(log, "input.gamepad.contains(Button::Select)");
-    } else {
-        if let Some(again) = choose_play_again(state) {
-            console!(log, format!("chose {}", again));
-        }
     }
 
     invariant_assert_eq!(state.missing_cards(), vec![0; 0]);

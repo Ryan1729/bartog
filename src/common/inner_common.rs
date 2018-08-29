@@ -103,14 +103,38 @@ pub type Card = u8;
 pub type Suit = u8;
 
 pub mod Suits {
-    pub const CLUBS: u8 = 0;
-    pub const DIAMONDS: u8 = 1;
-    pub const HEARTS: u8 = 2;
-    pub const SPADES: u8 = 3;
+    use super::Suit;
+
+    pub const CLUBS: Suit = 0;
+    pub const DIAMONDS: Suit = 1;
+    pub const HEARTS: Suit = 2;
+    pub const SPADES: Suit = 3;
+
+    pub const ALL: [Suit; 4] = [CLUBS, DIAMONDS, HEARTS, SPADES];
 }
 
 pub fn get_suit(card: Card) -> Suit {
     card / 13
+}
+
+pub fn get_suit_colour_and_char(suit: Suit) -> (u8, u8) {
+    match suit {
+        Suits::CLUBS => (BLACK_INDEX, CLUB_CHAR),
+        Suits::DIAMONDS => (RED_INDEX, DIAMOND_CHAR),
+        Suits::HEARTS => (RED_INDEX, HEART_CHAR),
+        Suits::SPADES => (BLACK_INDEX, SPADE_CHAR),
+        _ => (PURPLE_INDEX, 33), //purple "!"
+    }
+}
+
+pub fn get_suit_str(suit: Suit) -> &'static str {
+    match suit {
+        Suits::CLUBS => "clubs",
+        Suits::DIAMONDS => "diamonds",
+        Suits::HEARTS => "hearts",
+        Suits::SPADES => "spades",
+        _ => "unknown",
+    }
 }
 
 pub type Rank = u8;
@@ -172,8 +196,10 @@ pub const DISCARD_X: u8 = DECK_X + card::WIDTH + card::WIDTH / 2;
 pub const DISCARD_Y: u8 = DECK_Y;
 pub const DISCARD_XY: (u8, u8) = (DISCARD_X, DISCARD_Y);
 
+pub const NINE_SLICE_MAX_INTERIOR_SIZE: u8 = (SCREEN_WIDTH - 2 * SPRITE_SIZE as usize) as u8;
+
 pub const NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS: u8 =
-    ((SCREEN_WIDTH - 2 * SPRITE_SIZE as usize) / FONT_ADVANCE as usize) as u8;
+    (NINE_SLICE_MAX_INTERIOR_SIZE / FONT_ADVANCE) as u8;
 
 pub const WINDOW_TOP_LEFT: u8 = 64;
 pub const BUTTON_TOP_LEFT: u8 = 67;
