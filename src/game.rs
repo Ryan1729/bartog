@@ -150,7 +150,7 @@ fn move_cursor(state: &mut GameState, input: Input, speaker: &mut Speaker) -> bo
 }
 
 fn is_wild(card: Card) -> bool {
-    get_rank(card) == 8
+    get_rank(card) == 8 - 1
 }
 
 fn can_play(state: &GameState, &card: &Card) -> bool {
@@ -273,7 +273,7 @@ fn get_discard_animation(
         .remove_positioned_card(player, card_index)
         .map(|card| {
             if is_wild(card.card) {
-                CardAnimation::new(card, DISCARD_X, DISCARD_Y, Action::MoveToDiscard)
+                CardAnimation::new(card, DISCARD_X, DISCARD_Y, Action::SelectWild(player))
             } else {
                 CardAnimation::new(card, DISCARD_X, DISCARD_Y, Action::MoveToDiscard)
             }
@@ -453,13 +453,13 @@ pub fn do_suit_choice(
     {
         let text = b"choose a suit for the 8 to be";
 
-        let (x, y) = center_line_in_rect(
+        let (x, _) = center_line_in_rect(
             text.len() as u8,
             (SPRITE_SIZE, SPRITE_SIZE),
             (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
         );
 
-        framebuffer.print(text, x, y, WHITE_INDEX);
+        framebuffer.print(text, x, SPRITE_SIZE * 2, WHITE_INDEX);
     }
 
     let w = NINE_SLICE_MAX_INTERIOR_SIZE;
@@ -473,7 +473,7 @@ pub fn do_suit_choice(
 
         let spec = ButtonSpec {
             x,
-            y: SPRITE_SIZE * 5 + h * i,
+            y: h * i,
             w,
             h,
             id: i,
@@ -487,14 +487,23 @@ pub fn do_suit_choice(
 
     if state.context.hot == 0 || state.context.hot > 4 {
         state.context.set_next_hot(1);
-    } else if input.pressed_this_frame(Button::Up) || input.pressed_this_frame(Button::Right) {
-        if state.context.hot == 1 {
-            state.context.set_next_hot(2);
-        } else {
-            state.context.set_next_hot(1);
-        }
+    } else if input.pressed_this_frame(Button::Up) {
+        let next = dice_mod(state.context.hot - 1, 4);
+        state.context.set_next_hot(next);
+    } else if input.pressed_this_frame(Button::Down) {
+        let next = dice_mod(state.context.hot + 1, 4);
+        state.context.set_next_hot(next);
     }
 }
+
+fn dice_mod(x: u8, m: u8) -> u8 {
+    if x == 0 {
+        m
+    } else {
+        (x.saturating_sub(1) % m).saturating_add(1)
+    }
+}
+
 #[inline]
 pub fn do_bool_choice(
     framebuffer: &mut Framebuffer,
