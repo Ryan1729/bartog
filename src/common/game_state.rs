@@ -316,6 +316,16 @@ pub enum Choice {
     OfBool,
 }
 
+impl Choice {
+    pub fn is_idle(&self) -> bool {
+        use Choice::*;
+        match *self {
+            NoChoice | Already(_) => true,
+            OfSuit | OfBool => false,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub enum Chosen {
     Suit(Suit),

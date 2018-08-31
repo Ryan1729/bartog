@@ -179,6 +179,7 @@ fn cpu_would_play(state: &mut GameState, playerId: PlayerID) -> Option<u8> {
 }
 
 fn choose_suit(state: &mut GameState) -> Option<Suit> {
+    console!(log, "choose_suit(state: &mut GameState) -> Option<Suit>");
     match state.choice {
         Choice::NoChoice => {
             state.choice = Choice::OfSuit;
@@ -186,6 +187,7 @@ fn choose_suit(state: &mut GameState) -> Option<Suit> {
         }
         Choice::Already(Chosen::Suit(suit)) => {
             state.choice = Choice::NoChoice;
+            console!(log, "Choice::Already(Chosen::Suit(suit))");
             Some(suit)
         }
         _ => None,
@@ -217,7 +219,6 @@ fn advance_card_animations(state: &mut GameState) {
             let last_pos = (animation.card.x, animation.card.y);
 
             animation.approach_target();
-            console!(log, &format!("{:#?}", animation));
 
             (animation.is_complete(), last_pos)
         };
@@ -343,10 +344,8 @@ fn take_turn(state: &mut GameState, input: Input, speaker: &mut Speaker) {
 
                 if can_play_it {
                     let animation = get_discard_animation(state, player, index);
-                    console!(log, &format!("{:?}", animation));
 
                     push_if(&mut state.card_animations, animation);
-                    console!(log, &format!("{:?}", state.card_animations));
 
                     state.current_player = 0;
                 } else {
@@ -471,16 +470,23 @@ pub fn do_suit_choice(
 
         let (_, suit_char) = get_suit_colour_and_char(suit);
 
+        let mut text = String::with_capacity(1);
+        text.push(char::from(suit_char));
+
         let spec = ButtonSpec {
             x,
             y: h * i,
             w,
             h,
             id: i,
-            text: suit_char.to_string(),
+            text,
         };
 
         if do_button(framebuffer, &mut state.context, input, speaker, &spec) {
+            console!(
+                log,
+                "do_button(framebuffer, &mut state.context, input, speaker, &spec)"
+            );
             state.choice = Choice::Already(Chosen::Suit(suit));
         }
     }
@@ -574,7 +580,7 @@ pub fn update_and_render(
 ) {
     state.context.frame_init();
 
-    if let Choice::NoChoice = state.choice {
+    if state.choice.is_idle() {
         update(state, input, speaker);
     }
 
