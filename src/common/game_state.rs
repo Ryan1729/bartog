@@ -1,6 +1,7 @@
 use animation::CardAnimation;
 use common::{Logger, UIContext};
 use inner_common::*;
+use std::cmp::max;
 
 use rand::{Rng, SeedableRng, XorShiftRng};
 
@@ -141,8 +142,35 @@ impl Hand {
         }
     }
 
+    pub fn most_common_suits(&self) -> [Option<Suit>; 4] {
+        let mut counts: [(u8, u8); 4] = [(0, 0), (1, 0), (2, 0), (3, 0)];
+        for suit in self.cards.iter().cloned().map(get_suit) {
+            let (suit, count) = counts[suit as usize];
+            counts[suit as usize] = (suit, count + 1);
+        }
+
+        counts.sort_by(
+            |(_, c1), (_, c2)| c2.cmp(c1), //descending order
+        );
+
+        let mut max_count = 0;
+        let mut result = [None; 4];
+        for (i, &(suit, count)) in counts.into_iter().enumerate() {
+            if count > max_count {
+                result[i] = Some(suit);
+            } else {
+                break;
+            }
+
+            max_count = max(count, max_count);
+        }
+
+        result
+    }
+
     pub fn most_common_suit(&self) -> Option<Suit> {
-        unimplemented!()
+        let suits = self.most_common_suits();
+        suits[0]
     }
 }
 
