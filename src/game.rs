@@ -155,10 +155,11 @@ fn is_wild(card: Card) -> bool {
 
 fn can_play(state: &GameState, &card: &Card) -> bool {
     if let Some(&top_of_discard) = state.discard.last() {
-        is_wild(card)
-            || (is_wild(top_of_discard) && state.top_wild_declared_as == Some(get_suit(card)))
-            || get_suit(top_of_discard) == get_suit(card)
-            || get_rank(top_of_discard) == get_rank(card)
+        is_wild(card) || if is_wild(top_of_discard) {
+            state.top_wild_declared_as == Some(get_suit(card))
+        } else {
+            get_suit(top_of_discard) == get_suit(card) || get_rank(top_of_discard) == get_rank(card)
+        }
     } else {
         true
     }
@@ -207,6 +208,14 @@ fn choose_play_again(state: &mut GameState) -> Option<bool> {
     }
 }
 
+fn move_to_discard(state: &mut GameState, card: Card) {
+    if !is_wild(card) {
+        state.top_wild_declared_as = None;
+    }
+
+    state.discard.push(card);
+}
+
 fn advance_card_animations(state: &mut GameState) {
     // I should really be able to use `Vec::retain` here,
     // but that passes a `&T` insteead of a `&mut T`.
@@ -230,7 +239,7 @@ fn advance_card_animations(state: &mut GameState) {
 
             match animation.completion_action {
                 Action::MoveToDiscard => {
-                    state.discard.push(card);
+                    move_to_discard(state, card);
                 }
                 Action::SelectWild(playerId) => {
                     if is_cpu_player(&state, playerId) {
@@ -238,11 +247,11 @@ fn advance_card_animations(state: &mut GameState) {
                             let hand = state.get_hand(playerId);
                             hand.most_common_suit()
                         };
-                        state.discard.push(card);
+                        move_to_discard(state, card);
                     } else {
                         if let Some(suit) = choose_suit(state) {
                             state.top_wild_declared_as = Some(suit);
-                            state.discard.push(card);
+                            move_to_discard(state, card);
                         } else {
                             //wait until they choose
                             animation.card.x = last_pos.0;
@@ -592,6 +601,20 @@ pub fn update_and_render(
     }
 
     framebuffer.draw_card_back(DECK_X, DECK_Y);
+
+    match state.top_wild_declared_as {
+        Some(suit) => {
+            let (colour, suit_char) = get_suit_colour_and_char(suit);
+
+            framebuffer.print_char(
+                suit_char,
+                DECK_X + card::WIDTH + 2,
+                DECK_Y + (card::HEIGHT - FONT_SIZE) / 2,
+                colour,
+            );
+        }
+        None => {}
+    }
 
     state
         .discard

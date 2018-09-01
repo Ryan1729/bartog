@@ -1,5 +1,3 @@
-use inner_common::*;
-
 pub fn bytes_lines<'a>(bytes: &'a [u8]) -> impl Iterator<Item = &'a [u8]> {
     bytes.split(|&b| b == b'\n')
 }
