@@ -603,24 +603,7 @@ impl Framebuffer {
     }
 
     pub fn text_window(&mut self, bytes: &[u8]) {
-        let lines = bytes_lines(bytes);
-
-        let mut width: u8 = 0;
-        let mut height: u8 = 0;
-        for line in lines {
-            height = height.saturating_add(1);
-            width = max(width, line.len() as u8);
-        }
-
-        width = width.saturating_mul(FONT_ADVANCE);
-        height = height.saturating_mul(FONT_SIZE);
-
-        //one sprite of padding on each side
-        let window_width = width.saturating_add(2 * SPRITE_SIZE);
-        let window_height = height.saturating_add(2 * SPRITE_SIZE);
-
-        let x = (SCREEN_WIDTH as u8 - window_width) / 2;
-        let y = (SCREEN_HEIGHT as u8 - window_height) / 2;
+        let (x, y, window_width, window_height) = get_text_rect(bytes);
 
         self.window(x, y, window_width, window_height);
 
@@ -742,4 +725,23 @@ pub fn draw_winning_screen(framebuffer: &mut Framebuffer) {
 
         colour_index = (colour_index + 1) & 0x7;
     }
+}
+
+pub fn get_text_rect(bytes: &[u8]) -> (u8, u8, u8, u8) {
+    let lines = bytes_lines(bytes);
+
+    let mut width: u8 = 0;
+    let mut height: u8 = 0;
+    for line in lines {
+        height = height.saturating_add(1);
+        width = max(width, line.len() as u8);
+    }
+
+    width = width.saturating_mul(FONT_ADVANCE);
+    height = height.saturating_mul(FONT_SIZE);
+
+    let x = (SCREEN_WIDTH as u8 - width) / 2;
+    let y = (SCREEN_HEIGHT as u8 - height) / 2;
+
+    (x, y, width, height)
 }

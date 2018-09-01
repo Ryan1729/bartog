@@ -1,3 +1,4 @@
+use common::rendering::get_text_rect;
 use common::*;
 
 use rand::Rng;
@@ -526,6 +527,19 @@ pub fn do_bool_choice(
     speaker: &mut Speaker,
 ) {
     framebuffer.full_window();
+
+    let winner_text = reflow(
+        &state.get_winner_text(),
+        NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as usize,
+    );
+
+    framebuffer.print(
+        winner_text.as_bytes(),
+        get_text_rect(winner_text.as_bytes()).0,
+        SPRITE_SIZE,
+        6,
+    );
+
     {
         let question = b"would you like to play again?";
 
@@ -630,13 +644,6 @@ pub fn update_and_render(
 
     let len = state.winners.len();
     if len > 0 {
-        framebuffer.text_window(
-            reflow(
-                &state.get_winner_text(),
-                NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as usize,
-            ).as_bytes(),
-        );
-
         if let Some(again) = choose_play_again(state) {
             if again {
                 state.reset();

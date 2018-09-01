@@ -213,7 +213,7 @@ impl GameState {
     }
 
     pub fn player_ids(&self) -> Vec<PlayerID> {
-        (0..self.cpu_hands.len()).map(|id| id as u8).collect()
+        (0..=self.cpu_hands.len()).map(|id| id as u8).collect()
     }
 
     pub fn player_name(&self, playerId: PlayerID) -> String {
@@ -237,11 +237,15 @@ impl GameState {
 
         let mut winner_text = get_sentence_list(&winner_names);
 
-        winner_text.push_str(if self.winners.len() > 3 {
+        let suffix = if self.winners.len() == 1 && winner_text != "you" {
+            " wins."
+        } else if self.winners.len() > 3 {
             " all win."
         } else {
             " win."
-        });
+        };
+
+        winner_text.push_str(suffix);
 
         winner_text
     }
