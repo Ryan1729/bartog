@@ -243,7 +243,6 @@ fn advance_card_animations(state: &mut GameState) {
                         if let Some(suit) = choose_suit(state) {
                             state.top_wild_declared_as = Some(suit);
                             state.discard.push(card);
-                            state.get_hand_mut(playerId).push(card);
                         } else {
                             //wait until they choose
                             animation.card.x = last_pos.0;
