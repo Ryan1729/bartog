@@ -78,20 +78,6 @@ impl Hand {
         }
     }
 
-    pub fn len(&self) -> u8 {
-        let len = self.cards.len();
-
-        if len >= 255 {
-            255
-        } else {
-            len as u8
-        }
-    }
-
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a Card> {
-        self.cards.iter()
-    }
-
     pub fn draw(&mut self) -> Option<Card> {
         self.cards.pop()
     }
@@ -126,6 +112,32 @@ impl Hand {
             let index = rng.gen_range(0, len);
             other.cards.push(self.cards.remove(index));
         }
+    }
+
+    pub fn shuffle<R: Rng>(&mut self, rng: &mut R) {
+        rng.shuffle(&mut self.cards);
+    }
+
+    pub fn len(&self) -> u8 {
+        let len = self.cards.len();
+
+        if len >= 255 {
+            255
+        } else {
+            len as u8
+        }
+    }
+
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a Card> {
+        self.cards.iter()
+    }
+
+    pub fn drain<'a>(&'a mut self) -> impl Iterator<Item = Card> + 'a {
+        self.cards.drain(..)
+    }
+
+    pub fn fill(&mut self, cards: impl Iterator<Item = Card>) {
+        self.cards.extend(cards);
     }
 
     pub fn remove_if_present(&mut self, index: u8) -> Option<PositionedCard> {
@@ -380,6 +392,7 @@ impl GameState {
             &mut deck,
             Spread::LTR(TOP_AND_BOTTOM_HAND_EDGES, PLAYER_HAND_HEIGHT)
         );
+
         let cpu_hands = [
             dealt_hand!(
                 &mut deck,

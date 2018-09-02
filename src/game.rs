@@ -294,7 +294,20 @@ fn get_draw_animation(state: &mut GameState, player: PlayerID) -> Option<CardAni
 
         (hand.spread, hand.len())
     };
-    let card = state.deck.draw()?;
+    let card = {
+        if let Some(c) = state.deck.draw() {
+            Some(c)
+        } else {
+            let top_card = state.discard.draw()?;
+
+            state.deck.fill(state.discard.drain());
+            state.deck.shuffle(&mut state.rng);
+
+            state.discard.push(top_card);
+
+            state.deck.draw()
+        }
+    }?;
 
     let (x, y) = get_card_position(spread, len + 1, len);
 
@@ -684,12 +697,21 @@ pub fn update_and_render(
 
     draw_hand_with_cursor(framebuffer, &state.hand, state.hand_index as usize);
 
-    for &CardAnimation { card, .. } in state.card_animations.iter() {
-        framebuffer.draw_card_back(card.x, card.y);
+    for &CardAnimation {
+        card,
+        completion_action,
+        ..
+    } in state.card_animations.iter()
+    {
+        match completion_action {
+            Action::MoveToHand(_) => framebuffer.draw_card_back(card.x, card.y),
+            Action::MoveToDiscard | Action::SelectWild(_) => {
+                framebuffer.draw_card(card.card, card.x, card.y)
+            }
+        }
     }
 
-    let len = state.winners.len();
-    if len > 0 {
+    if state.winners.len() > 0 && state.card_animations.len() == 0 {
         if let Some(()) = choose_play_again(state) {
             state.reset();
         }
