@@ -1,3 +1,5 @@
+use common::inner_common::*;
+
 pub fn bytes_lines<'a>(bytes: &'a [u8]) -> impl Iterator<Item = &'a [u8]> {
     bytes.split(|&b| b == b'\n')
 }
@@ -25,6 +27,45 @@ pub fn reflow(s: &str, width: usize) -> String {
     }
 
     output
+}
+
+pub fn bytes_reflow(bytes: &[u8], width: usize) -> Vec<u8> {
+    if width == 0 {
+        return Vec::new();
+    }
+    let mut output = Vec::with_capacity(bytes.len() + bytes.len() / width);
+
+    let mut x = 0;
+    for word in bytes_split_whitespace(bytes) {
+        x += word.len();
+
+        if x > width {
+            output.push(b'\n');
+
+            x = word.len();
+        } else if x > word.len() {
+            output.push(b' ');
+
+            x += 1;
+        }
+        output.extend(word.iter());
+    }
+
+    output
+}
+
+// NOTE This does not use a general purpose definition of whitespace.
+// This should count a byte as whitespace iff it has all blank
+// pixels in this game's font.
+#[inline]
+pub fn is_byte_whitespace(byte: u8) -> bool {
+    let lower_half_byte = byte & 0b0111_1111;
+    lower_half_byte < TEN_CHAR || lower_half_byte == b' '
+}
+
+//See NOTE above.
+pub fn bytes_split_whitespace<'a>(bytes: &'a [u8]) -> impl Iterator<Item = &'a [u8]> {
+    bytes.split(|&b| is_byte_whitespace(b))
 }
 
 #[cfg(test)]

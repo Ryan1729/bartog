@@ -1,4 +1,4 @@
-use inner_common::{Suits::*, *};
+use inner_common::*;
 use std::cmp::max;
 use text::bytes_lines;
 

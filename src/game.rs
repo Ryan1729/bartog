@@ -134,6 +134,17 @@ fn draw_hand_with_cursor(framebuffer: &mut Framebuffer, hand: &Hand, index: usiz
     }
 }
 
+fn draw_event_log(framebuffer: &mut Framebuffer, state: &GameState) {
+    framebuffer.full_window();
+
+    let mut y = SPRITE_SIZE;
+    for line in state.event_log.get_window_slice(state.log_top_index) {
+        framebuffer.print_line(line, SPRITE_SIZE, y, WHITE_INDEX);
+
+        y += FONT_SIZE;
+    }
+}
+
 fn move_cursor(state: &mut GameState, input: Input, speaker: &mut Speaker) -> bool {
     if input.pressed_this_frame(Button::Right) {
         if state.hand_index < state.hand.len().saturating_sub(1) {
@@ -394,14 +405,36 @@ fn take_turn(state: &mut GameState, input: Input, speaker: &mut Speaker) {
 }
 
 fn update(state: &mut GameState, input: Input, speaker: &mut Speaker) {
-    if state.card_animations.len() == 0 {
-        if state.winners.len() == 0 {
-            take_turn(state, input, speaker);
+    if input.pressed_this_frame(Button::Start) {
+        if state.log_height > 0 {
+            state.log_height = 0;
+        } else {
+            state.log_height = SCREEN_HEIGHT as u8;
         }
-    } else {
-        advance_card_animations(state);
+        //TODO slide down animation
+    }
 
-        move_cursor(state, input, speaker);
+    if state.log_height > 0 {
+        if input.pressed_this_frame(Button::Up) {
+            state.log_top_index = state.log_top_index.saturating_sub(1);
+        //TODO feedback when you hit the top edge
+        } else if input.pressed_this_frame(Button::Down) {
+            if state.log_top_index < state.event_log.len() {
+                state.log_top_index += 1;
+            } else {
+                //TODO feedback when you hit the bottom edge
+            }
+        }
+    } else if state.choice.is_idle() {
+        if state.card_animations.len() == 0 {
+            if state.winners.len() == 0 {
+                take_turn(state, input, speaker);
+            }
+        } else {
+            advance_card_animations(state);
+
+            move_cursor(state, input, speaker);
+        }
     }
 }
 
@@ -661,9 +694,7 @@ pub fn update_and_render(
 ) {
     state.context.frame_init();
 
-    if state.choice.is_idle() {
-        update(state, input, speaker);
-    }
+    update(state, input, speaker);
 
     invariant_assert_eq!(state.missing_cards(), vec![0; 0]);
 
@@ -715,6 +746,10 @@ pub fn update_and_render(
         if let Some(()) = choose_play_again(state) {
             state.reset();
         }
+    }
+
+    if state.log_height > 0 {
+        draw_event_log(framebuffer, &state);
     }
 
     match state.choice {

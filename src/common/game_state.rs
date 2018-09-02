@@ -2,6 +2,8 @@ use animation::CardAnimation;
 use common::{log, Logger, UIContext};
 use inner_common::*;
 use std::cmp::max;
+use std::collections::VecDeque;
+use text::{bytes_lines, bytes_reflow};
 
 use rand::{Rng, SeedableRng, XorShiftRng};
 
@@ -324,6 +326,95 @@ mod tests {
     }
 }
 
+pub struct EventLog {
+    pub buffer: VecDeque<EventLine>,
+}
+
+type EventLine = [u8; EventLog::WIDTH];
+
+pub fn slice_until_first_0<'a>(bytes: &'a [u8]) -> &'a [u8] {
+    let mut usable_len = 0;
+
+    for i in 0..bytes.len() {
+        if bytes[i] == 0 {
+            usable_len = i.saturating_sub(1);
+            break;
+        }
+    }
+
+    &bytes[..usable_len]
+}
+
+impl EventLog {
+    const WIDTH: usize = NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as usize;
+    const HEIGHT: usize = NINE_SLICE_MAX_INTERIOR_HEIGHT_IN_CHARS as usize;
+
+    const BUFFER_SIZE: usize = 1024;
+
+    pub fn new() -> Self {
+        let buffer = VecDeque::with_capacity(EventLog::BUFFER_SIZE);
+        EventLog { buffer }
+    }
+
+    pub fn len(&self) -> usize {
+        self.buffer.len()
+    }
+
+    pub fn clear(&mut self) {
+        self.buffer.clear();
+    }
+
+    pub fn push(&mut self, bytes: &[u8]) {
+        //TODO remove redundant joining and resplitting
+        let reflowed = bytes_reflow(bytes, EventLog::WIDTH);
+        let lines = bytes_lines(&reflowed);
+
+        for line in lines {
+            self.push_line(line);
+        }
+    }
+
+    pub fn push_line(&mut self, bytes: &[u8]) {
+        let bytes = &bytes[..min(bytes.len(), EventLog::WIDTH)];
+
+        let next = self.next_mut();
+
+        for i in 0..next.len() {
+            next[i] = 0;
+        }
+
+        for i in 0..bytes.len() {
+            next[i] = bytes[i];
+        }
+    }
+
+    pub fn next_mut(&mut self) -> &mut EventLine {
+        debug_assert!(EventLog::BUFFER_SIZE > 0);
+        debug_assert!(self.buffer.capacity() == EventLog::BUFFER_SIZE);
+        debug_assert!(self.buffer.len() <= EventLog::BUFFER_SIZE);
+
+        if self.is_full() {
+            self.buffer.pop_front();
+        }
+
+        self.buffer.push_back([0; EventLog::WIDTH]);
+
+        self.buffer.back_mut().unwrap()
+    }
+
+    pub fn is_full(&self) -> bool {
+        self.buffer.len() == self.buffer.capacity()
+    }
+
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a [u8]> {
+        self.buffer.iter().map(|line| slice_until_first_0(line))
+    }
+
+    pub fn get_window_slice<'a>(&'a self, top_index: usize) -> impl Iterator<Item = &'a [u8]> {
+        self.iter().skip(top_index).take(EventLog::HEIGHT)
+    }
+}
+
 #[derive(Clone, Copy)]
 pub enum Choice {
     NoChoice,
@@ -363,6 +454,9 @@ pub struct GameState {
     pub choice: Choice,
     pub context: UIContext,
     pub rng: XorShiftRng,
+    pub event_log: EventLog,
+    pub log_top_index: usize,
+    pub log_height: u8,
     logger: Logger,
 }
 
@@ -382,7 +476,20 @@ macro_rules! dealt_hand {
 
 impl GameState {
     pub fn new(seed: [u8; 16], logger: Logger) -> GameState {
+        let event_log = EventLog::new();
+        GameState::new_with_event_log(seed, logger, event_log)
+    }
+
+    pub fn new_with_event_log(
+        seed: [u8; 16],
+        logger: Logger,
+        mut event_log: EventLog,
+    ) -> GameState {
         log(logger, &format!("{:?}", seed));
+
+        event_log.clear();
+
+        event_log.push(b"started a new round.");
 
         let mut rng = XorShiftRng::from_seed(seed);
 
@@ -432,12 +539,23 @@ impl GameState {
             choice: Choice::NoChoice,
             context: UIContext::new(),
             rng,
+            event_log,
+            log_top_index: 0,
+            log_height: 0,
             logger,
         }
     }
 
     pub fn reset(&mut self) {
-        *self = GameState::new(self.rng.gen(), self.logger);
+        use std::mem::replace;
+        let old_log = replace(
+            &mut self.event_log,
+            EventLog {
+                buffer: VecDeque::with_capacity(0),
+            },
+        );
+
+        *self = GameState::new_with_event_log(self.rng.gen(), self.logger, old_log);
     }
 
     pub fn missing_cards(&self) -> Vec<Card> {
