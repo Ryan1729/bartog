@@ -371,8 +371,6 @@ impl State {
             mem::transmute::<[f64; 2], [u8; 16]>([time, 1.0 / time])
         };
 
-        logger(&format!("{:?}", seed));
-
         State {
             game_state: GameState::new(seed, Some(logger)),
             framebuffer,

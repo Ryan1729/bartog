@@ -1,5 +1,5 @@
 use animation::CardAnimation;
-use common::{Logger, UIContext};
+use common::{log, Logger, UIContext};
 use inner_common::*;
 use std::cmp::max;
 
@@ -382,6 +382,8 @@ macro_rules! dealt_hand {
 
 impl GameState {
     pub fn new(seed: [u8; 16], logger: Logger) -> GameState {
+        log(logger, &format!("{:?}", seed));
+
         let mut rng = XorShiftRng::from_seed(seed);
 
         let mut deck = Hand::new_shuffled_deck(&mut rng);
