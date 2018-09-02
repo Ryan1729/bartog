@@ -1,7 +1,0 @@
-Before I had the following comment in the code:
-```
-/// There should be no operations that can cause cards not to be conserved between all Hand
-/// instances.
-```
-
-But then I decided that maintaining that makes things much more complicated. Animations mean I'd have to have two separate types, A Non-Copy Card type, and a Copy "CardInfo" type that would not be conserved. Since it's nearly trivial to simply make random moves and check that cards are conserved, I don't think preventing that with this particular type system is a good idea. If it was as easy as say making a Deck type with a constructor and annotating it, then sure, but Rust 2015 edition can't do that.

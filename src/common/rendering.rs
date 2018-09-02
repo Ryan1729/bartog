@@ -602,19 +602,6 @@ impl Framebuffer {
         );
     }
 
-    pub fn text_window(&mut self, bytes: &[u8]) {
-        let (x, y, window_width, window_height) = get_text_rect(bytes);
-
-        self.window(x, y, window_width, window_height);
-
-        self.print(
-            bytes,
-            x.saturating_add(SPRITE_SIZE),
-            y.saturating_add(SPRITE_SIZE),
-            6,
-        );
-    }
-
     pub fn full_window(&mut self) {
         self.window(0, 0, SCREEN_WIDTH as u8, SCREEN_WIDTH as u8);
     }
@@ -727,7 +714,55 @@ pub fn draw_winning_screen(framebuffer: &mut Framebuffer) {
     }
 }
 
-pub fn get_text_rect(bytes: &[u8]) -> (u8, u8, u8, u8) {
+#[derive(Clone, Copy, Debug)]
+pub struct Rect {
+    pub x: u8,
+    pub y: u8,
+    pub w: u8,
+    pub h: u8,
+}
+
+impl Rect {
+    #[inline]
+    pub fn point(&self) -> (u8, u8) {
+        (self.x, self.y)
+    }
+
+    #[inline]
+    pub fn dimensions(&self) -> (u8, u8) {
+        (self.w, self.h)
+    }
+}
+
+impl From<((u8, u8, u8, u8))> for Rect {
+    #[inline]
+    fn from((x, y, w, h): (u8, u8, u8, u8)) -> Self {
+        Rect { x, y, w, h }
+    }
+}
+
+impl From<Rect> for (u8, u8, u8, u8) {
+    #[inline]
+    fn from(Rect { x, y, w, h }: Rect) -> Self {
+        (x, y, w, h)
+    }
+}
+
+impl From<((u8, u8), (u8, u8))> for Rect {
+    #[inline]
+    fn from(((x, y), (w, h)): ((u8, u8), (u8, u8))) -> Self {
+        Rect { x, y, w, h }
+    }
+}
+
+impl From<Rect> for ((u8, u8), (u8, u8)) {
+    #[inline]
+    fn from(Rect { x, y, w, h }: Rect) -> Self {
+        ((x, y), (w, h))
+    }
+}
+
+pub fn get_text_dimensions(bytes: &[u8]) -> (u8, u8) {
     let lines = bytes_lines(bytes);
 
     let mut width: u8 = 0;
@@ -740,8 +775,113 @@ pub fn get_text_rect(bytes: &[u8]) -> (u8, u8, u8, u8) {
     width = width.saturating_mul(FONT_ADVANCE);
     height = height.saturating_mul(FONT_SIZE);
 
-    let x = (SCREEN_WIDTH as u8 - width) / 2;
-    let y = (SCREEN_HEIGHT as u8 - height) / 2;
+    (width, height)
+}
 
-    (x, y, width, height)
+pub fn center_line_in_rect<R: Into<Rect>>(text_length: u8, r: R) -> (u8, u8) {
+    let Rect { x, y, w, h } = r.into();
+    let middle_x = x + (w / 2);
+    let middle_y = y + (h / 2);
+
+    let text_x =
+        (middle_x as usize).saturating_sub(text_length as usize * FONT_ADVANCE as usize / 2) as u8;
+    let text_y = (middle_y as usize).saturating_sub(FONT_SIZE as usize / 2) as u8;
+
+    (text_x, text_y)
+}
+
+pub fn center_rect_in_rect<R: Into<Rect>>((width, height): (u8, u8), r: R) -> (u8, u8) {
+    let Rect { x, y, w, h } = r.into();
+    let middle_x = x + (w / 2);
+    let middle_y = y + (h / 2);
+
+    let left_x = middle_x.saturating_sub(width / 2);
+    let top_y = middle_y.saturating_sub(height / 2);
+
+    (left_x, top_y)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quickcheck::*;
+
+    #[test]
+    fn test_get_text_dimensions_then_center_rect_in_rect_matches_center_line_in_rect_for_a_single_line(
+) {
+        quickcheck(
+                    get_text_dimensions_then_center_rect_in_rect_matches_center_line_in_rect_for_a_single_line
+                        as fn(u8, (u8, u8, u8, u8)) -> TestResult,
+                )
+    }
+    fn get_text_dimensions_then_center_rect_in_rect_matches_center_line_in_rect_for_a_single_line(
+        char_count: u8,
+        r: (u8, u8, u8, u8),
+    ) -> TestResult {
+        if char_count as usize * FONT_ADVANCE as usize > 255 {
+            return TestResult::discard();
+        }
+
+        let rect: Rect = r.into();
+
+        let line_point = center_line_in_rect(char_count, rect);
+
+        let text = vec![b'A'; char_count as usize];
+
+        let text_point = center_rect_in_rect(get_text_dimensions(&text), rect);
+        assert_eq!(text_point, line_point);
+        TestResult::from_bool(text_point == line_point)
+    }
+
+    #[test]
+    fn test_center_rect_in_rect_actually_centers_when_possible() {
+        quickcheck(
+            center_rect_in_rect_actually_centers_when_possible
+                as fn(((u8, u8), (u8, u8, u8, u8))) -> TestResult,
+        )
+    }
+    fn center_rect_in_rect_actually_centers_when_possible(
+        ((w, h), r): ((u8, u8), (u8, u8, u8, u8)),
+    ) -> TestResult {
+        let rect: Rect = r.into();
+
+        if rect.w & 1 == 1 || w & 1 == 1 {
+            return TestResult::discard();
+        }
+
+        let (x, y) = center_rect_in_rect((w, h), rect);
+        let left_side = x.saturating_sub(rect.x);
+        let right_side = (rect.x + rect.w).saturating_sub(x + w);
+
+        assert_eq!(left_side, right_side);
+        TestResult::from_bool(left_side == right_side)
+    }
+
+    #[test]
+    fn test_center_line_in_rect_actually_centers_when_possible() {
+        assert!(FONT_ADVANCE & 1 == 0);
+        quickcheck(
+            center_line_in_rect_actually_centers_when_possible
+                as fn((u8, (u8, u8, u8, u8))) -> TestResult,
+        )
+    }
+    fn center_line_in_rect_actually_centers_when_possible(
+        (length, r): (u8, (u8, u8, u8, u8)),
+    ) -> TestResult {
+        let rect: Rect = r.into();
+
+        if rect.w & 1 == 1 || rect.w < FONT_ADVANCE || length >= (256 / FONT_ADVANCE as usize) as u8
+        {
+            return TestResult::discard();
+        }
+        let w = length * FONT_ADVANCE;
+
+        let (x, y) = center_line_in_rect(length, rect);
+        let left_side = (x as usize).saturating_sub(rect.x as usize);
+        let right_side =
+            (rect.x as usize + rect.w as usize).saturating_sub(x as usize + w as usize);
+
+        assert_eq!(left_side, right_side);
+        TestResult::from_bool(left_side == right_side)
+    }
 }

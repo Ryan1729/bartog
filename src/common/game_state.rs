@@ -318,6 +318,7 @@ pub enum Choice {
     Already(Chosen),
     OfSuit,
     OfBool,
+    OfUnit,
 }
 
 impl Choice {
@@ -325,7 +326,7 @@ impl Choice {
         use Choice::*;
         match *self {
             NoChoice | Already(_) => true,
-            OfSuit | OfBool => false,
+            OfSuit | OfBool | OfUnit => false,
         }
     }
 }
@@ -334,6 +335,7 @@ impl Choice {
 pub enum Chosen {
     Suit(Suit),
     Bool(bool),
+    Unit(()),
 }
 
 pub struct GameState {

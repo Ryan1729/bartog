@@ -1,4 +1,4 @@
-use common::rendering::get_text_rect;
+use common::rendering::{center_line_in_rect, center_rect_in_rect, get_text_dimensions};
 use common::*;
 
 use rand::Rng;
@@ -181,7 +181,6 @@ fn cpu_would_play(state: &mut GameState, playerId: PlayerID) -> Option<u8> {
 }
 
 fn choose_suit(state: &mut GameState) -> Option<Suit> {
-    console!(log, "choose_suit(state: &mut GameState) -> Option<Suit>");
     match state.choice {
         Choice::NoChoice => {
             state.choice = Choice::OfSuit;
@@ -189,21 +188,20 @@ fn choose_suit(state: &mut GameState) -> Option<Suit> {
         }
         Choice::Already(Chosen::Suit(suit)) => {
             state.choice = Choice::NoChoice;
-            console!(log, "Choice::Already(Chosen::Suit(suit))");
             Some(suit)
         }
         _ => None,
     }
 }
-fn choose_play_again(state: &mut GameState) -> Option<bool> {
+fn choose_play_again(state: &mut GameState) -> Option<()> {
     match state.choice {
         Choice::NoChoice => {
-            state.choice = Choice::OfBool;
+            state.choice = Choice::OfUnit;
             None
         }
-        Choice::Already(Chosen::Bool(b)) => {
+        Choice::Already(Chosen::Unit(unit)) => {
             state.choice = Choice::NoChoice;
-            Some(b)
+            Some(unit)
         }
         _ => None,
     }
@@ -394,15 +392,6 @@ fn update(state: &mut GameState, input: Input, speaker: &mut Speaker) {
     }
 }
 
-fn center_line_in_rect(text_length: u8, (x, y): (u8, u8), (w, h): (u8, u8)) -> (u8, u8) {
-    let middle_x = x + (w / 2);
-    let middle_y = y + (h / 2) - (FONT_SIZE / 4);
-
-    let text_x = middle_x - ((text_length as usize * FONT_ADVANCE as usize) / 2) as u8;
-
-    (text_x, middle_y)
-}
-
 //calling this once will swallow multiple presses on the button. We could either
 //pass in and return the number of presses to fix that, or this could simply be
 //called multiple times per frame (once for each click).
@@ -442,10 +431,11 @@ fn do_button(
 
     let text = spec.text.as_bytes();
 
-    let (x, y) = center_line_in_rect(text.len() as u8, (spec.x, spec.y), (spec.w, spec.h));
+    let (x, y) = center_line_in_rect(text.len() as u8, ((spec.x, spec.y), (spec.w, spec.h)));
 
-    //Long labels aren't great UX anyway, I think.
-    framebuffer.print(spec.text.as_bytes(), x, y, WHITE_INDEX);
+    //Long labels aren't great UX anyway, I think, so don't bother reflowing.
+    //Add the extra bit to `y` because the current graphics looks better that way.
+    framebuffer.print(spec.text.as_bytes(), x, y + (FONT_SIZE / 4), WHITE_INDEX);
 
     return result;
 }
@@ -463,8 +453,10 @@ pub fn do_suit_choice(
 
         let (x, _) = center_line_in_rect(
             text.len() as u8,
-            (SPRITE_SIZE, SPRITE_SIZE),
-            (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+            (
+                (SPRITE_SIZE, SPRITE_SIZE),
+                (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+            ),
         );
 
         framebuffer.print(text, x, SPRITE_SIZE * 2, WHITE_INDEX);
@@ -492,10 +484,6 @@ pub fn do_suit_choice(
         };
 
         if do_button(framebuffer, &mut state.context, input, speaker, &spec) {
-            console!(
-                log,
-                "do_button(framebuffer, &mut state.context, input, speaker, &spec)"
-            );
             state.choice = Choice::Already(Chosen::Suit(suit));
         }
     }
@@ -528,25 +516,15 @@ pub fn do_bool_choice(
 ) {
     framebuffer.full_window();
 
-    let winner_text = reflow(
-        &state.get_winner_text(),
-        NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as usize,
-    );
-
-    framebuffer.print(
-        winner_text.as_bytes(),
-        get_text_rect(winner_text.as_bytes()).0,
-        SPRITE_SIZE,
-        6,
-    );
-
     {
-        let question = b"would you like to play again?";
+        let question = b"Close this window?";
 
         let (x, y) = center_line_in_rect(
             question.len() as u8,
-            (SPRITE_SIZE, SPRITE_SIZE),
-            (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+            (
+                (SPRITE_SIZE, SPRITE_SIZE),
+                (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+            ),
         );
 
         framebuffer.print(question, x, y, WHITE_INDEX);
@@ -590,6 +568,74 @@ pub fn do_bool_choice(
         } else {
             state.context.set_next_hot(1);
         }
+    }
+}
+
+#[inline]
+pub fn do_unit_choice(
+    framebuffer: &mut Framebuffer,
+    state: &mut GameState,
+    input: Input,
+    speaker: &mut Speaker,
+) {
+    framebuffer.full_window();
+
+    {
+        let winner_text = reflow(
+            &state.get_winner_text(),
+            NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as usize,
+        );
+
+        let dimensions = get_text_dimensions(winner_text.as_bytes());
+
+        let (x, _) = center_rect_in_rect(
+            dimensions,
+            (
+                (SPRITE_SIZE, SPRITE_SIZE),
+                (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+            ),
+        );
+
+        framebuffer.print(winner_text.as_bytes(), x, SPRITE_SIZE, 6);
+    }
+
+    {
+        let question = b"would you like to play again?";
+
+        let (x, y) = center_line_in_rect(
+            question.len() as u8,
+            (
+                (SPRITE_SIZE, SPRITE_SIZE),
+                (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+            ),
+        );
+
+        framebuffer.print(question, x, y, WHITE_INDEX);
+    }
+
+    let w = SPRITE_SIZE * 5;
+    let h = SPRITE_SIZE * 3;
+    let y = SCREEN_HEIGHT as u8 - (h + SPRITE_SIZE);
+
+    let (x, _) = center_rect_in_rect((w, h), ((0, y), (SCREEN_WIDTH as u8, h)));
+
+    let text = "yes".to_owned();
+
+    let spec1 = ButtonSpec {
+        x,
+        y,
+        w,
+        h,
+        id: 1,
+        text,
+    };
+
+    if do_button(framebuffer, &mut state.context, input, speaker, &spec1) {
+        state.choice = Choice::Already(Chosen::Unit(()));
+    }
+
+    if state.context.hot != 1 {
+        state.context.set_next_hot(1);
     }
 }
 
@@ -644,16 +690,15 @@ pub fn update_and_render(
 
     let len = state.winners.len();
     if len > 0 {
-        if let Some(again) = choose_play_again(state) {
-            if again {
-                state.reset();
-            }
+        if let Some(()) = choose_play_again(state) {
+            state.reset();
         }
     }
 
     match state.choice {
         Choice::OfSuit => do_suit_choice(framebuffer, state, input, speaker),
         Choice::OfBool => do_bool_choice(framebuffer, state, input, speaker),
+        Choice::OfUnit => do_unit_choice(framebuffer, state, input, speaker),
         _ => {}
     }
 }
