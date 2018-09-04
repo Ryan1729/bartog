@@ -319,7 +319,7 @@ mod tests {
         };
 
         if !passes {
-            println!("Failed with: {}", result);
+            test_println!("Failed with: {}", result);
         }
 
         TestResult::from_bool(passes)

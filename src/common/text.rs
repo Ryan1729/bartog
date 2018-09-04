@@ -19,7 +19,7 @@ pub fn reflow(s: &str, width: usize) -> String {
             continue;
         }
 
-        if x > width {
+        if x >= width {
             output.push('\n');
 
             x = word.len();
@@ -38,18 +38,21 @@ pub fn bytes_reflow(bytes: &[u8], width: usize) -> Vec<u8> {
     if width == 0 {
         return Vec::new();
     }
+    test_log!(width);
     let mut output = Vec::with_capacity(bytes.len() + bytes.len() / width);
 
     let mut x = 0;
     for word in bytes_split_whitespace(bytes) {
+        test_log!(word);
         x += word.len();
-
+        test_log!(x);
+        test_log!(output);
         if x == width && x == word.len() {
             output.extend(word.iter());
             continue;
         }
 
-        if x > width {
+        if x >= width {
             output.push(b'\n');
 
             x = word.len();
@@ -140,7 +143,9 @@ mod tests {
         let width = 6;
 
         let reflowed = bytes_reflow(&s, width);
-
+        if !reflowed.ends_with(&[b'\n', 27]) {
+            test_println!("reflowed {:?}", reflowed);
+        }
         assert!(reflowed.ends_with(&[b'\n', 27]));
     }
     #[test]

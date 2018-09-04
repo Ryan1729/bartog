@@ -52,6 +52,25 @@ macro_rules! invariant_assert_eq {
     ($($whatever:tt)*) => {};
 }
 
+//This is useful since I can only use println! in non browser exectutions,
+//(it crashes otherwise) and this makes it easy to check that the only
+//instances of println are in these macros.
+macro_rules! test_println {
+    ($($arg:tt)*) => ({
+        if cfg!(test) {
+            println!($($arg)*);
+        }
+    })
+}
+
+macro_rules! test_log {
+    ($e:expr) => {{
+        if cfg!(test) {
+            println!(concat!(stringify!($e), ": {:#?}"), $e);
+        }
+    }};
+}
+
 pub mod rendering;
 pub use rendering::draw_winning_screen;
 pub use rendering::Framebuffer;
