@@ -3,7 +3,7 @@ use common::{log, Logger, UIContext};
 use inner_common::*;
 use std::cmp::max;
 use std::collections::VecDeque;
-use text::{bytes_lines, bytes_reflow};
+use text::{bytes_lines, bytes_reflow, slice_until_first_0};
 
 use rand::{Rng, SeedableRng, XorShiftRng};
 
@@ -234,7 +234,7 @@ impl GameState {
         let len = self.cpu_hands.len() as PlayerID;
 
         if playerId < len {
-            format!("CPU {}", playerId)
+            format!("cpu {}", playerId)
         } else if playerId == len {
             "you".to_string()
         } else {
@@ -319,7 +319,7 @@ mod tests {
         };
 
         if !passes {
-            println!("{}", result);
+            println!("Failed with: {}", result);
         }
 
         TestResult::from_bool(passes)
@@ -331,19 +331,6 @@ pub struct EventLog {
 }
 
 type EventLine = [u8; EventLog::WIDTH];
-
-pub fn slice_until_first_0<'a>(bytes: &'a [u8]) -> &'a [u8] {
-    let mut usable_len = 0;
-
-    for i in 0..bytes.len() {
-        if bytes[i] == 0 {
-            usable_len = i.saturating_sub(1);
-            break;
-        }
-    }
-
-    &bytes[..usable_len]
-}
 
 impl EventLog {
     const WIDTH: usize = NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as usize;
@@ -365,11 +352,17 @@ impl EventLog {
     }
 
     pub fn push(&mut self, bytes: &[u8]) {
+        console!(log, "push(&mut self, bytes: &[u8])");
         //TODO remove redundant joining and resplitting
         let reflowed = bytes_reflow(bytes, EventLog::WIDTH);
         let lines = bytes_lines(&reflowed);
+        console!(log, format!("{:?} {}", EventLog::WIDTH, reflowed.len()));
+        console!(log, format!("{:?}", reflowed));
+        console!(log, "^reflowed");
 
         for line in lines {
+            console!(log, format!("line: {:?}", line));
+            debug_assert!(line.len() <= EventLog::WIDTH);
             self.push_line(line);
         }
     }
@@ -487,8 +480,7 @@ impl GameState {
     ) -> GameState {
         log(logger, &format!("{:?}", seed));
 
-        event_log.clear();
-
+        event_log.push(&[b'-'; NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as usize]);
         event_log.push(b"started a new round.");
 
         let mut rng = XorShiftRng::from_seed(seed);

@@ -14,6 +14,11 @@ pub fn reflow(s: &str, width: usize) -> String {
     for word in s.split_whitespace() {
         x += word.len();
 
+        if x == width && x == word.len() {
+            output.push_str(word);
+            continue;
+        }
+
         if x > width {
             output.push('\n');
 
@@ -39,6 +44,11 @@ pub fn bytes_reflow(bytes: &[u8], width: usize) -> Vec<u8> {
     for word in bytes_split_whitespace(bytes) {
         x += word.len();
 
+        if x == width && x == word.len() {
+            output.extend(word.iter());
+            continue;
+        }
+
         if x > width {
             output.push(b'\n');
 
@@ -54,6 +64,23 @@ pub fn bytes_reflow(bytes: &[u8], width: usize) -> Vec<u8> {
     output
 }
 
+pub fn slice_until_first_0<'a>(bytes: &'a [u8]) -> &'a [u8] {
+    let mut usable_len = 255;
+
+    for i in 0..bytes.len() {
+        if bytes[i] == 0 {
+            usable_len = i;
+            break;
+        }
+    }
+
+    if usable_len == 255 {
+        bytes
+    } else {
+        &bytes[..usable_len]
+    }
+}
+
 // NOTE This does not use a general purpose definition of whitespace.
 // This should count a byte as whitespace iff it has all blank
 // pixels in this game's font.
@@ -65,13 +92,77 @@ pub fn is_byte_whitespace(byte: u8) -> bool {
 
 //See NOTE above.
 pub fn bytes_split_whitespace<'a>(bytes: &'a [u8]) -> impl Iterator<Item = &'a [u8]> {
-    bytes.split(|&b| is_byte_whitespace(b))
+    bytes
+        .split(|&b| is_byte_whitespace(b))
+        .filter(|word| word.len() > 0)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use quickcheck::*;
+
+    #[test]
+    fn test_bytes_reflow_then_lines_produces_lines_of_the_correct_length() {
+        quickcheck(
+            bytes_reflow_then_lines_produces_lines_of_the_correct_length
+                as fn((Vec<u8>, usize)) -> TestResult,
+        )
+    }
+    fn bytes_reflow_then_lines_produces_lines_of_the_correct_length(
+        (s, width): (Vec<u8>, usize),
+    ) -> TestResult {
+        if width == 0 {
+            return TestResult::discard();
+        }
+        let bytes = &s;
+
+        if bytes.iter().cloned().all(is_byte_whitespace) {
+            return TestResult::discard();
+        }
+
+        if bytes_split_whitespace(bytes).any(|w| w.len() > width) {
+            return TestResult::discard();
+        }
+
+        let reflowed = bytes_reflow(bytes, width);
+        let lines = bytes_lines(&reflowed);
+        for line in lines {
+            assert!(line.len() <= width);
+        }
+
+        TestResult::from_bool(true)
+    }
+
+    #[test]
+    fn test_bytes_reflow_works_for_this_generated_case() {
+        let s = vec![27, 0, 27, 0, 27, 0, 27];
+        let width = 6;
+
+        let reflowed = bytes_reflow(&s, width);
+
+        assert!(reflowed.ends_with(&[b'\n', 27]));
+    }
+    #[test]
+    fn test_bytes_reflow_works_for_this_real_case() {
+        let s = vec![
+            99, 112, 117, 32, 48, 32, 112, 108, 97, 121, 101, 100, 32, 97, 110, 32, 65, 99, 101,
+            32, 111, 102, 32, 104, 101, 97, 114, 116, 115,
+        ];
+        let width = 28;
+
+        let reflowed = bytes_reflow(&s, width);
+
+        assert!(reflowed.ends_with(&[b'\n', 104, 101, 97, 114, 116, 115]));
+    }
+
+    #[test]
+    fn test_is_byte_whitespace_works_on_upper_half_values() {
+        assert!(is_byte_whitespace(128));
+        assert!(is_byte_whitespace(128 + 1));
+        assert!(is_byte_whitespace(128 + 32));
+        assert!(!is_byte_whitespace(128 + 48));
+    }
 
     #[test]
     fn test_reflow_retains_all_non_whitespace() {
@@ -108,5 +199,23 @@ mod tests {
             reflow("CPU0, CPU1, CPU2, and you all win.", 25),
             "CPU0, CPU1, CPU2, and you\nall win.".to_string()
         );
+    }
+
+    #[test]
+    fn bytes_reflow_handles_word_split_just_before_the_len() {
+        assert_eq!(
+            bytes_reflow(b"CPU 1 played a Queen of clubs.", 28),
+            b"CPU 1 played a Queen of\nclubs."
+        );
+    }
+
+    #[test]
+    fn reflow_does_not_add_a_space_if_there_is_no_room() {
+        assert_eq!(reflow("12345 67890", 5), "12345\n67890".to_string());
+    }
+
+    #[test]
+    fn bytes_reflow_does_not_add_a_space_if_there_is_no_room() {
+        assert_eq!(bytes_reflow(b"12345 67890", 5), b"12345\n67890");
     }
 }

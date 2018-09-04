@@ -291,6 +291,25 @@ fn get_discard_animation(
     state
         .remove_positioned_card(player, card_index)
         .map(|card| {
+            let player_name = state.player_name(player);
+
+            let card_string = get_card_string(card.card);
+
+            let rank = get_rank(card.card);
+
+            let event_str = &[
+                player_name.as_bytes(),
+                if rank == 0 || rank == 7 {
+                    b" played an "
+                } else {
+                    b" played a "
+                },
+                card_string.as_bytes(),
+            ]
+                .concat();
+            console!(log, &format!("event_str {:?}", event_str));
+            state.event_log.push(event_str);
+            console!(log, "state.event_log.push(event_str)");
             if is_wild(card.card) {
                 CardAnimation::new(card, DISCARD_X, DISCARD_Y, Action::SelectWild(player))
             } else {
@@ -321,6 +340,12 @@ fn get_draw_animation(state: &mut GameState, player: PlayerID) -> Option<CardAni
     }?;
 
     let (x, y) = get_card_position(spread, len + 1, len);
+
+    let player_name = state.player_name(player);
+
+    let event_str = &[player_name.as_bytes(), b" drew a card."].concat();
+
+    state.event_log.push(event_str);
 
     Some(CardAnimation::new(
         PositionedCard {
@@ -372,7 +397,7 @@ fn take_turn(state: &mut GameState, input: Input, speaker: &mut Speaker) {
                         .map(|card| can_play(&state, card))
                         .unwrap_or(false)
                 };
-
+                console!(log, "can_play_it: ", can_play_it);
                 if can_play_it {
                     let animation = get_discard_animation(state, player, index);
 
@@ -750,12 +775,12 @@ pub fn update_and_render(
 
     if state.log_height > 0 {
         draw_event_log(framebuffer, &state);
-    }
-
-    match state.choice {
-        Choice::OfSuit => do_suit_choice(framebuffer, state, input, speaker),
-        Choice::OfBool => do_bool_choice(framebuffer, state, input, speaker),
-        Choice::OfUnit => do_unit_choice(framebuffer, state, input, speaker),
-        _ => {}
+    } else {
+        match state.choice {
+            Choice::OfSuit => do_suit_choice(framebuffer, state, input, speaker),
+            Choice::OfBool => do_bool_choice(framebuffer, state, input, speaker),
+            Choice::OfUnit => do_unit_choice(framebuffer, state, input, speaker),
+            _ => {}
+        }
     }
 }

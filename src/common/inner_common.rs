@@ -100,6 +100,10 @@ pub const SPADE_CHAR: u8 = 28;
 //If a type error ever actually happens, make these into enums.
 pub type Card = u8;
 
+pub fn get_card_string(card: Card) -> String {
+    format!("{} of {}", get_rank_str(card), get_suit_str(get_suit(card)))
+}
+
 pub type Suit = u8;
 
 pub mod Suits {
@@ -159,6 +163,25 @@ pub fn get_rank_char(card: Card) -> u8 {
         11 => b'q',
         12 => b'k',
         _ => b'!',
+    }
+}
+
+pub fn get_rank_str(card: Card) -> &'static str {
+    match get_rank(card) {
+        0 => "Ace",
+        1 => "2",
+        2 => "3",
+        3 => "4",
+        4 => "5",
+        5 => "6",
+        6 => "7",
+        7 => "8",
+        8 => "9",
+        9 => "10",
+        10 => "Jack",
+        11 => "Queen",
+        12 => "King",
+        _ => "UnknownRank",
     }
 }
 
