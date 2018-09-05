@@ -226,6 +226,15 @@ fn move_to_discard(state: &mut GameState, card: Card) {
     state.discard.push(card);
 }
 
+fn log_wild_selection(state: &mut GameState, player: PlayerID) {
+    if let Some(suit) = state.top_wild_declared_as {
+        let player_name = state.player_name(player);
+        let suit_char = get_suit_colour_and_char(suit).1;
+        let event_str = &[player_name.as_bytes(), b" selected ", &[suit_char], b" ."].concat();
+        state.event_log.push(event_str)
+    }
+}
+
 fn advance_card_animations(state: &mut GameState) {
     // I should really be able to use `Vec::retain` here,
     // but that passes a `&T` insteead of a `&mut T`.
@@ -257,10 +266,12 @@ fn advance_card_animations(state: &mut GameState) {
                             let hand = state.get_hand(playerId);
                             hand.most_common_suit()
                         };
+                        log_wild_selection(state, playerId);
                         move_to_discard(state, card);
                     } else {
                         if let Some(suit) = choose_suit(state) {
                             state.top_wild_declared_as = Some(suit);
+                            log_wild_selection(state, playerId);
                             move_to_discard(state, card);
                         } else {
                             //wait until they choose
@@ -293,7 +304,7 @@ fn get_discard_animation(
         .map(|card| {
             let player_name = state.player_name(player);
 
-            let card_string = get_card_string(card.card);
+            let card_string = get_short_card_string_and_colour(card.card).0;
 
             let rank = get_rank(card.card);
 
@@ -305,11 +316,12 @@ fn get_discard_animation(
                     b" played a "
                 },
                 card_string.as_bytes(),
+                b".",
             ]
                 .concat();
-            console!(log, &format!("event_str {:?}", event_str));
+
             state.event_log.push(event_str);
-            console!(log, "state.event_log.push(event_str)");
+
             if is_wild(card.card) {
                 CardAnimation::new(card, DISCARD_X, DISCARD_Y, Action::SelectWild(player))
             } else {

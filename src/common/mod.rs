@@ -55,6 +55,7 @@ macro_rules! invariant_assert_eq {
 //This is useful since I can only use println! in non browser exectutions,
 //(it crashes otherwise) and this makes it easy to check that the only
 //instances of println are in these macros.
+#[allow(unused_macros)]
 macro_rules! test_println {
     ($($arg:tt)*) => ({
         if cfg!(test) {

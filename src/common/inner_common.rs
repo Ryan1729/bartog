@@ -104,6 +104,17 @@ pub fn get_card_string(card: Card) -> String {
     format!("{} of {}", get_rank_str(card), get_suit_str(get_suit(card)))
 }
 
+pub fn get_short_card_string_and_colour(card: Card) -> (String, u8) {
+    let (colour, ch) = get_suit_colour_and_char(get_suit(card));
+
+    let mut output = String::with_capacity(2);
+
+    output.push(get_rank_char(card) as char);
+    output.push(ch as char);
+
+    (output, colour)
+}
+
 pub type Suit = u8;
 
 pub mod Suits {

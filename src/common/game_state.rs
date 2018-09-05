@@ -352,16 +352,11 @@ impl EventLog {
     }
 
     pub fn push(&mut self, bytes: &[u8]) {
-        console!(log, "push(&mut self, bytes: &[u8])");
         //TODO remove redundant joining and resplitting
         let reflowed = bytes_reflow(bytes, EventLog::WIDTH);
         let lines = bytes_lines(&reflowed);
-        console!(log, format!("{:?} {}", EventLog::WIDTH, reflowed.len()));
-        console!(log, format!("{:?}", reflowed));
-        console!(log, "^reflowed");
 
         for line in lines {
-            console!(log, format!("line: {:?}", line));
             debug_assert!(line.len() <= EventLog::WIDTH);
             self.push_line(line);
         }
