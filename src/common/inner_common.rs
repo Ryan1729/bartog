@@ -179,7 +179,7 @@ pub fn get_rank_char(card: Card) -> u8 {
 
 pub fn get_rank_str(card: Card) -> &'static str {
     match get_rank(card) {
-        0 => "Ace",
+        0 => "ace",
         1 => "2",
         2 => "3",
         3 => "4",
@@ -189,10 +189,10 @@ pub fn get_rank_str(card: Card) -> &'static str {
         7 => "8",
         8 => "9",
         9 => "10",
-        10 => "Jack",
-        11 => "Queen",
-        12 => "King",
-        _ => "UnknownRank",
+        10 => "jack",
+        11 => "queen",
+        12 => "king",
+        _ => "unknown rank",
     }
 }
 

@@ -229,8 +229,14 @@ fn move_to_discard(state: &mut GameState, card: Card) {
 fn log_wild_selection(state: &mut GameState, player: PlayerID) {
     if let Some(suit) = state.top_wild_declared_as {
         let player_name = state.player_name(player);
-        let suit_char = get_suit_colour_and_char(suit).1;
-        let event_str = &[player_name.as_bytes(), b" selected ", &[suit_char], b" ."].concat();
+        let suit_str = get_suit_str(suit);
+        let event_str = &[
+            player_name.as_bytes(),
+            b" selected ",
+            suit_str.as_bytes(),
+            b".",
+        ]
+            .concat();
         state.event_log.push(event_str)
     }
 }
@@ -304,7 +310,7 @@ fn get_discard_animation(
         .map(|card| {
             let player_name = state.player_name(player);
 
-            let card_string = get_short_card_string_and_colour(card.card).0;
+            let card_string = get_card_string(card.card);
 
             let rank = get_rank(card.card);
 
