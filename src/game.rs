@@ -135,13 +135,16 @@ fn draw_hand_with_cursor(framebuffer: &mut Framebuffer, hand: &Hand, index: usiz
 }
 
 fn draw_event_log(framebuffer: &mut Framebuffer, state: &GameState) {
-    framebuffer.full_window();
+    framebuffer.bottom_six_slice(WINDOW_TOP_LEFT, 0, 0, SCREEN_WIDTH as u8, state.log_height);
 
     let mut y = SPRITE_SIZE;
     for line in state.event_log.get_window_slice(state.log_top_index) {
         framebuffer.print_line(line, SPRITE_SIZE, y, WHITE_INDEX);
 
         y += FONT_SIZE;
+        if y >= state.log_height {
+            break;
+        }
     }
 }
 
@@ -448,13 +451,22 @@ fn take_turn(state: &mut GameState, input: Input, speaker: &mut Speaker) {
 }
 
 fn update(state: &mut GameState, input: Input, speaker: &mut Speaker) {
-    if input.pressed_this_frame(Button::Start) {
-        if state.log_height > 0 {
-            state.log_height = 0;
-        } else {
-            state.log_height = SCREEN_HEIGHT as u8;
+    match state.log_heading {
+        LogHeading::Up => {
+            state.log_height = state.log_height.saturating_sub(SPRITE_SIZE);
         }
-        //TODO slide down animation
+        LogHeading::Down => {
+            if state.log_height <= SCREEN_HEIGHT as u8 - SPRITE_SIZE {
+                state.log_height += SPRITE_SIZE;
+            }
+        }
+    }
+
+    if input.pressed_this_frame(Button::Start) {
+        state.log_heading = match state.log_heading {
+            LogHeading::Up => LogHeading::Down,
+            LogHeading::Down => LogHeading::Up,
+        };
     }
 
     if state.log_height > 0 {

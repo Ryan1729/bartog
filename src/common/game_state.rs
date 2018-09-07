@@ -429,6 +429,11 @@ pub enum Chosen {
     Unit(()),
 }
 
+pub enum LogHeading {
+    Up,
+    Down,
+}
+
 pub struct GameState {
     pub deck: Hand,
     pub discard: Hand,
@@ -445,6 +450,7 @@ pub struct GameState {
     pub event_log: EventLog,
     pub log_top_index: usize,
     pub log_height: u8,
+    pub log_heading: LogHeading,
     logger: Logger,
 }
 
@@ -529,6 +535,7 @@ impl GameState {
             event_log,
             log_top_index: 0,
             log_height: 0,
+            log_heading: LogHeading::Up,
             logger,
         }
     }

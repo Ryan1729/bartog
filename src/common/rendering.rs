@@ -603,7 +603,7 @@ impl Framebuffer {
     }
 
     pub fn full_window(&mut self) {
-        self.window(0, 0, SCREEN_WIDTH as u8, SCREEN_WIDTH as u8);
+        self.window(0, 0, SCREEN_WIDTH as u8, SCREEN_HEIGHT as u8);
     }
 
     pub fn window(&mut self, x: u8, y: u8, w: u8, h: u8) {
@@ -659,6 +659,47 @@ impl Framebuffer {
 
         self.spr(TOP_LEFT, x, y);
         self.spr(TOP_RIGHT, before_right_corner, y);
+        self.spr(BOTTOM_LEFT, x, above_bottom_corner);
+        self.spr(BOTTOM_RIGHT, before_right_corner, above_bottom_corner);
+    }
+
+    pub fn bottom_six_slice(&mut self, top_left: u8, x: u8, y: u8, w: u8, h: u8) {
+        let TOP_LEFT: u8 = top_left;
+        let TOP: u8 = TOP_LEFT + 1;
+        let TOP_RIGHT: u8 = TOP + 1;
+
+        let MIDDLE_LEFT: u8 = TOP_LEFT + SPRITES_PER_ROW;
+        let MIDDLE: u8 = TOP + SPRITES_PER_ROW;
+        let MIDDLE_RIGHT: u8 = TOP_RIGHT + SPRITES_PER_ROW;
+
+        let BOTTOM_LEFT: u8 = MIDDLE_LEFT + SPRITES_PER_ROW;
+        let BOTTOM: u8 = MIDDLE + SPRITES_PER_ROW;
+        let BOTTOM_RIGHT: u8 = MIDDLE_RIGHT + SPRITES_PER_ROW;
+
+        let after_left_corner = x.saturating_add(SPRITE_SIZE);
+        let before_right_corner = x.saturating_add(w).saturating_sub(SPRITE_SIZE);
+
+        let below_top_corner = y.saturating_add(SPRITE_SIZE);
+        let above_bottom_corner = y.saturating_add(h).saturating_sub(SPRITE_SIZE);
+
+        for fill_y in (below_top_corner..above_bottom_corner).step_by(SPRITE_SIZE as _) {
+            for fill_x in (after_left_corner..before_right_corner).step_by(SPRITE_SIZE as _) {
+                self.spr(MIDDLE, fill_x, fill_y);
+            }
+        }
+
+        for fill_x in (after_left_corner..before_right_corner).step_by(SPRITE_SIZE as _) {
+            self.spr(MIDDLE, fill_x, y);
+            self.spr(BOTTOM, fill_x, above_bottom_corner);
+        }
+
+        for fill_y in (below_top_corner..above_bottom_corner).step_by(SPRITE_SIZE as _) {
+            self.spr(MIDDLE_LEFT, x, fill_y);
+            self.spr(MIDDLE_RIGHT, before_right_corner, fill_y);
+        }
+
+        self.spr(MIDDLE_LEFT, x, y);
+        self.spr(MIDDLE_RIGHT, before_right_corner, y);
         self.spr(BOTTOM_LEFT, x, above_bottom_corner);
         self.spr(BOTTOM_RIGHT, before_right_corner, above_bottom_corner);
     }
