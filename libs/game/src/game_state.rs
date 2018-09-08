@@ -1,9 +1,6 @@
-use animation::CardAnimation;
-use inner_common::*;
+use common::{bytes_lines, bytes_reflow, slice_until_first_0, CardAnimation, UIContext, *};
 use std::cmp::max;
 use std::collections::VecDeque;
-use text::{bytes_lines, bytes_reflow, slice_until_first_0};
-use UIContext;
 
 use platform_types::{log, Logger};
 
