@@ -8,3 +8,6 @@ rand = "0.5"
 
 [dependencies.common]
 path = "../common"
+
+[dependencies.platform_types]
+path = "../platform_types"

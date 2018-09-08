@@ -14,6 +14,9 @@ use common::rendering::{
 use common::text::*;
 use common::*;
 
+extern crate platform_types;
+use platform_types::{Button, Input, Speaker, SFX};
+
 extern crate rand;
 
 use rand::Rng;
