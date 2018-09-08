@@ -11,12 +11,6 @@ quickcheck = "0.6"
 stdweb = "0.4"
 rand = "0.5"
 
-[dependencies.common]
-path = "../common"
-
-[dependencies.game]
-path = "../game"
-
 [dependencies.platform_types]
 path = "../platform_types"
 

@@ -8,6 +8,9 @@ authors = ["Ryan Wiedemann <Ryan1729@gmail.com>"]
 [dependencies.web]
 path = "libs/web"
 
+[dependencies.game]
+path = "libs/game"
+
 [features]
 default = []
 invariant-checking = []

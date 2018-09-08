@@ -86,3 +86,23 @@ pub mod Button {
         }
     }
 }
+
+pub type Logger = Option<fn(&str) -> ()>;
+
+pub fn log(logger: Logger, s: &str) {
+    if let Some(l) = logger {
+        l(s);
+    }
+}
+
+pub type StateNew = fn(seed: [u8; 16], logger: Logger) -> Box<dyn State>;
+
+pub trait State {
+    fn frame(&mut self, handle_sound: fn(SFX));
+
+    fn press(&mut self, button: Button::Ty);
+
+    fn release(&mut self, button: Button::Ty);
+
+    fn get_frame_buffer(&self) -> &[u32];
+}

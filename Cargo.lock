@@ -20,6 +20,7 @@ dependencies = [
 name = "bartog"
 version = "1.0.0"
 dependencies = [
+ "game 0.1.0",
  "web 0.1.0",
 ]
 
@@ -406,8 +407,6 @@ name = "web"
 version = "0.1.0"
 dependencies = [
  "bitflags 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "common 0.1.0",
- "game 0.1.0",
  "platform_types 0.1.0",
  "quickcheck 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
