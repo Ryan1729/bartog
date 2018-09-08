@@ -20,15 +20,8 @@ use stdweb::web::{self, Element, IElement, IEventTarget, INode, INonElementParen
 
 use stdweb::{UnsafeTypedArray, Value};
 
-extern crate common;
-use common::game_state::GameState;
-use common::rendering::Framebuffer;
-
 extern crate platform_types;
-use platform_types::{Button, Input, Speaker};
-
-extern crate game;
-use game::update_and_render;
+use platform_types::{Button, Logger, State, StateNew, SFX};
 
 macro_rules! enclose {
     ( [$( $x:ident ),*] $y:expr ) => {
@@ -194,15 +187,25 @@ fn setup_webgl(canvas: &Element) -> Value {
     )
 }
 
+fn handle_sound(request: SFX) {
+    let request_string = request.to_sound_key();
+
+    js! {
+        if (soundHandler) {
+            soundHandler(@{request_string});
+        }
+    };
+}
+
 struct PinkyWeb {
-    state: State,
     paused: bool,
     busy: bool,
     js_ctx: Value,
+    state: Box<dyn State>,
 }
 
 impl PinkyWeb {
-    fn new(canvas: &Element) -> Self {
+    fn new(canvas: &Element, state: Box<dyn State>) -> Self {
         let gl = setup_webgl(&canvas);
 
         let js_ctx = js!(
@@ -231,7 +234,7 @@ impl PinkyWeb {
         );
 
         PinkyWeb {
-            state: State::new(),
+            state,
             paused: true,
             busy: false,
             js_ctx,
@@ -248,7 +251,7 @@ impl PinkyWeb {
     }
 
     fn execute_cycle(&mut self) -> Result<bool, Box<Error>> {
-        self.state.frame();
+        self.state.frame(handle_sound);
 
         Ok(true)
     }
@@ -281,7 +284,7 @@ impl PinkyWeb {
             js! {
                 var h = @{&self.js_ctx};
                 var framebuffer = @{unsafe {
-                    UnsafeTypedArray::new( &self.state.framebuffer.buffer )
+                    UnsafeTypedArray::new( self.state.get_frame_buffer() )
                  }};
                 if( h.gl ) {
                     var data = new Uint8Array(
@@ -346,13 +349,6 @@ impl PinkyWeb {
     }
 }
 
-pub struct State {
-    pub game_state: GameState,
-    pub framebuffer: Framebuffer,
-    pub input: Input,
-    pub speaker: Speaker,
-}
-
 #[inline]
 fn logger(s: &str) {
     console!(log, s);
@@ -360,60 +356,6 @@ fn logger(s: &str) {
 
 use std::mem;
 use stdweb::web::Date;
-
-impl State {
-    pub fn new() -> State {
-        let framebuffer = Framebuffer::new();
-
-        let seed = unsafe {
-            let time = Date::new().get_time();
-
-            mem::transmute::<[f64; 2], [u8; 16]>([time, 1.0 / time])
-        };
-
-        State {
-            game_state: GameState::new(seed, Some(logger)),
-            framebuffer,
-            input: Input::new(),
-            speaker: Speaker::new(),
-        }
-    }
-
-    pub fn frame(&mut self) {
-        update_and_render(
-            &mut self.framebuffer,
-            &mut self.game_state,
-            self.input,
-            &mut self.speaker,
-        );
-
-        self.input.previous_gamepad = self.input.gamepad;
-
-        for request in self.speaker.drain() {
-            let request_string = request.to_sound_key();
-
-            js! {
-                if (soundHandler) {
-                    soundHandler(@{request_string});
-                }
-            };
-        }
-    }
-
-    pub fn press(&mut self, button: Button::Ty) {
-        if self.input.previous_gamepad.contains(button) {
-            //This is meant to pass along the key repeat, if any.
-            //Not sure if rewriting history is the best way to do this.
-            self.input.previous_gamepad.remove(button);
-        }
-
-        self.input.gamepad.insert(button);
-    }
-
-    pub fn release(&mut self, button: Button::Ty) {
-        self.input.gamepad.remove(button);
-    }
-}
 
 fn emulate_for_a_single_frame(pinky: Rc<RefCell<PinkyWeb>>) {
     pinky.borrow_mut().busy = true;
@@ -497,11 +439,12 @@ fn handle_error<E: Into<Box<Error>>>(error: E) {
     show("error");
 }
 
-pub fn run() {
+pub fn run(state: Box<dyn State>) {
     stdweb::initialize();
 
     let canvas = web::document().get_element_by_id("viewport").unwrap();
-    let pinky = Rc::new(RefCell::new(PinkyWeb::new(&canvas)));
+
+    let pinky = Rc::new(RefCell::new(PinkyWeb::new(&canvas, state)));
 
     support_input(pinky.clone());
 
@@ -517,4 +460,13 @@ pub fn run() {
     });
 
     stdweb::event_loop();
+}
+
+pub fn get_state_params() -> ([u8; 16], Logger) {
+    let seed = unsafe {
+        let time = Date::new().get_time();
+
+        mem::transmute::<[f64; 2], [u8; 16]>([time, 1.0 / time])
+    };
+    (seed, Some(logger))
 }

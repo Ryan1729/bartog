@@ -15,7 +15,7 @@ use common::text::*;
 use common::*;
 
 extern crate platform_types;
-use platform_types::{Button, Input, Speaker, SFX};
+use platform_types::{Button, Input, Logger, Speaker, State, SFX};
 
 extern crate rand;
 
@@ -831,5 +831,60 @@ pub fn update_and_render(
             Choice::OfUnit => do_unit_choice(framebuffer, state, input, speaker),
             _ => {}
         }
+    }
+}
+
+pub struct BartogState {
+    pub game_state: GameState,
+    pub framebuffer: Framebuffer,
+    pub input: Input,
+    pub speaker: Speaker,
+}
+
+impl BartogState {
+    pub fn new(seed: [u8; 16], logger: Logger) -> Box<Self> {
+        let framebuffer = Framebuffer::new();
+
+        Box::new(BartogState {
+            game_state: GameState::new(seed, logger),
+            framebuffer,
+            input: Input::new(),
+            speaker: Speaker::new(),
+        })
+    }
+}
+
+impl State for BartogState {
+    fn frame(&mut self, handle_sound: fn(SFX)) {
+        update_and_render(
+            &mut self.framebuffer,
+            &mut self.game_state,
+            self.input,
+            &mut self.speaker,
+        );
+
+        self.input.previous_gamepad = self.input.gamepad;
+
+        for request in self.speaker.drain() {
+            handle_sound(request);
+        }
+    }
+
+    fn press(&mut self, button: Button::Ty) {
+        if self.input.previous_gamepad.contains(button) {
+            //This is meant to pass along the key repeat, if any.
+            //Not sure if rewriting history is the best way to do this.
+            self.input.previous_gamepad.remove(button);
+        }
+
+        self.input.gamepad.insert(button);
+    }
+
+    fn release(&mut self, button: Button::Ty) {
+        self.input.gamepad.remove(button);
+    }
+
+    fn get_frame_buffer(&self) -> &[u32] {
+        &self.framebuffer.buffer
     }
 }

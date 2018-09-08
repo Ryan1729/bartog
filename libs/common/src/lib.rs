@@ -101,14 +101,6 @@ pub use animation::*;
 pub mod text;
 pub use text::*;
 
-pub type Logger = Option<fn(&str) -> ()>;
-
-pub fn log(logger: Logger, s: &str) {
-    if let Some(l) = logger {
-        l(s);
-    }
-}
-
 pub type UIId = u8;
 
 #[derive(Debug)]
