@@ -1,4 +1,7 @@
+#![allow(non_snake_case)]
+
 #[cfg(feature = "invariant-checking")]
+#[macro_export]
 macro_rules! invariant_violation {
     () => ({
         console!(error, "invariant was violated!", &format!("{}:{}", file!(), line!()));
@@ -21,6 +24,7 @@ macro_rules! invariant_violation {
 }
 
 #[cfg(not(feature = "invariant-checking"))]
+#[macro_export]
 macro_rules! invariant_violation {
     ($code:block, $($rest:tt)*) => {
         $code
@@ -29,6 +33,7 @@ macro_rules! invariant_violation {
 }
 
 #[cfg(feature = "invariant-checking")]
+#[macro_export]
 macro_rules! invariant_assert {
     ($($arg:tt)+) => ({
         assert!($($arg)*)
@@ -36,11 +41,13 @@ macro_rules! invariant_assert {
 }
 
 #[cfg(not(feature = "invariant-checking"))]
+#[macro_export]
 macro_rules! invariant_assert {
     ($($whatever:tt)*) => {};
 }
 
 #[cfg(feature = "invariant-checking")]
+#[macro_export]
 macro_rules! invariant_assert_eq {
     ($($arg:tt)+) => ({
         assert_eq!($($arg)*)
@@ -48,6 +55,7 @@ macro_rules! invariant_assert_eq {
 }
 
 #[cfg(not(feature = "invariant-checking"))]
+#[macro_export]
 macro_rules! invariant_assert_eq {
     ($($whatever:tt)*) => {};
 }
@@ -56,6 +64,7 @@ macro_rules! invariant_assert_eq {
 //(it crashes otherwise) and this makes it easy to check that the only
 //instances of println are in these macros.
 #[allow(unused_macros)]
+#[macro_export]
 macro_rules! test_println {
     ($($arg:tt)*) => ({
         if cfg!(test) {
@@ -64,6 +73,7 @@ macro_rules! test_println {
     })
 }
 
+#[macro_export]
 macro_rules! test_log {
     ($e:expr) => {{
         if cfg!(test) {
@@ -72,20 +82,25 @@ macro_rules! test_log {
     }};
 }
 
+#[macro_use]
+extern crate bitflags;
+
+extern crate rand;
+
 pub mod rendering;
-pub use self::rendering::Framebuffer;
+pub use rendering::Framebuffer;
 
 pub mod inner_common;
-pub use self::inner_common::*;
+pub use inner_common::*;
 
 pub mod game_state;
-pub use self::game_state::*;
+pub use game_state::*;
 
 pub mod animation;
-pub use self::animation::*;
+pub use animation::*;
 
 pub mod text;
-pub use self::text::*;
+pub use text::*;
 
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Input {

@@ -1,0 +1,8 @@
+[package]
+name = "common"
+version = "0.1.0"
+authors = ["Ryan1729 <Ryan1729@gmail.com>"]
+
+[dependencies]
+bitflags = "0.7"
+rand = "0.5"

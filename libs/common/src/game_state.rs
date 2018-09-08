@@ -1,9 +1,9 @@
-use common::animation::CardAnimation;
-use common::inner_common::*;
-use common::text::{bytes_lines, bytes_reflow, slice_until_first_0};
-use common::{log, Logger, UIContext};
+use animation::CardAnimation;
+use inner_common::*;
 use std::cmp::max;
 use std::collections::VecDeque;
+use text::{bytes_lines, bytes_reflow, slice_until_first_0};
+use {log, Logger, UIContext};
 
 use rand::{Rng, SeedableRng, XorShiftRng};
 

@@ -1,4 +1,4 @@
-use common::inner_common::TEN_CHAR;
+use inner_common::TEN_CHAR;
 
 pub fn bytes_lines<'a>(bytes: &'a [u8]) -> impl Iterator<Item = &'a [u8]> {
     bytes.split(|&b| b == b'\n')

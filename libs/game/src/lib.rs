@@ -1,3 +1,7 @@
+#![allow(non_snake_case)]
+#[macro_use]
+extern crate common;
+
 use common::animation::{Action, CardAnimation};
 use common::game_state::{
     get_card_offset, get_card_position, Choice, Chosen, GameState, Hand, LogHeading, Spread,
@@ -10,8 +14,11 @@ use common::rendering::{
 use common::text::*;
 use common::*;
 
+extern crate rand;
+
 use rand::Rng;
 
+#[allow(dead_code)]
 enum Face {
     Up,
     Down,
@@ -427,7 +434,7 @@ fn take_turn(state: &mut GameState, input: Input, speaker: &mut Speaker) {
                         .map(|card| can_play(&state, card))
                         .unwrap_or(false)
                 };
-                console!(log, "can_play_it: ", can_play_it);
+
                 if can_play_it {
                     let animation = get_discard_animation(state, player, index);
 

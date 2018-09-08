@@ -3,9 +3,6 @@
 #![allow(non_snake_case)]
 
 #[macro_use]
-extern crate bitflags;
-
-#[macro_use]
 extern crate stdweb;
 
 #[cfg(test)]
@@ -23,13 +20,12 @@ use stdweb::web::{self, Element, IElement, IEventTarget, INode, INonElementParen
 
 use stdweb::{UnsafeTypedArray, Value};
 
-#[macro_use]
-mod common;
+extern crate common;
 use common::game_state::GameState;
 use common::rendering::Framebuffer;
 use common::{Button, Input, Speaker};
 
-mod game;
+extern crate game;
 use game::update_and_render;
 
 macro_rules! enclose {

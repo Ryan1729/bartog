@@ -11,6 +11,12 @@ quickcheck = "0.6"
 stdweb = "0.4"
 rand = "0.5"
 
+[dependencies.common]
+path = "libs/common"
+
+[dependencies.game]
+path = "libs/game"
+
 [features]
 default = []
 invariant-checking = []
@@ -30,4 +36,3 @@ rpath = false
 lto = true
 debug-assertions = false
 codegen-units = 1
-

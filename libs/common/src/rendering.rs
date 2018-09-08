@@ -1,6 +1,6 @@
-use common::inner_common::*;
-use common::text::bytes_lines;
+use inner_common::*;
 use std::cmp::max;
+use text::bytes_lines;
 
 pub struct Framebuffer {
     pub buffer: Vec<u32>,
