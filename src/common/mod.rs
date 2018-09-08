@@ -73,20 +73,19 @@ macro_rules! test_log {
 }
 
 pub mod rendering;
-pub use rendering::draw_winning_screen;
-pub use rendering::Framebuffer;
+pub use self::rendering::Framebuffer;
 
 pub mod inner_common;
-pub use inner_common::*;
+pub use self::inner_common::*;
 
 pub mod game_state;
-pub use game_state::*;
+pub use self::game_state::*;
 
 pub mod animation;
-pub use animation::*;
+pub use self::animation::*;
 
 pub mod text;
-pub use text::*;
+pub use self::text::*;
 
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Input {

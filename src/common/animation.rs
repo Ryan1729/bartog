@@ -1,4 +1,4 @@
-use inner_common::*;
+use common::inner_common::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Action {

@@ -1,9 +1,9 @@
-use animation::CardAnimation;
+use common::animation::CardAnimation;
+use common::inner_common::*;
+use common::text::{bytes_lines, bytes_reflow, slice_until_first_0};
 use common::{log, Logger, UIContext};
-use inner_common::*;
 use std::cmp::max;
 use std::collections::VecDeque;
-use text::{bytes_lines, bytes_reflow, slice_until_first_0};
 
 use rand::{Rng, SeedableRng, XorShiftRng};
 
@@ -414,10 +414,9 @@ pub enum Choice {
 
 impl Choice {
     pub fn is_idle(&self) -> bool {
-        use Choice::*;
         match *self {
-            NoChoice | Already(_) => true,
-            OfSuit | OfBool | OfUnit => false,
+            Choice::NoChoice | Choice::Already(_) => true,
+            Choice::OfSuit | Choice::OfBool | Choice::OfUnit => false,
         }
     }
 }

@@ -17,7 +17,7 @@ pub mod colours {
     pub const WHITE: u32 = 0xFFEEEEEE;
     pub const BLACK: u32 = 0xFF222222;
 }
-pub use colours::*;
+pub use common::inner_common::colours::*;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub const PALETTE: [u32; 8] = [

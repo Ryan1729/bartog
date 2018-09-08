@@ -25,7 +25,9 @@ use stdweb::{UnsafeTypedArray, Value};
 
 #[macro_use]
 mod common;
-use common::*;
+use common::game_state::GameState;
+use common::rendering::Framebuffer;
+use common::{Button, Input, Speaker};
 
 mod game;
 use game::update_and_render;
