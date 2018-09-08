@@ -15,7 +15,7 @@ use common::text::*;
 use common::*;
 
 extern crate platform_types;
-use platform_types::{Button, Input, Logger, Speaker, State, SFX};
+use platform_types::{Button, Input, Speaker, State, StateParams, SFX};
 
 extern crate rand;
 
@@ -842,15 +842,15 @@ pub struct BartogState {
 }
 
 impl BartogState {
-    pub fn new(seed: [u8; 16], logger: Logger) -> Box<Self> {
+    pub fn new((seed, logger): StateParams) -> Self {
         let framebuffer = Framebuffer::new();
 
-        Box::new(BartogState {
+        BartogState {
             game_state: GameState::new(seed, logger),
             framebuffer,
             input: Input::new(),
             speaker: Speaker::new(),
-        })
+        }
     }
 }
 

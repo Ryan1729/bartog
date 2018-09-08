@@ -95,7 +95,7 @@ pub fn log(logger: Logger, s: &str) {
     }
 }
 
-pub type StateNew = fn(seed: [u8; 16], logger: Logger) -> Box<dyn State>;
+pub type StateParams = ([u8; 16], Logger);
 
 pub trait State {
     fn frame(&mut self, handle_sound: fn(SFX));

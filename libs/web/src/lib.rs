@@ -21,7 +21,7 @@ use stdweb::web::{self, Element, IElement, IEventTarget, INode, INonElementParen
 use stdweb::{UnsafeTypedArray, Value};
 
 extern crate platform_types;
-use platform_types::{Button, Logger, State, StateNew, SFX};
+use platform_types::{Button, State, StateParams, SFX};
 
 macro_rules! enclose {
     ( [$( $x:ident ),*] $y:expr ) => {
@@ -197,15 +197,15 @@ fn handle_sound(request: SFX) {
     };
 }
 
-struct PinkyWeb {
+struct PinkyWeb<S: State> {
     paused: bool,
     busy: bool,
     js_ctx: Value,
-    state: Box<dyn State>,
+    state: S,
 }
 
-impl PinkyWeb {
-    fn new(canvas: &Element, state: Box<dyn State>) -> Self {
+impl<S: State> PinkyWeb<S> {
+    fn new(canvas: &Element, state: S) -> Self {
         let gl = setup_webgl(&canvas);
 
         let js_ctx = js!(
@@ -357,7 +357,7 @@ fn logger(s: &str) {
 use std::mem;
 use stdweb::web::Date;
 
-fn emulate_for_a_single_frame(pinky: Rc<RefCell<PinkyWeb>>) {
+fn emulate_for_a_single_frame<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>>) {
     pinky.borrow_mut().busy = true;
 
     web::set_timeout(
@@ -381,7 +381,7 @@ fn emulate_for_a_single_frame(pinky: Rc<RefCell<PinkyWeb>>) {
     );
 }
 
-fn main_loop(pinky: Rc<RefCell<PinkyWeb>>) {
+fn main_loop<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>>) {
     // If we're running too slowly there is no point
     // in queueing up even more work.
     if !pinky.borrow_mut().busy {
@@ -412,7 +412,7 @@ fn hide(id: &str) {
         .unwrap();
 }
 
-fn support_input(pinky: Rc<RefCell<PinkyWeb>>) {
+fn support_input<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>>) {
     web::window().add_event_listener(enclose!( [pinky] move |event: KeyDownEvent| {
         let handled = pinky.borrow_mut().on_key( &event.key(), event.location(), true );
         if handled {
@@ -439,7 +439,7 @@ fn handle_error<E: Into<Box<Error>>>(error: E) {
     show("error");
 }
 
-pub fn run(state: Box<dyn State>) {
+pub fn run<S: State + 'static>(state: S) {
     stdweb::initialize();
 
     let canvas = web::document().get_element_by_id("viewport").unwrap();
@@ -462,7 +462,7 @@ pub fn run(state: Box<dyn State>) {
     stdweb::event_loop();
 }
 
-pub fn get_state_params() -> ([u8; 16], Logger) {
+pub fn get_state_params() -> StateParams {
     let seed = unsafe {
         let time = Date::new().get_time();
 

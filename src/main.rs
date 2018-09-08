@@ -3,7 +3,7 @@ extern crate web;
 extern crate game;
 
 fn main() {
-    let (seed, logger) = web::get_state_params();
-    let state = game::BartogState::new(seed, logger);
+    let params = web::get_state_params();
+    let state = game::BartogState::new(params);
     web::run(state);
 }
