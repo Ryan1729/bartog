@@ -378,7 +378,6 @@ impl EventLog {
 
     pub fn next_mut(&mut self) -> &mut EventLine {
         debug_assert!(EventLog::BUFFER_SIZE > 0);
-        debug_assert!(self.buffer.capacity() == EventLog::BUFFER_SIZE);
         debug_assert!(self.buffer.len() <= EventLog::BUFFER_SIZE);
 
         if self.is_full() {
@@ -391,7 +390,7 @@ impl EventLog {
     }
 
     pub fn is_full(&self) -> bool {
-        self.buffer.len() == self.buffer.capacity()
+        self.buffer.len() >= EventLog::BUFFER_SIZE
     }
 
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a [u8]> {
