@@ -6,6 +6,69 @@ use platform_types::{log, Logger};
 
 use rand::{Rng, SeedableRng, XorShiftRng};
 
+pub struct CanPlayGraph {
+    pub nodes: [u64; DECK_SIZE as usize],
+}
+
+impl CanPlayGraph {
+    pub fn is_playable_on(&self, card: Card, top_of_discard: Card) -> bool {
+        let card_flags = self.nodes[card as usize];
+        card_flags & (1 << top_of_discard as u64) != 0
+    }
+}
+
+const CLUBS_FLAGS: u64 = 0b0001_1111_1111_1111;
+const DIAMONDS_FLAGS: u64 = CLUBS_FLAGS << RANK_COUNT;
+const HEARTS_FLAGS: u64 = CLUBS_FLAGS << (RANK_COUNT * 2);
+const SPADES_FLAGS: u64 = CLUBS_FLAGS << (RANK_COUNT * 3);
+
+const SUIT_FLAGS: [u64; SUIT_COUNT as usize] =
+    [CLUBS_FLAGS, DIAMONDS_FLAGS, HEARTS_FLAGS, SPADES_FLAGS];
+
+macro_rules! across_all_suits {
+    ($flags:expr) => {
+        ($flags & 0b0001_1111_1111_1111)
+            | ($flags & 0b0001_1111_1111_1111 << RANK_COUNT)
+            | ($flags & 0b0001_1111_1111_1111 << (RANK_COUNT * 2))
+            | ($flags & 0b0001_1111_1111_1111 << (RANK_COUNT * 3))
+    };
+}
+
+const RANK_FLAGS: [u64; RANK_COUNT as usize] = [
+    across_all_suits!(1),
+    across_all_suits!(1 << 1),
+    across_all_suits!(1 << 2),
+    across_all_suits!(1 << 3),
+    across_all_suits!(1 << 4),
+    across_all_suits!(1 << 5),
+    across_all_suits!(1 << 6),
+    across_all_suits!(1 << 7),
+    across_all_suits!(1 << 8),
+    across_all_suits!(1 << 9),
+    across_all_suits!(1 << 10),
+    across_all_suits!(1 << 11),
+    across_all_suits!(1 << 12),
+];
+
+impl Default for CanPlayGraph {
+    fn default() -> Self {
+        //Reminder:
+        //the cards go from 0-51, in ascending rank order, and in ♣ ♦ ♥ ♠ suit order (alphabetical)
+        //A♣, 2♣, ... K♣, A♦, ..., A♥, ..., A♠, ..., K♠.
+        let mut nodes = [0; DECK_SIZE as usize];
+
+        for suit in 0..SUIT_COUNT as usize {
+            for rank in 0..RANK_COUNT as usize {
+                let i = rank + suit * RANK_COUNT as usize;
+
+                nodes[i] = SUIT_FLAGS[suit] | RANK_FLAGS[rank];
+            }
+        }
+
+        CanPlayGraph { nodes }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub enum Spread {
     LTR((u8, u8), u8),
@@ -442,6 +505,7 @@ pub struct GameState {
     pub winners: Vec<PlayerID>,
     pub top_wild_declared_as: Option<Suit>,
     pub choice: Choice,
+    pub can_play_graph: CanPlayGraph,
     pub context: UIContext,
     pub rng: XorShiftRng,
     pub event_log: EventLog,
@@ -527,6 +591,7 @@ impl GameState {
             winners,
             top_wild_declared_as: None,
             choice: Choice::NoChoice,
+            can_play_graph: CanPlayGraph::default(),
             context: UIContext::new(),
             rng,
             event_log,
