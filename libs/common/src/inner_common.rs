@@ -97,6 +97,10 @@ pub const DIAMOND_CHAR: u8 = 29;
 pub const HEART_CHAR: u8 = 30;
 pub const SPADE_CHAR: u8 = 28;
 
+pub const RANK_COUNT: u8 = 13;
+pub const SUIT_COUNT: u8 = 4;
+pub const DECK_SIZE: u8 = RANK_COUNT * SUIT_COUNT;
+
 //If a type error ever actually happens, make these into enums.
 pub type Card = u8;
 
@@ -125,11 +129,11 @@ pub mod Suits {
     pub const HEARTS: Suit = 2;
     pub const SPADES: Suit = 3;
 
-    pub const ALL: [Suit; 4] = [CLUBS, DIAMONDS, HEARTS, SPADES];
+    pub const ALL: [Suit; SUIT_COUNT] = [CLUBS, DIAMONDS, HEARTS, SPADES];
 }
 
 pub fn get_suit(card: Card) -> Suit {
-    card / 13
+    card / RANK_COUNT
 }
 
 pub fn get_suit_colour_and_char(suit: Suit) -> (u8, u8) {
@@ -155,7 +159,7 @@ pub fn get_suit_str(suit: Suit) -> &'static str {
 pub type Rank = u8;
 
 pub fn get_rank(card: Card) -> Rank {
-    card % 13
+    card % RANK_COUNT
 }
 
 pub fn get_rank_char(card: Card) -> u8 {
@@ -205,7 +209,6 @@ pub struct PositionedCard {
 
 pub type PlayerID = u8;
 
-pub const DECK_SIZE: u8 = 52;
 pub const PLAYER_HAND_HEIGHT: u8 = (SCREEN_HEIGHT - (card::HEIGHT * 5 / 9) as usize) as u8;
 pub const MIDDLE_CPU_HAND_HEIGHT: u8 = card::Y_EMPTY_SPACE;
 pub const LEFT_CPU_HAND_X: u8 = card::X_EMPTY_SPACE;

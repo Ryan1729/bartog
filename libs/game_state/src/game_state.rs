@@ -6,6 +6,7 @@ use platform_types::{log, Logger};
 
 use rand::{Rng, SeedableRng, XorShiftRng};
 
+#[derive(Clone)]
 pub struct CanPlayGraph {
     pub nodes: [u64; DECK_SIZE as usize],
 }
@@ -464,10 +465,11 @@ impl EventLog {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub enum Choice {
     NoChoice,
     Already(Chosen),
+    OfCanPlayGraph(CanPlayGraph),
     OfSuit,
     OfBool,
     OfUnit,
@@ -477,13 +479,14 @@ impl Choice {
     pub fn is_idle(&self) -> bool {
         match *self {
             Choice::NoChoice | Choice::Already(_) => true,
-            Choice::OfSuit | Choice::OfBool | Choice::OfUnit => false,
+            Choice::OfCanPlayGraph(_) | Choice::OfSuit | Choice::OfBool | Choice::OfUnit => false,
         }
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub enum Chosen {
+    CanPlayGraph(CanPlayGraph),
     Suit(Suit),
     Bool(bool),
     Unit(()),
@@ -634,5 +637,13 @@ impl GameState {
         }
 
         example_deck.difference(&observed_deck).cloned().collect()
+    }
+
+    pub fn log(&self, s: &str) {
+        log(self.logger, s);
+    }
+
+    pub fn get_logger(&self) -> Logger {
+        self.logger.clone()
     }
 }

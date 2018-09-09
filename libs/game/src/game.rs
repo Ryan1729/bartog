@@ -2,8 +2,63 @@ use common::*;
 use game_state::{
     get_card_offset, get_card_position, Choice, Chosen, GameState, Hand, LogHeading, Spread,
 };
-use platform_types::{Button, Input, Speaker, State, StateParams, SFX};
+use platform_types::{log, Button, Input, Speaker, State, StateParams, SFX};
 use rand::Rng;
+
+pub struct BartogState {
+    pub game_state: GameState,
+    pub framebuffer: Framebuffer,
+    pub input: Input,
+    pub speaker: Speaker,
+}
+
+impl BartogState {
+    pub fn new((seed, logger): StateParams) -> Self {
+        let framebuffer = Framebuffer::new();
+
+        BartogState {
+            game_state: GameState::new(seed, logger),
+            framebuffer,
+            input: Input::new(),
+            speaker: Speaker::new(),
+        }
+    }
+}
+
+impl State for BartogState {
+    fn frame(&mut self, handle_sound: fn(SFX)) {
+        update_and_render(
+            &mut self.framebuffer,
+            &mut self.game_state,
+            self.input,
+            &mut self.speaker,
+        );
+
+        self.input.previous_gamepad = self.input.gamepad;
+
+        for request in self.speaker.drain() {
+            handle_sound(request);
+        }
+    }
+
+    fn press(&mut self, button: Button::Ty) {
+        if self.input.previous_gamepad.contains(button) {
+            //This is meant to pass along the key repeat, if any.
+            //Not sure if rewriting history is the best way to do this.
+            self.input.previous_gamepad.remove(button);
+        }
+
+        self.input.gamepad.insert(button);
+    }
+
+    fn release(&mut self, button: Button::Ty) {
+        self.input.gamepad.remove(button);
+    }
+
+    fn get_frame_buffer(&self) -> &[u32] {
+        &self.framebuffer.buffer
+    }
+}
 
 #[allow(dead_code)]
 enum Face {
@@ -176,7 +231,7 @@ fn can_play(state: &GameState, &card: &Card) -> bool {
         is_wild(card) || if is_wild(top_of_discard) {
             state.top_wild_declared_as == Some(get_suit(card))
         } else {
-            get_suit(top_of_discard) == get_suit(card) || get_rank(top_of_discard) == get_rank(card)
+            state.can_play_graph.is_playable_on(card, top_of_discard)
         }
     } else {
         true
@@ -744,6 +799,102 @@ pub fn do_unit_choice(
 }
 
 #[inline]
+pub fn do_can_play_graph_choice(
+    framebuffer: &mut Framebuffer,
+    state: &mut GameState,
+    input: Input,
+    speaker: &mut Speaker,
+) {
+    let logger = state.get_logger();
+    if let Choice::OfCanPlayGraph(ref mut graph) = state.choice {
+        framebuffer.full_window();
+
+        {
+            let text = b"choose a card to change.";
+
+            let (x, _) = center_line_in_rect(
+                text.len() as u8,
+                (
+                    (SPRITE_SIZE, SPRITE_SIZE),
+                    (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+                ),
+            );
+
+            framebuffer.print(text, x, SPRITE_SIZE * 2, WHITE_INDEX);
+        }
+
+        {
+            let y = SPRITE_SIZE * 4;
+            let w = SPRITE_SIZE * 5;
+            let h = SPRITE_SIZE * 3;
+
+            let spec = ButtonSpec {
+                x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
+                y,
+                w,
+                h,
+                id: 3,
+                text: "Done".to_owned(),
+            };
+
+            if do_button(framebuffer, &mut state.context, input, speaker, &spec) {
+                //TODO we can probably eliminate this largish copy
+                //state.choice = Choice::Already(Chosen::CanPlayGraph(graph.clone()));
+
+                log(
+                    logger,
+                    "Choice::Already(Chosen::CanPlayGraph(graph.clone()))",
+                );
+            }
+        }
+
+        let w = NINE_SLICE_MAX_INTERIOR_SIZE;
+        let h = SPRITE_SIZE * 3;
+        let x = SPRITE_SIZE;
+
+        const ID_OFFSET: UIId = 10;
+
+        for (i, card) in (0..DECK_SIZE)
+            .skip(state.context.hot.saturating_sub(4) as usize)
+            .take(4)
+            .enumerate()
+        {
+            let id = card + ID_OFFSET;
+
+            let text = get_card_string(card);
+
+            let spec = ButtonSpec {
+                x,
+                y: h * i as u8,
+                w,
+                h,
+                id,
+                text,
+            };
+
+            if do_button(framebuffer, &mut state.context, input, speaker, &spec) {
+                log(logger, &spec.text);
+            }
+        }
+
+        if state.context.hot == 0 || state.context.hot >= DECK_SIZE + ID_OFFSET {
+            state.context.set_next_hot(1);
+        } else if input.pressed_this_frame(Button::Up) {
+            let next = dice_mod(state.context.hot - 1, DECK_SIZE + ID_OFFSET) + ID_OFFSET;
+            state.context.set_next_hot(next);
+        } else if input.pressed_this_frame(Button::Down) {
+            let next = dice_mod(state.context.hot + 1, DECK_SIZE + ID_OFFSET) + ID_OFFSET;
+            state.context.set_next_hot(next);
+        }
+    } else {
+        invariant_violation!(
+            { state.choice = Choice::NoChoice },
+            "`do_can_play_graph_choice` was called with the wrong choice type!"
+        )
+    }
+}
+
+#[inline]
 pub fn update_and_render(
     framebuffer: &mut Framebuffer,
     state: &mut GameState,
@@ -810,65 +961,13 @@ pub fn update_and_render(
         draw_event_log(framebuffer, &state);
     } else {
         match state.choice {
+            Choice::OfCanPlayGraph(_) => {
+                do_can_play_graph_choice(framebuffer, state, input, speaker)
+            }
             Choice::OfSuit => do_suit_choice(framebuffer, state, input, speaker),
             Choice::OfBool => do_bool_choice(framebuffer, state, input, speaker),
             Choice::OfUnit => do_unit_choice(framebuffer, state, input, speaker),
             _ => {}
         }
-    }
-}
-
-pub struct BartogState {
-    pub game_state: GameState,
-    pub framebuffer: Framebuffer,
-    pub input: Input,
-    pub speaker: Speaker,
-}
-
-impl BartogState {
-    pub fn new((seed, logger): StateParams) -> Self {
-        let framebuffer = Framebuffer::new();
-
-        BartogState {
-            game_state: GameState::new(seed, logger),
-            framebuffer,
-            input: Input::new(),
-            speaker: Speaker::new(),
-        }
-    }
-}
-
-impl State for BartogState {
-    fn frame(&mut self, handle_sound: fn(SFX)) {
-        update_and_render(
-            &mut self.framebuffer,
-            &mut self.game_state,
-            self.input,
-            &mut self.speaker,
-        );
-
-        self.input.previous_gamepad = self.input.gamepad;
-
-        for request in self.speaker.drain() {
-            handle_sound(request);
-        }
-    }
-
-    fn press(&mut self, button: Button::Ty) {
-        if self.input.previous_gamepad.contains(button) {
-            //This is meant to pass along the key repeat, if any.
-            //Not sure if rewriting history is the best way to do this.
-            self.input.previous_gamepad.remove(button);
-        }
-
-        self.input.gamepad.insert(button);
-    }
-
-    fn release(&mut self, button: Button::Ty) {
-        self.input.gamepad.remove(button);
-    }
-
-    fn get_frame_buffer(&self) -> &[u32] {
-        &self.framebuffer.buffer
     }
 }
