@@ -120,3 +120,46 @@ The question now is, how to represent it in something approaching that level of 
 The easiest thing to do seems to be allocating 52 bits for each card that indicate whether that card can be played on each of the cards, (or vice versa I suppose.) That would require the full 52 * 52 = 2704 bits, (which would probably be faster to access if we gave each card its own 64 bits, requiring 64 * 52 = 3328 bits). It seems most practical to just check whether a given graph has one strongly connected component, since apparently there's [at least](https://en.wikipedia.org/wiki/Tarjan's_strongly_connected_components_algorithm) [two distinct](https://en.wikipedia.org/wiki/Path-based_strong_component_algorithm) algorithms to find all strongly connected components, which easily allows to check how many there are, in linear time, in the number of edges and nodes. I think we might be able to optimize in our particular case by checking if there are above a minimum number of bits, if the edges factor in the running happens to be large. This complicates generating random connected graph instances only slightly. We can just generate the required number of bits, and then check whether there is a single strongly connected component, and if not, (which our previous math indicates will happen almost all the time,) then set some zero bits. This breaks uniform sampling, but a bias towards permissive graphs sounds like a feature not a bug.
 
 Another important aspect of a representation is how easy it is to create a UI for it. creating a UI that did not structurally allow the specification of non-strongly-connected sounds difficult and unlikely to yield usable results, (52 layers of menus is far too many and yet not enough!) But instead, prompting for which card or common group of cards the player would like to alter the connectivity for, then presenting them with 52 toggles, then alerting them if they try to submit a non-strongly connected graph, seems like a livable UI.
+
+___
+
+The time has come to actually implement the  UI for this.
+
+I'm imagining something like this:
+
+```
++---------------+
+|               |
+| Description   |
+|               |
++---------+     |
+|   Q♣    +-----+
++---------+Reset|
+|   K♣    +-----+
++---------+     |
+|   A♦    +-----+
++---------+Cance|
+|   2♦    +-----+
++---------+     |
+|   3♦    +-----+
++---------+ Done|
++---------------+
+```
+
+The card button column would be scrollable. When the bottom button is selected and the player presses down then the buttons move up revealing more if there are any, and vice versa for pressing up. (Should the scrolling wrap?)
+
+"Reset" would change the connectivity to the default one, "Cancel" would take you back to the, (as yet unimplemented,) rule select screen, and leave the connectivity graph the way it was before the player changed it, and "Done" would confirm the changes and start the next game. All three of these should probably have confirmation dialogs.
+
+After the player selects a card button they are presented with 52 checkboxes, presumably also scrollable, which allow selecting all the possible outgoing connections. (one might think that we should leave the card's own checkbox out, but eventually we are likely to add the possibility of multiple copies of a card in play at once)
+
+We want to have good logs that describe the changes to the previous state, since logging the entire graph is impractical, (you'd have to scroll past hundreds of screens and/or decipher compact symbols.) Another argument for logging the changes is that, in the common case, only a few connections will be changed, since the player's UI makes it hard to make sweeping changes, and to be fair we shouldn't have the computer players do that either. 
+
+So therefore we need to store the changes to the state, even though it would be simpler to store a copy of the entire state. A basic change consists of a card that is being changed, (52 possibilities,) and the outgoing connections for it (2^52 possibilities.) Since 52 possibilities can be expressed in 6 bits (2^6 = 64 > 52 > 32 = 2^5), we can easily fit a change into 64 bits.
+
+A notable exception to the small changes rule is resetting to the default. We should log a reset to default as something like "PLAYER_NAME has reset the can play on rules back to the default". To store this we can make the all ones bit pattern mean resetting, and check for that one in particular when logging.
+
+That leaves us with some possible bit patterns left over. If we want to later, we could add patterns that perform more complicated changes and buttons that perform them. For instance, allowing all cards to be playable on each other, or allowing all cards of a particular rank to be played on all cards, or disallowing all cards of a particular suit to be played on cards of a particular rank, or similar changes with suit and rank switched in and out. We may want to wait and see what "shortcuts" are desired by actual players in practice.
+
+It may or may not be desirable to combine together changes before putting them in the log. For example, if all the cards of a particular rank, (say twos) can now be played on a suit (say spades), then should we figure this out and log "PLAYER_NAME has changed the rules to allow playing all 2s on spades"? This seems rather difficult to cover all the cases for. It seems like there would be ambiguous cases where we could end up saying something true that obscures the more meaningful effects of the actual change. If we did add buttons for more complicated changes, then recognizing exactly those kinds of changes might make sense. Waiting and seeing how readable the logs are in practice seems wise.
+
+We will also need to allow the player to check what the current playability graph is. It seems impossible to present the whole graph "at a glance" so instead, they will have to indicate the card they are interested in looking at, then be shown a list of cards that card is playable on. I'm not currently sure of the best way to present that in our limited screen space. Would it be possible to create a readable string for each of the 2^52 possible outgoing connections? Otherwise, we can display the checkboxes from the outgoing connection selection screen.
