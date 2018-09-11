@@ -122,14 +122,14 @@ pub fn get_short_card_string_and_colour(card: Card) -> (String, u8) {
 pub type Suit = u8;
 
 pub mod Suits {
-    use super::Suit;
+    use super::*;
 
     pub const CLUBS: Suit = 0;
     pub const DIAMONDS: Suit = 1;
     pub const HEARTS: Suit = 2;
     pub const SPADES: Suit = 3;
 
-    pub const ALL: [Suit; SUIT_COUNT] = [CLUBS, DIAMONDS, HEARTS, SPADES];
+    pub const ALL: [Suit; SUIT_COUNT as usize] = [CLUBS, DIAMONDS, HEARTS, SPADES];
 }
 
 pub fn get_suit(card: Card) -> Suit {

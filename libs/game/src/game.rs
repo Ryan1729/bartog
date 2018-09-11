@@ -1,6 +1,7 @@
 use common::*;
 use game_state::{
-    get_card_offset, get_card_position, Choice, Chosen, GameState, Hand, LogHeading, Spread,
+    can_play, get_card_offset, get_card_position, Choice, Chosen, GameState, Hand, LogHeading,
+    Spread,
 };
 use platform_types::{log, Button, Input, Speaker, State, StateParams, SFX};
 use rand::Rng;
@@ -250,6 +251,27 @@ fn cpu_would_play(state: &mut GameState, playerId: PlayerID) -> Option<u8> {
     };
 
     state.rng.choose(&playable).map(|&(i, _)| i as u8)
+}
+
+use std::mem;
+
+fn choose_can_play_graph(state: &mut GameState) -> Vec<can_play::Change> {
+    match state.choice {
+        Choice::NoChoice => {
+            state.choice = Choice::OfCanPlayGraph(Vec::new());
+            Vec::new()
+        }
+        Choice::Already(Chosen::CanPlayGraph(_)) => {
+            if let Choice::Already(Chosen::CanPlayGraph(changes)) =
+                mem::replace(&mut state.choice, Choice::NoChoice)
+            {
+                changes
+            } else {
+                invariant_violation!({ Vec::new() }, "Somehow we're multi-threaded or somthing?!")
+            }
+        }
+        _ => Vec::new(),
+    }
 }
 
 fn choose_suit(state: &mut GameState) -> Option<Suit> {
@@ -806,7 +828,7 @@ pub fn do_can_play_graph_choice(
     speaker: &mut Speaker,
 ) {
     let logger = state.get_logger();
-    if let Choice::OfCanPlayGraph(ref mut graph) = state.choice {
+    if let Choice::OfCanPlayGraph(ref changes) = state.choice {
         framebuffer.full_window();
 
         {
@@ -904,6 +926,15 @@ pub fn update_and_render(
     state.context.frame_init();
 
     update(state, input, speaker);
+
+    match choose_can_play_graph(state) {
+        ref x if x.len() == 0 => {
+            //wait until they choose
+        }
+        changes => {
+            state.log(&format!("testing:\n{:#?}", changes));
+        }
+    }
 
     invariant_assert_eq!(state.missing_cards(), vec![0; 0]);
 

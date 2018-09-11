@@ -82,6 +82,14 @@ macro_rules! test_log {
     }};
 }
 
+#[macro_export]
+//GameState log
+macro_rules! glog {
+    ($state:expr, $e:expr) => {{
+        $state.log(&format!(concat!(stringify!($e), ": {:#?}"), $e));
+    }};
+}
+
 extern crate platform_types;
 
 extern crate rand;

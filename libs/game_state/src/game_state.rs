@@ -1,72 +1,160 @@
-use common::{bytes_lines, bytes_reflow, slice_until_first_0, CardAnimation, UIContext, *};
+use common::{
+    bytes_lines, bytes_reflow, slice_until_first_0, CardAnimation, UIContext, DECK_SIZE, *,
+};
 use std::cmp::max;
 use std::collections::VecDeque;
+use std::fmt;
 
 use platform_types::{log, Logger};
 
 use rand::{Rng, SeedableRng, XorShiftRng};
 
-#[derive(Clone)]
-pub struct CanPlayGraph {
-    pub nodes: [u64; DECK_SIZE as usize],
-}
+pub mod can_play {
+    use super::*;
 
-impl CanPlayGraph {
-    pub fn is_playable_on(&self, card: Card, top_of_discard: Card) -> bool {
-        let card_flags = self.nodes[card as usize];
-        card_flags & (1 << top_of_discard as u64) != 0
-    }
-}
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    pub struct Edges(u64);
 
-const CLUBS_FLAGS: u64 = 0b0001_1111_1111_1111;
-const DIAMONDS_FLAGS: u64 = CLUBS_FLAGS << RANK_COUNT;
-const HEARTS_FLAGS: u64 = CLUBS_FLAGS << (RANK_COUNT * 2);
-const SPADES_FLAGS: u64 = CLUBS_FLAGS << (RANK_COUNT * 3);
-
-const SUIT_FLAGS: [u64; SUIT_COUNT as usize] =
-    [CLUBS_FLAGS, DIAMONDS_FLAGS, HEARTS_FLAGS, SPADES_FLAGS];
-
-macro_rules! across_all_suits {
-    ($flags:expr) => {
-        ($flags & 0b0001_1111_1111_1111)
-            | ($flags & 0b0001_1111_1111_1111 << RANK_COUNT)
-            | ($flags & 0b0001_1111_1111_1111 << (RANK_COUNT * 2))
-            | ($flags & 0b0001_1111_1111_1111 << (RANK_COUNT * 3))
-    };
-}
-
-const RANK_FLAGS: [u64; RANK_COUNT as usize] = [
-    across_all_suits!(1),
-    across_all_suits!(1 << 1),
-    across_all_suits!(1 << 2),
-    across_all_suits!(1 << 3),
-    across_all_suits!(1 << 4),
-    across_all_suits!(1 << 5),
-    across_all_suits!(1 << 6),
-    across_all_suits!(1 << 7),
-    across_all_suits!(1 << 8),
-    across_all_suits!(1 << 9),
-    across_all_suits!(1 << 10),
-    across_all_suits!(1 << 11),
-    across_all_suits!(1 << 12),
-];
-
-impl Default for CanPlayGraph {
-    fn default() -> Self {
-        //Reminder:
-        //the cards go from 0-51, in ascending rank order, and in ♣ ♦ ♥ ♠ suit order (alphabetical)
-        //A♣, 2♣, ... K♣, A♦, ..., A♥, ..., A♠, ..., K♠.
-        let mut nodes = [0; DECK_SIZE as usize];
-
-        for suit in 0..SUIT_COUNT as usize {
-            for rank in 0..RANK_COUNT as usize {
-                let i = rank + suit * RANK_COUNT as usize;
-
-                nodes[i] = SUIT_FLAGS[suit] | RANK_FLAGS[rank];
-            }
+    impl Edges {
+        pub fn new(edges: u64) -> Self {
+            Edges(edges & ((1 << 52) - 1))
         }
 
-        CanPlayGraph { nodes }
+        pub fn has_card(&self, card: Card) -> bool {
+            self.0 & (1 << card) != 0
+        }
+
+        pub fn cards(&self) -> Vec<Card> {
+            let mut output = Vec::with_capacity(DECK_SIZE as _);
+
+            for card in 0..DECK_SIZE {
+                if self.has_card(card) {
+                    output.push(card);
+                }
+            }
+
+            output
+        }
+    }
+
+    impl Default for Edges {
+        fn default() -> Self {
+            Edges(0)
+        }
+    }
+
+    impl fmt::Debug for Edges {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            let v = self.0;
+            if v >= 1 << 52 {
+                write!(f, "INVALID EDGES: {:?}, valid portion:", v);
+            }
+
+            write!(
+                f,
+                "{:?}",
+                self.cards()
+                    .into_iter()
+                    .map(get_card_string)
+                    .collect::<Vec<_>>(),
+            )
+        }
+    }
+
+    #[derive(Clone)]
+    pub struct Graph {
+        pub nodes: [Edges; DECK_SIZE as usize],
+    }
+
+    impl Graph {
+        pub fn is_playable_on(&self, card: Card, top_of_discard: Card) -> bool {
+            let edges = self.nodes[card as usize].0;
+            edges & (1 << top_of_discard as u64) != 0
+        }
+    }
+
+    const CLUBS_FLAGS: u64 = 0b0001_1111_1111_1111;
+    const DIAMONDS_FLAGS: u64 = CLUBS_FLAGS << RANK_COUNT;
+    const HEARTS_FLAGS: u64 = CLUBS_FLAGS << (RANK_COUNT * 2);
+    const SPADES_FLAGS: u64 = CLUBS_FLAGS << (RANK_COUNT * 3);
+
+    const SUIT_FLAGS: [u64; SUIT_COUNT as usize] =
+        [CLUBS_FLAGS, DIAMONDS_FLAGS, HEARTS_FLAGS, SPADES_FLAGS];
+
+    macro_rules! across_all_suits {
+        ($flags:expr) => {
+            ($flags & 0b0001_1111_1111_1111)
+                | ($flags & 0b0001_1111_1111_1111 << RANK_COUNT)
+                | ($flags & 0b0001_1111_1111_1111 << (RANK_COUNT * 2))
+                | ($flags & 0b0001_1111_1111_1111 << (RANK_COUNT * 3))
+        };
+    }
+
+    const RANK_FLAGS: [u64; RANK_COUNT as usize] = [
+        across_all_suits!(1),
+        across_all_suits!(1 << 1),
+        across_all_suits!(1 << 2),
+        across_all_suits!(1 << 3),
+        across_all_suits!(1 << 4),
+        across_all_suits!(1 << 5),
+        across_all_suits!(1 << 6),
+        across_all_suits!(1 << 7),
+        across_all_suits!(1 << 8),
+        across_all_suits!(1 << 9),
+        across_all_suits!(1 << 10),
+        across_all_suits!(1 << 11),
+        across_all_suits!(1 << 12),
+    ];
+
+    impl Default for Graph {
+        fn default() -> Self {
+            //Reminder:
+            // the cards go from 0-51, in ascending rank order,
+            // and in ♣ ♦ ♥ ♠ suit order (alphabetical)
+            // A♣, 2♣, ... K♣, A♦, ..., A♥, ..., A♠, ..., K♠.
+            let mut nodes = [Edges::default(); DECK_SIZE as usize];
+
+            for suit in 0..SUIT_COUNT as usize {
+                for rank in 0..RANK_COUNT as usize {
+                    let i = rank + suit * RANK_COUNT as usize;
+
+                    nodes[i] = Edges::new(SUIT_FLAGS[suit] | RANK_FLAGS[rank]);
+                }
+            }
+
+            Graph { nodes }
+        }
+    }
+
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    pub struct Change(u64);
+
+    impl Change {
+        fn edges(&self) -> Edges {
+            Edges::new(self.0)
+        }
+
+        fn card(&self) -> Card {
+            (self.0 >> DECK_SIZE as u64) as u8 & 0b0011_1111
+        }
+    }
+
+    const RESET_ALL: Change = Change(-1i64 as u64);
+
+    impl fmt::Debug for Change {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            if *self == RESET_ALL {
+                write!(f, "reset to default")?;
+                return Ok(());
+            }
+
+            write!(
+                f,
+                "Card: {}, Edges: {:?}",
+                get_card_string(self.card()),
+                self.edges()
+            )
+        }
     }
 }
 
@@ -465,11 +553,11 @@ impl EventLog {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Choice {
     NoChoice,
     Already(Chosen),
-    OfCanPlayGraph(CanPlayGraph),
+    OfCanPlayGraph(Vec<can_play::Change>),
     OfSuit,
     OfBool,
     OfUnit,
@@ -484,9 +572,9 @@ impl Choice {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Chosen {
-    CanPlayGraph(CanPlayGraph),
+    CanPlayGraph(Vec<can_play::Change>),
     Suit(Suit),
     Bool(bool),
     Unit(()),
@@ -508,7 +596,7 @@ pub struct GameState {
     pub winners: Vec<PlayerID>,
     pub top_wild_declared_as: Option<Suit>,
     pub choice: Choice,
-    pub can_play_graph: CanPlayGraph,
+    pub can_play_graph: can_play::Graph,
     pub context: UIContext,
     pub rng: XorShiftRng,
     pub event_log: EventLog,
@@ -594,7 +682,7 @@ impl GameState {
             winners,
             top_wild_declared_as: None,
             choice: Choice::NoChoice,
-            can_play_graph: CanPlayGraph::default(),
+            can_play_graph: Default::default(),
             context: UIContext::new(),
             rng,
             event_log,
