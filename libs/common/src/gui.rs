@@ -2,6 +2,7 @@ pub type UIId = u8;
 
 #[derive(Debug)]
 pub struct UIContext {
+    pub extra_state: u64,
     pub hot: UIId,
     pub active: UIId,
     pub next_hot: UIId,
@@ -10,6 +11,7 @@ pub struct UIContext {
 impl UIContext {
     pub fn new() -> Self {
         UIContext {
+            extra_state: 0,
             hot: 0,
             active: 0,
             next_hot: 0,
@@ -31,6 +33,9 @@ impl UIContext {
     pub fn frame_init(&mut self) {
         if self.active == 0 {
             self.hot = self.next_hot;
+            if self.hot == 0 {
+                self.extra_state = 0;
+            }
         }
         self.next_hot = 0;
     }

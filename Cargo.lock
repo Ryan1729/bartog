@@ -45,6 +45,15 @@ version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "choices"
+version = "0.1.0"
+dependencies = [
+ "common 0.1.0",
+ "game_state 0.1.0",
+ "platform_types 0.1.0",
+]
+
+[[package]]
 name = "cloudabi"
 version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -100,6 +109,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "game"
 version = "0.1.0"
 dependencies = [
+ "choices 0.1.0",
  "common 0.1.0",
  "game_state 0.1.0",
  "platform_types 0.1.0",

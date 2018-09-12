@@ -603,7 +603,7 @@ pub struct GameState {
     pub log_top_index: usize,
     pub log_height: u8,
     pub log_heading: LogHeading,
-    logger: Logger,
+    pub logger: Logger,
 }
 
 macro_rules! dealt_hand {
