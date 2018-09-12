@@ -119,6 +119,10 @@ pub fn get_short_card_string_and_colour(card: Card) -> (String, u8) {
     (output, colour)
 }
 
+pub fn nth_next_card(card: Card, offset: u8) -> Card {
+    (card + offset) % DECK_SIZE
+}
+
 pub type Suit = u8;
 
 pub mod Suits {
