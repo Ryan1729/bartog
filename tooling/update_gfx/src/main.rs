@@ -27,7 +27,9 @@ fn main() -> Result<(), Box<std::error::Error>> {
     // The default options
     reader.next_frame(&mut buf)?;
 
-    let mut file = File::create("out.txt")?;
+    let filename = "out.txt";
+
+    let mut file = File::create(filename)?;
 
     use png::ColorType::*;
     let pixel_width = match info.color_type {
@@ -68,6 +70,8 @@ fn main() -> Result<(), Box<std::error::Error>> {
     output.push_str("]\n");
 
     file.write_all(output.as_bytes())?;
+
+    println!("overwrote {}", filename);
 
     Ok(())
 }
