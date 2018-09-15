@@ -4,7 +4,9 @@ extern crate png;
 use std::fs::File;
 use std::io::prelude::*;
 
-const IMAGE_FILENAME: &'static str = "../../assets/gfx.png";
+//const IMAGE_FILENAME: &'static str = "../../assets/gfx.png";
+// for relatively rare font extension
+const IMAGE_FILENAME: &'static str = "../../assets/font.png";
 // for testing
 // const IMAGE_FILENAME: &'static str = "assets/pallete.png";
 
@@ -12,7 +14,8 @@ fn main() -> Result<(), Box<std::error::Error>> {
     let decoder = png::Decoder::new(File::open(IMAGE_FILENAME)?);
     let (info, mut reader) = decoder.read_info()?;
     println!(
-        "{:?}",
+        "{} : {:?}",
+        IMAGE_FILENAME,
         (
             info.width,
             info.height,
@@ -45,6 +48,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
 
     for colour in buf.chunks(pixel_width) {
         let index = match (colour[0], colour[1], colour[2]) {
+            //pallete
             (51, 82, 225) => 0,
             (48, 176, 110) => 1,
             (222, 73, 73) => 2,
@@ -53,6 +57,9 @@ fn main() -> Result<(), Box<std::error::Error>> {
             (90, 125, 139) => 5,
             (238, 238, 238) => 6,
             (34, 34, 34) => 7,
+            //map pure white and black to closest pallete colours
+            (255, 255, 255) => 6,
+            (0, 0, 0) => 7,
             _ => 255,
         };
 
