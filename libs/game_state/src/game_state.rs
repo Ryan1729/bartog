@@ -24,6 +24,26 @@ pub mod can_play {
             self.0 & (1 << card) != 0
         }
 
+        pub fn toggle_card(&mut self, card: Card) {
+            let was = self.has_card(card);
+            self.set_card_to(card, !was)
+        }
+
+        pub fn set_card_to(&mut self, card: Card, to: bool) {
+            if to {
+                self.set_card(card);
+            } else {
+                self.unset_card(card);
+            }
+        }
+
+        pub fn set_card(&mut self, card: Card) {
+            self.0 |= 1 << card;
+        }
+        pub fn unset_card(&mut self, card: Card) {
+            self.0 &= !(1 << card);
+        }
+
         pub fn cards(&self) -> Vec<Card> {
             let mut output = Vec::with_capacity(DECK_SIZE as _);
 
@@ -155,6 +175,28 @@ pub mod can_play {
                 self.edges()
             )
         }
+    }
+
+    #[derive(Debug, Clone)]
+    pub enum Layer {
+        Card,
+        Edges,
+    }
+
+    impl Default for Layer {
+        fn default() -> Self {
+            //Layer::Card
+            //for testing
+            Layer::Edges
+        }
+    }
+
+    #[derive(Debug, Default, Clone)]
+    pub struct ChoiceState {
+        pub changes: Vec<can_play::Change>,
+        pub card: Card,
+        pub edges: Edges,
+        pub layer: Layer,
     }
 }
 
@@ -503,7 +545,6 @@ impl EventLog {
     }
 
     pub fn push(&mut self, bytes: &[u8]) {
-        //TODO remove redundant joining and resplitting
         let reflowed = bytes_reflow(bytes, EventLog::WIDTH);
         let lines = bytes_lines(&reflowed);
 
@@ -557,7 +598,7 @@ impl EventLog {
 pub enum Choice {
     NoChoice,
     Already(Chosen),
-    OfCanPlayGraph(Vec<can_play::Change>),
+    OfCanPlayGraph(can_play::ChoiceState),
     OfSuit,
     OfBool,
     OfUnit,

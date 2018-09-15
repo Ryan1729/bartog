@@ -1,55 +1,7 @@
 use common::*;
 use game_state::{can_play, Choice, Chosen, GameState};
-use platform_types::{log, Button, Input, Speaker, SFX};
+use platform_types::{log, Button, Input, Logger, Speaker, SFX};
 use std::cmp::min;
-
-//calling this once will swallow multiple presses on the button. We could either
-//pass in and return the number of presses to fix that, or this could simply be
-//called multiple times per frame (once for each click).
-fn do_button(
-    framebuffer: &mut Framebuffer,
-    context: &mut UIContext,
-    input: Input,
-    speaker: &mut Speaker,
-    spec: &ButtonSpec,
-) -> bool {
-    let mut result = false;
-
-    let id = spec.id;
-
-    if context.active == id {
-        if input.released_this_frame(Button::A) {
-            result = context.hot == id;
-
-            context.set_not_active();
-        }
-        context.set_next_hot(id);
-    } else if context.hot == id {
-        if input.pressed_this_frame(Button::A) {
-            context.set_active(id);
-            speaker.request_sfx(SFX::ButtonPress);
-        }
-        context.set_next_hot(id);
-    }
-
-    if context.active == id && input.gamepad.contains(Button::A) {
-        framebuffer.button_pressed(spec.x, spec.y, spec.w, spec.h);
-    } else if context.hot == id {
-        framebuffer.button_hot(spec.x, spec.y, spec.w, spec.h);
-    } else {
-        framebuffer.button(spec.x, spec.y, spec.w, spec.h);
-    }
-
-    let text = spec.text.as_bytes();
-
-    let (x, y) = center_line_in_rect(text.len() as u8, ((spec.x, spec.y), (spec.w, spec.h)));
-
-    //Long labels aren't great UX anyway, I think, so don't bother reflowing.
-    //Add the extra bit to `y` because the current graphics looks better that way.
-    framebuffer.print(spec.text.as_bytes(), x, y + (FONT_SIZE / 4), WHITE_INDEX);
-
-    return result;
-}
 
 pub fn choose_play_again(state: &mut GameState) -> Option<()> {
     match state.choice {
@@ -283,7 +235,7 @@ use std::mem;
 pub fn choose_can_play_graph(state: &mut GameState) -> Vec<can_play::Change> {
     match state.choice {
         Choice::NoChoice => {
-            state.choice = Choice::OfCanPlayGraph(Vec::new());
+            state.choice = Choice::OfCanPlayGraph(Default::default());
             Vec::new()
         }
         Choice::Already(Chosen::CanPlayGraph(_)) => {
@@ -301,10 +253,11 @@ pub fn choose_can_play_graph(state: &mut GameState) -> Vec<can_play::Change> {
 
 fn can_play_graph_choose_card(
     framebuffer: &mut Framebuffer,
-    state: &mut GameState,
+    context: &mut UIContext,
     input: Input,
     speaker: &mut Speaker,
     choice_state: &mut can_play::ChoiceState,
+    logger: Logger,
 ) {
     framebuffer.full_window();
 
@@ -337,7 +290,7 @@ fn can_play_graph_choose_card(
             text: "reset".to_owned(),
         };
 
-        if do_button(framebuffer, &mut state.context, input, speaker, &spec) {
+        if do_button(framebuffer, context, input, speaker, &spec) {
             log(logger, "reset");
         }
     }
@@ -354,7 +307,7 @@ fn can_play_graph_choose_card(
             text: "cancel".to_owned(),
         };
 
-        if do_button(framebuffer, &mut state.context, input, speaker, &spec) {
+        if do_button(framebuffer, context, input, speaker, &spec) {
             log(logger, "cancel");
         }
     }
@@ -371,7 +324,7 @@ fn can_play_graph_choose_card(
             text: "done".to_owned(),
         };
 
-        if do_button(framebuffer, &mut state.context, input, speaker, &spec) {
+        if do_button(framebuffer, context, input, speaker, &spec) {
             log(logger, "done");
         }
     }
@@ -397,34 +350,35 @@ fn can_play_graph_choose_card(
             text,
         };
 
-        if do_button(framebuffer, &mut state.context, input, speaker, &spec) {
-            log(logger, &spec.text);
+        if do_button(framebuffer, context, input, speaker, &spec) {
+            choice_state.card = card;
+            choice_state.layer = can_play::Layer::Edges;
         }
     }
 
-    if state.context.hot < FIRST_SCROLL_ID as _ {
-        if state.context.hot == 0 {
-            state.context.set_next_hot(1);
+    if context.hot < FIRST_SCROLL_ID as _ {
+        if context.hot == 0 {
+            context.set_next_hot(1);
         } else if input.pressed_this_frame(Button::Up) {
-            let next = dice_mod(state.context.hot - 1, 3);
-            state.context.set_next_hot(next);
+            let next = dice_mod(context.hot - 1, 3);
+            context.set_next_hot(next);
         } else if input.pressed_this_frame(Button::Down) {
-            let next = dice_mod(state.context.hot + 1, 3);
-            state.context.set_next_hot(next);
+            let next = dice_mod(context.hot + 1, 3);
+            context.set_next_hot(next);
         } else if input.pressed_this_frame(Button::Right) || input.pressed_this_frame(Button::Left)
         {
-            let next = (FIRST_SCROLL_ID - 1) + state.context.hot;
-            state.context.set_next_hot(next);
+            let next = (FIRST_SCROLL_ID - 1) + context.hot;
+            context.set_next_hot(next);
         }
     } else {
         if input.pressed_this_frame(Button::Right) || input.pressed_this_frame(Button::Left) {
             let next = min(
-                state.context.hot.saturating_sub(FIRST_SCROLL_ID) + 1,
+                context.hot.saturating_sub(FIRST_SCROLL_ID) + 1,
                 FIRST_SCROLL_ID - 1,
             );
-            state.context.set_next_hot(next);
+            context.set_next_hot(next);
         } else {
-            let mut unoffset = state.context.hot - FIRST_SCROLL_ID;
+            let mut unoffset = context.hot - FIRST_SCROLL_ID;
 
             if input.pressed_this_frame(Button::Up) {
                 if unoffset == 0 {
@@ -440,7 +394,140 @@ fn can_play_graph_choose_card(
                 }
             }
 
-            state.context.set_next_hot(unoffset + FIRST_SCROLL_ID);
+            context.set_next_hot(unoffset + FIRST_SCROLL_ID);
+        }
+    }
+}
+
+fn heading_y(i: i8) -> u8 {
+    (SPRITE_SIZE as i8 * 2 + FONT_SIZE as i8 * i) as u8
+}
+
+fn can_play_graph_choose_edges(
+    framebuffer: &mut Framebuffer,
+    context: &mut UIContext,
+    input: Input,
+    speaker: &mut Speaker,
+    choice_state: &mut can_play::ChoiceState,
+    logger: Logger,
+) {
+    framebuffer.full_window();
+
+    let mut max_heading_y = heading_y(-1);
+
+    {
+        let text = &[
+            b"choose the cards the ",
+            get_card_string(choice_state.card).as_bytes(),
+            b" can be played on.",
+        ]
+            .concat();
+
+        let reflowed = bytes_reflow(text, NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as _);
+        let lines = bytes_lines(&reflowed);
+
+        for (i, line) in lines.enumerate() {
+            let (x, _) = center_line_in_rect(
+                line.len() as u8,
+                (
+                    (SPRITE_SIZE, SPRITE_SIZE),
+                    (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+                ),
+            );
+
+            max_heading_y = heading_y(i as i8);
+
+            framebuffer.print(line, x, max_heading_y, WHITE_INDEX);
+        }
+    }
+
+    let w = SPRITE_SIZE * 5;
+    let h = SPRITE_SIZE * 3;
+
+    {
+        let y = SPRITE_SIZE * 4;
+
+        let spec = ButtonSpec {
+            x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
+            y,
+            w,
+            h,
+            id: 1,
+            text: "ok".to_owned(),
+        };
+
+        if do_button(framebuffer, context, input, speaker, &spec) {
+            log(logger, "ok");
+        }
+    }
+
+    {
+        let y = SPRITE_SIZE * 7;
+
+        let spec = ButtonSpec {
+            x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
+            y,
+            w,
+            h,
+            id: 2,
+            text: "cancel".to_owned(),
+        };
+
+        if do_button(framebuffer, context, input, speaker, &spec) {
+            log(logger, "cancel");
+        }
+    }
+
+    const FIRST_CHECKBOX_ID: UIId = 4;
+
+    const SCROLL_ROWS_COUNT: u8 = 8;
+    const SCROLL_COLS_COUNT: u8 = 2;
+    for y in 0..SCROLL_ROWS_COUNT {
+        for x in 0..SCROLL_COLS_COUNT {
+            let i = x + y * SCROLL_COLS_COUNT;
+            let id = i as UIId + FIRST_CHECKBOX_ID;
+
+            let card = i as Card;
+            let text = get_suit_rank_pair(card);
+
+            let spec = CheckboxSpec {
+                x: SPRITE_SIZE
+                    + (SPRITE_SIZE * 2 + RANK_SUIT_PAIR_WITH_IN_CHARS * FONT_ADVANCE) * x,
+                y: max_heading_y + SPRITE_SIZE * (y + 1) as u8 + (SPRITE_SIZE as u8 / 2),
+                id,
+                text,
+                checked: choice_state.edges.has_card(card),
+            };
+
+            if do_checkbox(framebuffer, context, input, speaker, &spec) {
+                choice_state.edges.toggle_card(card);
+            }
+        }
+    }
+
+    if context.hot < FIRST_CHECKBOX_ID as _ {
+        if context.hot == 0 {
+            context.set_next_hot(1);
+        } else if input.pressed_this_frame(Button::Up) {
+            let next = dice_mod(context.hot - 1, 3);
+            context.set_next_hot(next);
+        } else if input.pressed_this_frame(Button::Down) {
+            let next = dice_mod(context.hot + 1, 3);
+            context.set_next_hot(next);
+        } else if input.pressed_this_frame(Button::Right) || input.pressed_this_frame(Button::Left)
+        {
+            let next = (FIRST_CHECKBOX_ID - 1) + context.hot;
+            context.set_next_hot(next);
+        }
+    } else {
+        if input.pressed_this_frame(Button::Right) || input.pressed_this_frame(Button::Left) {
+            let next = min(
+                context.hot.saturating_sub(FIRST_CHECKBOX_ID) + 1,
+                FIRST_CHECKBOX_ID - 1,
+            );
+            context.set_next_hot(next);
+        } else {
+
         }
     }
 }
@@ -455,12 +542,22 @@ pub fn do_can_play_graph_choice(
     let logger = state.get_logger();
     if let Choice::OfCanPlayGraph(ref mut choice_state) = state.choice {
         match choice_state.layer {
-            can_play::Layer::Card => {
-                can_play_graph_choose_card(framebuffer, state, input, speaker, choice_state)
-            }
-            can_play::Layer::Edges => {
-                can_play_graph_choose_edges(framebuffer, state, input, speaker, choice_state)
-            }
+            can_play::Layer::Card => can_play_graph_choose_card(
+                framebuffer,
+                &mut state.context,
+                input,
+                speaker,
+                choice_state,
+                logger,
+            ),
+            can_play::Layer::Edges => can_play_graph_choose_edges(
+                framebuffer,
+                &mut state.context,
+                input,
+                speaker,
+                choice_state,
+                logger,
+            ),
         }
     } else {
         invariant_violation!(

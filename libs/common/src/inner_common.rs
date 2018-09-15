@@ -90,6 +90,17 @@ pub mod cursor {
     pub const ALT_SPRITE_Y: u8 = 0;
 }
 
+pub mod checkbox {
+    pub const UNCHECKED: u8 = 15;
+    pub const CHECKED: u8 = UNCHECKED + 16;
+    pub const HOT_UNCHECKED: u8 = UNCHECKED + 16 * 2;
+    pub const HOT_CHECKED: u8 = UNCHECKED + 16 * 3;
+    pub const PRESSED_CHECKED: u8 = UNCHECKED + 16 * 4;
+    pub const PRESSED_UNCHECKED: u8 = UNCHECKED + 16 * 5;
+}
+
+pub const RANK_SUIT_PAIR_LAYOUT_CHAR: u8 = 26;
+
 pub const TEN_CHAR: u8 = 27;
 
 pub const CLUB_CHAR: u8 = 31;
@@ -106,6 +117,21 @@ pub type Card = u8;
 
 pub fn get_card_string(card: Card) -> String {
     format!("{} of {}", get_rank_str(card), get_suit_str(get_suit(card)))
+}
+
+pub const RANK_SUIT_PAIR_WITH_IN_CHARS: u8 = 4;
+
+pub fn get_suit_rank_pair(card: Card) -> String {
+    let mut output = String::with_capacity(RANK_SUIT_PAIR_WITH_IN_CHARS as usize);
+
+    let (colour, suit_char) = get_suit_colour_and_char(get_suit(card));
+
+    output.push(RANK_SUIT_PAIR_LAYOUT_CHAR as char);
+    output.push(get_rank_char(card) as char);
+    output.push(suit_char as char);
+    output.push(colour as char);
+
+    output
 }
 
 pub fn get_short_card_string_and_colour(card: Card) -> (String, u8) {

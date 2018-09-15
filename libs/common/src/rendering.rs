@@ -479,6 +479,49 @@ impl Framebuffer {
     }
 
     pub fn print_line(&mut self, bytes: &[u8], mut x: u8, y: u8, colour: u8) {
+        let mut bytes_iter = bytes.iter();
+
+        while let Some(&c) = bytes_iter.next() {
+            if c == RANK_SUIT_PAIR_LAYOUT_CHAR {
+                if let Some(&rank) = bytes_iter.next() {
+                    let (sprite_x, sprite_y) = get_char_xy(rank);
+
+                    if rank == TEN_CHAR {
+                        x = x.saturating_add(FONT_ADVANCE / 4);
+                        self.print_char_raw(sprite_x, sprite_y, FONT_SIZE, FONT_SIZE, x, y, colour);
+                        x = x.saturating_add(FONT_ADVANCE * 3 / 4);
+                    } else {
+                        x = x.saturating_add(FONT_ADVANCE);
+                        self.print_char_raw(sprite_x, sprite_y, FONT_SIZE, FONT_SIZE, x, y, colour);
+                    }
+
+                    x = x.saturating_add(FONT_ADVANCE);
+
+                    if let Some(&suit) = bytes_iter.next() {
+                        let (sprite_x, sprite_y) = get_char_xy(suit);
+
+                        x = x.saturating_add(FONT_ADVANCE / 4);
+                        self.print_char_raw(sprite_x, sprite_y, FONT_SIZE, FONT_SIZE, x, y, colour);
+                        x = x.saturating_add(FONT_ADVANCE * 3 / 4);
+                    } else {
+                        x = x.saturating_add(FONT_ADVANCE);
+                    }
+
+                    x = x.saturating_add(FONT_ADVANCE);
+                }
+                //Need 4 chars of room
+                bytes_iter.next();
+
+                continue;
+            }
+
+            let (sprite_x, sprite_y) = get_char_xy(c);
+            self.print_char_raw(sprite_x, sprite_y, FONT_SIZE, FONT_SIZE, x, y, colour);
+            x = x.saturating_add(FONT_ADVANCE);
+        }
+    }
+
+    pub fn print_line_raw(&mut self, bytes: &[u8], mut x: u8, y: u8, colour: u8) {
         for &c in bytes {
             let (sprite_x, sprite_y) = get_char_xy(c);
             self.print_char_raw(sprite_x, sprite_y, FONT_SIZE, FONT_SIZE, x, y, colour);
@@ -702,6 +745,42 @@ impl Framebuffer {
         self.spr(MIDDLE_RIGHT, before_right_corner, y);
         self.spr(BOTTOM_LEFT, x, above_bottom_corner);
         self.spr(BOTTOM_RIGHT, before_right_corner, above_bottom_corner);
+    }
+
+    pub fn checkbox(&mut self, x: u8, y: u8, checked: bool) {
+        self.spr(
+            if checked {
+                checkbox::CHECKED
+            } else {
+                checkbox::UNCHECKED
+            },
+            x,
+            y,
+        );
+    }
+
+    pub fn checkbox_hot(&mut self, x: u8, y: u8, checked: bool) {
+        self.spr(
+            if checked {
+                checkbox::HOT_CHECKED
+            } else {
+                checkbox::HOT_UNCHECKED
+            },
+            x,
+            y,
+        );
+    }
+
+    pub fn checkbox_pressed(&mut self, x: u8, y: u8, checked: bool) {
+        self.spr(
+            if checked {
+                checkbox::PRESSED_CHECKED
+            } else {
+                checkbox::PRESSED_UNCHECKED
+            },
+            x,
+            y,
+        );
     }
 }
 

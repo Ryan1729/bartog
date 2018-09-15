@@ -57,9 +57,9 @@ fn main() -> Result<(), Box<std::error::Error>> {
             (90, 125, 139) => 5,
             (238, 238, 238) => 6,
             (34, 34, 34) => 7,
-            //map pure white and black to closest pallete colours
+            //map pure white and black to font gfx colours
             (255, 255, 255) => 6,
-            (0, 0, 0) => 7,
+            (0, 0, 0) => 0,
             _ => 255,
         };
 
