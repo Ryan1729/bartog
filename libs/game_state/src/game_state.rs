@@ -197,6 +197,7 @@ pub mod can_play {
         pub card: Card,
         pub edges: Edges,
         pub layer: Layer,
+        pub scroll_card: Card,
     }
 }
 

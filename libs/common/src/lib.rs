@@ -90,6 +90,14 @@ macro_rules! glog {
     }};
 }
 
+#[macro_export]
+//Logger log
+macro_rules! llog {
+    ($logger:expr, $e:expr) => {{
+        log($logger, &format!(concat!(stringify!($e), ": {:#?}"), $e));
+    }};
+}
+
 extern crate platform_types;
 
 extern crate rand;

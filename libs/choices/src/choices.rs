@@ -478,16 +478,23 @@ fn can_play_graph_choose_edges(
         }
     }
 
-    const FIRST_CHECKBOX_ID: UIId = 4;
+    const FIRST_CHECKBOX_ID: UIId = 3;
 
-    const SCROLL_ROWS_COUNT: u8 = 8;
+    const SCROLL_ROWS_COUNT: u8 = 10;
     const SCROLL_COLS_COUNT: u8 = 2;
+
+    invariant_assert_eq!(
+        (DECK_SIZE / SCROLL_COLS_COUNT) * SCROLL_COLS_COUNT,
+        DECK_SIZE,
+    );
+    let scroll_card = nth_next_card(choice_state.scroll_card, 0);
+
     for y in 0..SCROLL_ROWS_COUNT {
         for x in 0..SCROLL_COLS_COUNT {
             let i = x + y * SCROLL_COLS_COUNT;
             let id = i as UIId + FIRST_CHECKBOX_ID;
 
-            let card = i as Card;
+            let card = nth_next_card(scroll_card, i);
             let text = get_suit_rank_pair(card);
 
             let spec = CheckboxSpec {
@@ -509,27 +516,70 @@ fn can_play_graph_choose_edges(
         if context.hot == 0 {
             context.set_next_hot(1);
         } else if input.pressed_this_frame(Button::Up) {
-            let next = dice_mod(context.hot - 1, 3);
+            let next = dice_mod(context.hot - 1, 2);
             context.set_next_hot(next);
         } else if input.pressed_this_frame(Button::Down) {
-            let next = dice_mod(context.hot + 1, 3);
+            let next = dice_mod(context.hot + 1, 2);
             context.set_next_hot(next);
-        } else if input.pressed_this_frame(Button::Right) || input.pressed_this_frame(Button::Left)
-        {
-            let next = (FIRST_CHECKBOX_ID - 1) + context.hot;
-            context.set_next_hot(next);
+        } else if input.pressed_this_frame(Button::Right) {
+            if context.hot == 1 {
+                context.set_next_hot(FIRST_CHECKBOX_ID);
+            } else {
+                context.set_next_hot(FIRST_CHECKBOX_ID + 3 * SCROLL_COLS_COUNT);
+            }
+        } else if input.pressed_this_frame(Button::Left) {
+            if context.hot == 1 {
+                context.set_next_hot(FIRST_CHECKBOX_ID + 1);
+            } else {
+                context.set_next_hot(FIRST_CHECKBOX_ID + 3 * SCROLL_COLS_COUNT + 1);
+            }
         }
     } else {
-        if input.pressed_this_frame(Button::Right) || input.pressed_this_frame(Button::Left) {
-            let next = min(
-                context.hot.saturating_sub(FIRST_CHECKBOX_ID) + 1,
-                FIRST_CHECKBOX_ID - 1,
-            );
-            context.set_next_hot(next);
+        if input.pressed_this_frame(Button::Left) {
+            if context.hot & 1 == 1 {
+                if context.hot > FIRST_CHECKBOX_ID + 3 * SCROLL_COLS_COUNT {
+                    context.set_next_hot(FIRST_CHECKBOX_ID - 1);
+                } else {
+                    context.set_next_hot(FIRST_CHECKBOX_ID - 2);
+                }
+            } else {
+                let next = context.hot - 1;
+                context.set_next_hot(next);
+            }
+        } else if input.pressed_this_frame(Button::Right) {
+            if context.hot & 1 == 1 {
+                let next = context.hot + 1;
+                context.set_next_hot(next);
+            } else {
+                if context.hot > FIRST_CHECKBOX_ID + 3 * SCROLL_COLS_COUNT {
+                    context.set_next_hot(FIRST_CHECKBOX_ID - 1);
+                } else {
+                    context.set_next_hot(FIRST_CHECKBOX_ID - 2);
+                }
+            }
         } else {
+            let mut unoffset = context.hot - FIRST_CHECKBOX_ID;
 
+            if input.pressed_this_frame(Button::Up) {
+                if unoffset < 2 {
+                    choice_state.scroll_card =
+                        nth_next_card(choice_state.scroll_card, DECK_SIZE - 2) as _;
+                } else {
+                    unoffset -= 2;
+                }
+            } else if input.pressed_this_frame(Button::Down) {
+                if unoffset / SCROLL_COLS_COUNT >= SCROLL_ROWS_COUNT - 1 {
+                    choice_state.scroll_card = nth_next_card(choice_state.scroll_card, 2) as _;
+                } else {
+                    unoffset = nth_next_card(unoffset, 2);
+                }
+            }
+
+            context.set_next_hot(unoffset + FIRST_CHECKBOX_ID);
         }
     }
+
+    llog!(logger, context);
 }
 
 #[inline]
