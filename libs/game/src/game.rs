@@ -3,7 +3,10 @@ use choices::{
     do_can_play_graph_choice, do_suit_choice, do_unit_choice,
 };
 use common::*;
-use game_state::{get_card_offset, get_card_position, Choice, GameState, Hand, LogHeading, Spread};
+use game_state::{
+    can_play, get_card_offset, get_card_position, Choice, GameState, Hand, LogHeading, Spread,
+    Status,
+};
 use platform_types::{Button, Input, Speaker, State, StateParams, SFX};
 use rand::Rng;
 
@@ -233,7 +236,10 @@ fn can_play(state: &GameState, &card: &Card) -> bool {
         is_wild(card) || if is_wild(top_of_discard) {
             state.top_wild_declared_as == Some(get_suit(card))
         } else {
-            state.can_play_graph.is_playable_on(card, top_of_discard)
+            state
+                .rules
+                .can_play_graph
+                .is_playable_on(card, top_of_discard)
         }
     } else {
         true
@@ -484,6 +490,27 @@ fn take_turn(state: &mut GameState, input: Input, speaker: &mut Speaker) {
 }
 
 fn update(state: &mut GameState, input: Input, speaker: &mut Speaker) {
+    match state.status {
+        Status::InGame => update_in_game(state, input, speaker),
+        Status::RuleSelection => update_rule_selection(state, input, speaker),
+    }
+}
+
+fn update_rule_selection(state: &mut GameState, _input: Input, _speaker: &mut Speaker) {
+    match choose_can_play_graph(state) {
+        ref x if x.len() == 0 => {
+            //wait until they choose
+        }
+        changes => {
+            let player_id = state.player_id();
+            state.apply_can_play_graph_changes(changes, player_id);
+
+            state.status = Status::InGame;
+        }
+    }
+}
+
+fn update_in_game(state: &mut GameState, input: Input, speaker: &mut Speaker) {
     match state.log_heading {
         LogHeading::Up => {
             state.log_height = state.log_height.saturating_sub(SPRITE_SIZE);
@@ -536,15 +563,6 @@ pub fn update_and_render(
     state.context.frame_init();
 
     update(state, input, speaker);
-
-    match choose_can_play_graph(state) {
-        ref x if x.len() == 0 => {
-            //wait until they choose
-        }
-        changes => {
-            state.log(&format!("testing:\n{:#?}", changes));
-        }
-    }
 
     invariant_assert_eq!(state.missing_cards(), vec![0; 0]);
 

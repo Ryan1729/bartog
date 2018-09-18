@@ -622,7 +622,7 @@ pub fn do_can_play_graph_choice(
                 );
 
                 if let can_play::Layer::Edges = choice_state.layer {
-                    let can_play_graph = &state.can_play_graph;
+                    let can_play_graph = &state.rules.can_play_graph;
 
                     choice_state.edges = choice_state
                         .changes

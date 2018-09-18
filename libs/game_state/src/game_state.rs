@@ -57,6 +57,29 @@ pub mod can_play {
         }
     }
 
+    use std::ops::BitOr;
+
+    impl BitOr<Edges> for Edges {
+        type Output = Edges;
+        fn bitor(self, other: Edges) -> Self::Output {
+            Edges(self.0 | other.0)
+        }
+    }
+
+    impl BitOr<u64> for Edges {
+        type Output = Edges;
+        fn bitor(self, other: u64) -> Self::Output {
+            Edges(self.0 | other)
+        }
+    }
+
+    impl BitOr<Edges> for u64 {
+        type Output = Edges;
+        fn bitor(self, other: Edges) -> Self::Output {
+            Edges(self | other.0)
+        }
+    }
+
     impl Default for Edges {
         fn default() -> Self {
             Edges(0)
@@ -94,6 +117,10 @@ pub mod can_play {
 
         pub fn get_edges(&self, card: Card) -> Edges {
             self.nodes[card as usize]
+        }
+
+        pub fn set_edges(&mut self, card: Card, edges: Edges) {
+            self.nodes[card as usize] = edges;
         }
     }
 
@@ -634,6 +661,34 @@ pub enum LogHeading {
     Down,
 }
 
+pub enum Status {
+    InGame,
+    RuleSelection,
+}
+
+impl Default for Status {
+    fn default() -> Self {
+        //Status::InGame
+        //For testing
+        Status::RuleSelection
+    }
+}
+
+#[derive(Default)]
+pub struct Rules {
+    pub can_play_graph: can_play::Graph,
+}
+
+impl Rules {
+    fn empty() -> Self {
+        Rules {
+            can_play_graph: can_play::Graph {
+                nodes: [can_play::Edges::new(0); DECK_SIZE as usize],
+            },
+        }
+    }
+}
+
 pub struct GameState {
     pub deck: Hand,
     pub discard: Hand,
@@ -645,7 +700,8 @@ pub struct GameState {
     pub winners: Vec<PlayerID>,
     pub top_wild_declared_as: Option<Suit>,
     pub choice: Choice,
-    pub can_play_graph: can_play::Graph,
+    pub rules: Rules,
+    pub status: Status,
     pub context: UIContext,
     pub rng: XorShiftRng,
     pub event_log: EventLog,
@@ -672,11 +728,19 @@ macro_rules! dealt_hand {
 impl GameState {
     pub fn new(seed: [u8; 16], logger: Logger) -> GameState {
         let event_log = EventLog::new();
-        GameState::new_with_event_log(seed, logger, event_log)
+        GameState::new_with_previous(
+            seed,
+            Default::default(),
+            Default::default(),
+            logger,
+            event_log,
+        )
     }
 
-    pub fn new_with_event_log(
+    pub fn new_with_previous(
         seed: [u8; 16],
+        status: Status,
+        rules: Rules,
         logger: Logger,
         mut event_log: EventLog,
     ) -> GameState {
@@ -731,7 +795,8 @@ impl GameState {
             winners,
             top_wild_declared_as: None,
             choice: Choice::NoChoice,
-            can_play_graph: Default::default(),
+            rules,
+            status,
             context: UIContext::new(),
             rng,
             event_log,
@@ -742,16 +807,80 @@ impl GameState {
         }
     }
 
+    fn add_cpu_rule(&mut self, player: PlayerID) {
+        //TODO add single-strongly connected component checking and start
+        //generating non-additive changes;
+        let count = self.rng.gen_range(5, DECK_SIZE as usize);
+        let mut cards = Vec::with_capacity(count);
+        for _ in 0..count {
+            cards.push(self.rng.gen_range(0, DECK_SIZE));
+        }
+
+        let mut changes = Vec::with_capacity(count);
+        for card in cards {
+            let old_edges = self.rules.can_play_graph.get_edges(card);
+            let edges = self.rng.gen_range(0, 1 << DECK_SIZE as u64) | old_edges;
+
+            changes.push(can_play::Change::new(edges, card));
+        }
+
+        self.apply_can_play_graph_changes(changes, player);
+    }
+
+    pub fn apply_can_play_graph_changes(
+        &mut self,
+        changes: Vec<can_play::Change>,
+        player: PlayerID,
+    ) {
+        //TODO log changes in a more detailed way.
+        let text = &[self.player_name(player).as_bytes(), b" changed the rules."].concat();
+
+        self.event_log.push(text);
+
+        //TODO enforce a single strongly connected component in the graph
+
+        for &change in changes.iter() {
+            let card = change.card();
+            let edges = change.edges();
+
+            self.rules.can_play_graph.set_edges(card, edges);
+        }
+    }
+
+    pub fn player_id(&self) -> PlayerID {
+        self.cpu_hands.len() as PlayerID
+    }
+
     pub fn reset(&mut self) {
         use std::mem::replace;
+
+        let status = {
+            let mut status = Status::InGame;
+
+            let player_id = self.player_id();
+
+            for &id in self.winners.clone().iter() {
+                if id >= player_id {
+                    status = Status::RuleSelection;
+                    continue;
+                }
+
+                self.add_cpu_rule(id);
+            }
+
+            status
+        };
+
         let old_log = replace(
             &mut self.event_log,
             EventLog {
                 buffer: VecDeque::with_capacity(0),
             },
         );
+        let old_rules = replace(&mut self.rules, Rules::empty());
 
-        *self = GameState::new_with_event_log(self.rng.gen(), self.logger, old_log);
+        *self =
+            GameState::new_with_previous(self.rng.gen(), status, old_rules, self.logger, old_log);
     }
 
     pub fn missing_cards(&self) -> Vec<Card> {
