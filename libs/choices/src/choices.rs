@@ -1,6 +1,6 @@
 use common::*;
 use game_state::{can_play, Choice, Chosen, GameState};
-use platform_types::{log, Button, Input, Logger, Speaker, SFX};
+use platform_types::{log, Button, Input, Logger, Speaker};
 use std::cmp::min;
 
 pub fn choose_play_again(state: &mut GameState) -> Option<()> {
@@ -291,7 +291,8 @@ fn can_play_graph_choose_card(
         };
 
         if do_button(framebuffer, context, input, speaker, &spec) {
-            log(logger, "reset");
+            //TODO add confirm dialog
+            *choice_state = Default::default();
         }
     }
 
@@ -308,11 +309,13 @@ fn can_play_graph_choose_card(
         };
 
         if do_button(framebuffer, context, input, speaker, &spec) {
-            log(logger, "cancel");
+            log(logger, "cancel: TODO go back to rule type choosing screen");
         }
     }
 
-    {
+    let changes_len = choice_state.changes.len();
+
+    if changes_len > 0 {
         let y = SPRITE_SIZE * 10;
 
         let spec = ButtonSpec {
@@ -325,8 +328,22 @@ fn can_play_graph_choose_card(
         };
 
         if do_button(framebuffer, context, input, speaker, &spec) {
-            log(logger, "done");
+            choice_state.done = true;
         }
+    }
+
+    {
+        let x = SPRITE_SIZE * 11;
+        let y = SPRITE_SIZE * 13;
+
+        let text = if changes_len == 1 {
+            b"change. "
+        } else {
+            b"changes."
+        };
+
+        framebuffer.print_line(format!("{}", changes_len).as_bytes(), x, y, WHITE_INDEX);
+        framebuffer.print_line(text, x, y + FONT_SIZE, WHITE_INDEX);
     }
 
     let w = SPRITE_SIZE * 10;
@@ -409,7 +426,7 @@ fn can_play_graph_choose_edges(
     input: Input,
     speaker: &mut Speaker,
     choice_state: &mut can_play::ChoiceState,
-    logger: Logger,
+    _logger: Logger,
 ) {
     framebuffer.full_window();
 
@@ -457,7 +474,10 @@ fn can_play_graph_choose_edges(
         };
 
         if do_button(framebuffer, context, input, speaker, &spec) {
-            log(logger, "ok");
+            choice_state
+                .changes
+                .push(can_play::Change::new(choice_state.edges, choice_state.card));
+            choice_state.layer = Default::default();
         }
     }
 
@@ -474,7 +494,7 @@ fn can_play_graph_choose_edges(
         };
 
         if do_button(framebuffer, context, input, speaker, &spec) {
-            log(logger, "cancel");
+            choice_state.layer = Default::default();
         }
     }
 
@@ -578,8 +598,6 @@ fn can_play_graph_choose_edges(
             context.set_next_hot(unoffset + FIRST_CHECKBOX_ID);
         }
     }
-
-    llog!(logger, context);
 }
 
 #[inline]
@@ -590,16 +608,37 @@ pub fn do_can_play_graph_choice(
     speaker: &mut Speaker,
 ) {
     let logger = state.get_logger();
+    let mut chosen = None;
     if let Choice::OfCanPlayGraph(ref mut choice_state) = state.choice {
         match choice_state.layer {
-            can_play::Layer::Card => can_play_graph_choose_card(
-                framebuffer,
-                &mut state.context,
-                input,
-                speaker,
-                choice_state,
-                logger,
-            ),
+            can_play::Layer::Card => {
+                can_play_graph_choose_card(
+                    framebuffer,
+                    &mut state.context,
+                    input,
+                    speaker,
+                    choice_state,
+                    logger,
+                );
+
+                if let can_play::Layer::Edges = choice_state.layer {
+                    let can_play_graph = &state.can_play_graph;
+
+                    choice_state.edges = choice_state
+                        .changes
+                        .iter()
+                        .rev()
+                        .find(|c| c.card() == choice_state.card)
+                        .map(|c| c.edges())
+                        .unwrap_or_else(|| can_play_graph.get_edges(choice_state.card));
+                }
+
+                if choice_state.done {
+                    //This is already kind of convoluted. I think we'll juat the clone,
+                    //since it now only happens when the choice is actually made.
+                    chosen = Some(choice_state.changes.clone());
+                }
+            }
             can_play::Layer::Edges => can_play_graph_choose_edges(
                 framebuffer,
                 &mut state.context,
@@ -614,5 +653,9 @@ pub fn do_can_play_graph_choice(
             { state.choice = Choice::NoChoice },
             "`do_can_play_graph_choice` was called with the wrong choice type!"
         )
+    }
+
+    if let Some(chosen) = chosen {
+        state.choice = Choice::Already(Chosen::CanPlayGraph(chosen));
     }
 }

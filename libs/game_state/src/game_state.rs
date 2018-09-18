@@ -91,6 +91,10 @@ pub mod can_play {
             let edges = self.nodes[card as usize].0;
             edges & (1 << top_of_discard as u64) != 0
         }
+
+        pub fn get_edges(&self, card: Card) -> Edges {
+            self.nodes[card as usize]
+        }
     }
 
     const CLUBS_FLAGS: u64 = 0b0001_1111_1111_1111;
@@ -104,9 +108,9 @@ pub mod can_play {
     macro_rules! across_all_suits {
         ($flags:expr) => {
             ($flags & 0b0001_1111_1111_1111)
-                | ($flags & 0b0001_1111_1111_1111 << RANK_COUNT)
-                | ($flags & 0b0001_1111_1111_1111 << (RANK_COUNT * 2))
-                | ($flags & 0b0001_1111_1111_1111 << (RANK_COUNT * 3))
+                | (($flags & 0b0001_1111_1111_1111) << RANK_COUNT)
+                | (($flags & 0b0001_1111_1111_1111) << (RANK_COUNT * 2))
+                | (($flags & 0b0001_1111_1111_1111) << (RANK_COUNT * 3))
         };
     }
 
@@ -150,11 +154,15 @@ pub mod can_play {
     pub struct Change(u64);
 
     impl Change {
-        fn edges(&self) -> Edges {
+        pub fn new(edges: Edges, card: Card) -> Self {
+            Change(((card as u64) << DECK_SIZE) | edges.0)
+        }
+
+        pub fn edges(&self) -> Edges {
             Edges::new(self.0)
         }
 
-        fn card(&self) -> Card {
+        pub fn card(&self) -> Card {
             (self.0 >> DECK_SIZE as u64) as u8 & 0b0011_1111
         }
     }
@@ -185,9 +193,7 @@ pub mod can_play {
 
     impl Default for Layer {
         fn default() -> Self {
-            //Layer::Card
-            //for testing
-            Layer::Edges
+            Layer::Card
         }
     }
 
@@ -198,6 +204,7 @@ pub mod can_play {
         pub edges: Edges,
         pub layer: Layer,
         pub scroll_card: Card,
+        pub done: bool,
     }
 }
 
