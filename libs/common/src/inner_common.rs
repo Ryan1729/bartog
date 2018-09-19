@@ -112,7 +112,6 @@ pub const RANK_COUNT: u8 = 13;
 pub const SUIT_COUNT: u8 = 4;
 pub const DECK_SIZE: u8 = RANK_COUNT * SUIT_COUNT;
 
-//If a type error ever actually happens, make these into enums.
 pub type Card = u8;
 
 pub fn get_card_string(card: Card) -> String {
