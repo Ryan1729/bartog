@@ -503,6 +503,9 @@ fn update_rule_selection(state: &mut GameState, _input: Input, _speaker: &mut Sp
         }
         changes => {
             let player_id = state.player_id();
+
+            state.add_rule_change_log_header(player_id);
+
             state.apply_can_play_graph_changes(changes, player_id);
 
             state.status = Status::InGame;

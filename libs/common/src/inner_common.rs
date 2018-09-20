@@ -118,6 +118,24 @@ pub fn get_card_string(card: Card) -> String {
     format!("{} of {}", get_rank_str(card), get_suit_str(get_suit(card)))
 }
 
+pub fn get_card_list(cards: &Vec<Card>) -> String {
+    //TODO better size estimate.
+    let mut output = String::with_capacity(cards.len() * 20);
+    let len = cards.len();
+    let mut sep = "";
+    for (i, &card) in cards.iter().enumerate() {
+        output.push_str(sep);
+        output.push_str(&get_card_string(card));
+
+        if i >= len - 1 {
+            sep = ", and ";
+        } else {
+            sep = ", ";
+        }
+    }
+    output
+}
+
 pub const RANK_SUIT_PAIR_WITH_IN_CHARS: u8 = 4;
 
 pub fn get_suit_rank_pair(card: Card) -> String {

@@ -55,6 +55,10 @@ pub mod can_play {
 
             output
         }
+
+        pub fn get_bits(&self) -> u64 {
+            self.0
+        }
     }
 
     use std::ops::BitOr;
@@ -470,6 +474,16 @@ impl GameState {
         }
     }
 
+    pub fn get_pronoun(&self, playerId: PlayerID) -> String {
+        let len = self.cpu_hands.len() as PlayerID;
+
+        if playerId == len {
+            "you".to_string()
+        } else {
+            "they".to_string()
+        }
+    }
+
     pub fn get_winner_text(&self) -> String {
         let winner_names: Vec<_> = self
             .winners
@@ -601,6 +615,10 @@ impl EventLog {
         for i in 0..bytes.len() {
             next[i] = bytes[i];
         }
+    }
+
+    pub fn push_hr(&mut self) {
+        self.push(&[b'-'; NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as usize])
     }
 
     pub fn next_mut(&mut self) -> &mut EventLine {
@@ -746,7 +764,7 @@ impl GameState {
     ) -> GameState {
         log(logger, &format!("{:?}", seed));
 
-        event_log.push(&[b'-'; NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as usize]);
+        event_log.push_hr();
         event_log.push(b"started a new round.");
 
         let mut rng = XorShiftRng::from_seed(seed);
@@ -808,6 +826,8 @@ impl GameState {
     }
 
     fn add_cpu_rule(&mut self, player: PlayerID) {
+        self.add_rule_change_log_header(player);
+
         //TODO add single-strongly connected component checking and start
         //generating non-additive changes;
         let count = self.rng.gen_range(5, DECK_SIZE as usize);
@@ -832,19 +852,105 @@ impl GameState {
         changes: Vec<can_play::Change>,
         player: PlayerID,
     ) {
-        //TODO log changes in a more detailed way.
-        let text = &[self.player_name(player).as_bytes(), b" changed the rules."].concat();
-
-        self.event_log.push(text);
-
         //TODO enforce a single strongly connected component in the graph
 
-        for &change in changes.iter() {
-            let card = change.card();
-            let edges = change.edges();
+        let mut flattened_changes = [None; DECK_SIZE as usize];
 
-            self.rules.can_play_graph.set_edges(card, edges);
+        for &change in changes.iter() {
+            let index = change.card() as usize;
+
+            flattened_changes[index] = Some(change);
         }
+
+        for possible_change in flattened_changes.into_iter() {
+            if let Some(change) = possible_change {
+                let new_card = change.card();
+                let new_edges = change.edges();
+
+                //logging
+                let previous_edges = self.rules.can_play_graph.get_edges(new_card);
+
+                let mut additions = Vec::new();
+                let mut removals = Vec::new();
+
+                for card in 0..DECK_SIZE {
+                    let mask = 1 << card as usize;
+                    let p_edge = mask & previous_edges.get_bits() != 0;
+                    let n_edge = mask & new_edges.get_bits() != 0;
+
+                    match (p_edge, n_edge) {
+                        (true, false) => removals.push(card),
+                        (false, true) => additions.push(card),
+                        _ => {}
+                    }
+                }
+
+                let pronoun = self.get_pronoun(player);
+                let card_string = get_card_string(new_card);
+
+                match (additions.len() > 0, removals.len() > 0) {
+                    (false, false) => {}
+                    (true, false) => {
+                        let additions_string = get_card_list(&additions);
+                        let text = &[
+                            pronoun.as_bytes(),
+                            b" allowed the ",
+                            card_string.as_bytes(),
+                            b" to be played on the following cards: ",
+                            additions_string.as_bytes(),
+                            b".",
+                        ]
+                            .concat();
+                        self.event_log.push(text);
+                    }
+                    (false, true) => {
+                        let removals_string = get_card_list(&removals);
+                        let text = &[
+                            pronoun.as_bytes(),
+                            b" prevented the ",
+                            card_string.as_bytes(),
+                            b" from being played on the following cards: ",
+                            removals_string.as_bytes(),
+                            b".",
+                        ]
+                            .concat();
+                        self.event_log.push(text);
+                    }
+                    (true, true) => {
+                        let additions_string = get_card_list(&additions);
+                        let removals_string = get_card_list(&removals);
+                        let text = &[
+                            pronoun.as_bytes(),
+                            b" allowed the ",
+                            card_string.as_bytes(),
+                            b" to be played on the following cards: ",
+                            additions_string.as_bytes(),
+                            b". but ",
+                            pronoun.as_bytes(),
+                            b" also prevented it from being played on the following cards: ",
+                            removals_string.as_bytes(),
+                            b".",
+                        ]
+                            .concat();
+                        self.event_log.push(text);
+                    }
+                };
+
+                /////////
+
+                self.rules.can_play_graph.set_edges(new_card, new_edges);
+            }
+        }
+    }
+
+    pub fn add_rule_change_log_header(&mut self, player: PlayerID) {
+        self.event_log.push_hr();
+
+        let player_name = self.player_name(player);
+
+        let text = &[player_name.as_bytes(), b" changed the rules as follows:"].concat();
+
+        self.event_log.push(text);
     }
 
     pub fn player_id(&self) -> PlayerID {
