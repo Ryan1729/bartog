@@ -568,6 +568,7 @@ mod tests {
     }
 }
 
+#[derive(Debug)]
 pub struct EventLog {
     pub buffer: VecDeque<EventLine>,
 }
@@ -891,7 +892,7 @@ impl GameState {
                 match (additions.len() > 0, removals.len() > 0) {
                     (false, false) => {}
                     (true, false) => {
-                        let additions_string = get_card_list(&additions);
+                        let additions_string = get_suit_rank_pair_list(&additions);
                         let text = &[
                             pronoun.as_bytes(),
                             b" allowed the ",
@@ -904,7 +905,7 @@ impl GameState {
                         self.event_log.push(text);
                     }
                     (false, true) => {
-                        let removals_string = get_card_list(&removals);
+                        let removals_string = get_suit_rank_pair_list(&removals);
                         let text = &[
                             pronoun.as_bytes(),
                             b" prevented the ",
@@ -917,8 +918,8 @@ impl GameState {
                         self.event_log.push(text);
                     }
                     (true, true) => {
-                        let additions_string = get_card_list(&additions);
-                        let removals_string = get_card_list(&removals);
+                        let additions_string = get_suit_rank_pair_list(&additions);
+                        let removals_string = get_suit_rank_pair_list(&removals);
                         let text = &[
                             pronoun.as_bytes(),
                             b" allowed the ",
@@ -932,6 +933,7 @@ impl GameState {
                             b".",
                         ]
                             .concat();
+                        glog!(self, &text);
                         self.event_log.push(text);
                     }
                 };
@@ -941,6 +943,7 @@ impl GameState {
                 self.rules.can_play_graph.set_edges(new_card, new_edges);
             }
         }
+        glog!(self, &self.event_log);
     }
 
     pub fn add_rule_change_log_header(&mut self, player: PlayerID) {

@@ -127,7 +127,7 @@ pub fn get_card_list(cards: &Vec<Card>) -> String {
         output.push_str(sep);
         output.push_str(&get_card_string(card));
 
-        if i >= len - 1 {
+        if i >= len.saturating_sub(2) {
             sep = ", and ";
         } else {
             sep = ", ";
@@ -149,6 +149,42 @@ pub fn get_suit_rank_pair(card: Card) -> String {
     output.push(colour as char);
 
     output
+}
+
+pub fn get_suit_rank_pair_list(cards: &Vec<Card>) -> String {
+    //TODO better size estimate.
+    let mut output = String::with_capacity(cards.len() * RANK_SUIT_PAIR_WITH_IN_CHARS as usize * 2);
+    let len = cards.len();
+    let mut sep = "";
+    for (i, &card) in cards.iter().enumerate() {
+        output.push_str(sep);
+        output.push_str(&get_suit_rank_pair(card));
+
+        if i >= len.saturating_sub(2) {
+            sep = ", and ";
+        } else {
+            sep = ", ";
+        }
+    }
+    output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quickcheck::*;
+
+    #[test]
+    fn test_get_suit_rank_pair_list_retains_layout_char() {
+        let v = vec![9];
+        let list = get_suit_rank_pair_list(&v);
+        assert!(list.contains(RANK_SUIT_PAIR_LAYOUT_CHAR as char));
+        assert!(list.as_bytes().contains(&RANK_SUIT_PAIR_LAYOUT_CHAR));
+
+        let s = format!("{:?}", list.as_bytes());
+        assert!(s.contains(&RANK_SUIT_PAIR_LAYOUT_CHAR.to_string()));
+        assert_eq!(s, "[26, 27, 31, 7]");
+    }
 }
 
 pub fn get_short_card_string_and_colour(card: Card) -> (String, u8) {

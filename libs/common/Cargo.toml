@@ -5,6 +5,7 @@ authors = ["Ryan1729 <Ryan1729@gmail.com>"]
 
 [dependencies]
 rand = "0.5"
+quickcheck = "0.6"
 
 [dependencies.platform_types]
 path = "../platform_types"

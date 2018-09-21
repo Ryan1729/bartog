@@ -98,6 +98,9 @@ macro_rules! llog {
     }};
 }
 
+#[cfg(test)]
+extern crate quickcheck;
+
 extern crate platform_types;
 
 extern crate rand;
