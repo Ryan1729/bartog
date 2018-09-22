@@ -241,6 +241,28 @@ pub fn get_suit_str(suit: Suit) -> &'static str {
 
 pub type Rank = u8;
 
+pub mod Ranks {
+    use super::*;
+
+    pub const ACE: Rank = 0;
+    pub const TWO: Rank = 1;
+    pub const THREE: Rank = 2;
+    pub const FOUR: Rank = 3;
+    pub const FIVE: Rank = 4;
+    pub const SIX: Rank = 5;
+    pub const SEVEN: Rank = 6;
+    pub const EIGHT: Rank = 7;
+    pub const NINE: Rank = 8;
+    pub const TEN: Rank = 9;
+    pub const JACK: Rank = 10;
+    pub const QUEEN: Rank = 11;
+    pub const KING: Rank = 12;
+
+    pub const ALL: [Rank; RANK_COUNT as usize] = [
+        ACE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING,
+    ];
+}
+
 pub fn get_rank(card: Card) -> Rank {
     card % RANK_COUNT
 }

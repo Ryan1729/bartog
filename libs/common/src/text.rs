@@ -1,4 +1,4 @@
-use inner_common::TEN_CHAR;
+use inner_common::RANK_SUIT_PAIR_LAYOUT_CHAR;
 
 pub fn bytes_lines<'a>(bytes: &'a [u8]) -> impl Iterator<Item = &'a [u8]> {
     bytes.split(|&b| b == b'\n')
@@ -90,7 +90,7 @@ pub fn slice_until_first_0<'a>(bytes: &'a [u8]) -> &'a [u8] {
 #[inline]
 pub fn is_byte_whitespace(byte: u8) -> bool {
     let lower_half_byte = byte & 0b0111_1111;
-    lower_half_byte < TEN_CHAR || lower_half_byte == b' '
+    lower_half_byte < RANK_SUIT_PAIR_LAYOUT_CHAR || lower_half_byte == b' '
 }
 
 //See NOTE above.

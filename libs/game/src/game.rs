@@ -228,7 +228,7 @@ fn move_cursor(state: &mut GameState, input: Input, speaker: &mut Speaker) -> bo
 }
 
 fn is_wild(card: Card) -> bool {
-    get_rank(card) == 8 - 1
+    get_rank(card) == Ranks::EIGHT
 }
 
 fn can_play(state: &GameState, &card: &Card) -> bool {
@@ -358,7 +358,7 @@ fn get_discard_animation(
 
             let event_str = &[
                 player_name.as_bytes(),
-                if rank == 0 || rank == 7 {
+                if rank == Ranks::ACE || rank == Ranks::EIGHT {
                     b" played an "
                 } else {
                     b" played a "

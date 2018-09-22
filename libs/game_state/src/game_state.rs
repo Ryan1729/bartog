@@ -9,108 +9,141 @@ use platform_types::{log, Logger};
 
 use rand::{Rng, SeedableRng, XorShiftRng};
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct CardFlags(u64);
+
+impl CardFlags {
+    pub fn new(edges: u64) -> Self {
+        CardFlags(edges & ((1 << 52) - 1))
+    }
+
+    pub fn has_card(&self, card: Card) -> bool {
+        self.0 & (1 << card) != 0
+    }
+
+    pub fn toggle_card(&mut self, card: Card) {
+        let was = self.has_card(card);
+        self.set_card_to(card, !was)
+    }
+
+    pub fn set_card_to(&mut self, card: Card, to: bool) {
+        if to {
+            self.set_card(card);
+        } else {
+            self.unset_card(card);
+        }
+    }
+
+    pub fn set_card(&mut self, card: Card) {
+        self.0 |= 1 << card;
+    }
+    pub fn unset_card(&mut self, card: Card) {
+        self.0 &= !(1 << card);
+    }
+
+    pub fn cards(&self) -> Vec<Card> {
+        let mut output = Vec::with_capacity(DECK_SIZE as _);
+
+        for card in 0..DECK_SIZE {
+            if self.has_card(card) {
+                output.push(card);
+            }
+        }
+
+        output
+    }
+
+    pub fn get_bits(&self) -> u64 {
+        self.0
+    }
+}
+
+use std::ops::BitOr;
+
+impl BitOr<CardFlags> for CardFlags {
+    type Output = CardFlags;
+    fn bitor(self, other: CardFlags) -> Self::Output {
+        CardFlags(self.0 | other.0)
+    }
+}
+
+impl BitOr<u64> for CardFlags {
+    type Output = CardFlags;
+    fn bitor(self, other: u64) -> Self::Output {
+        CardFlags(self.0 | other)
+    }
+}
+
+impl BitOr<CardFlags> for u64 {
+    type Output = CardFlags;
+    fn bitor(self, other: CardFlags) -> Self::Output {
+        CardFlags(self | other.0)
+    }
+}
+
+impl Default for CardFlags {
+    fn default() -> Self {
+        CardFlags(0)
+    }
+}
+
+impl fmt::Debug for CardFlags {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let v = self.0;
+        if v >= 1 << 52 {
+            write!(f, "INVALID EDGES: {:?}, valid portion:", v);
+        }
+
+        write!(
+            f,
+            "{:?}",
+            self.cards()
+                .into_iter()
+                .map(get_card_string)
+                .collect::<Vec<_>>(),
+        )
+    }
+}
+
+const CLUBS_FLAGS: u64 = 0b0001_1111_1111_1111;
+const DIAMONDS_FLAGS: u64 = CLUBS_FLAGS << RANK_COUNT;
+const HEARTS_FLAGS: u64 = CLUBS_FLAGS << (RANK_COUNT * 2);
+const SPADES_FLAGS: u64 = CLUBS_FLAGS << (RANK_COUNT * 3);
+
+const SUIT_FLAGS: [u64; SUIT_COUNT as usize] =
+    [CLUBS_FLAGS, DIAMONDS_FLAGS, HEARTS_FLAGS, SPADES_FLAGS];
+
+macro_rules! across_all_suits {
+    ($flags:expr) => {
+        ($flags & 0b0001_1111_1111_1111)
+            | (($flags & 0b0001_1111_1111_1111) << RANK_COUNT)
+            | (($flags & 0b0001_1111_1111_1111) << (RANK_COUNT * 2))
+            | (($flags & 0b0001_1111_1111_1111) << (RANK_COUNT * 3))
+    };
+}
+
+const RANK_FLAGS: [u64; RANK_COUNT as usize] = [
+    across_all_suits!(1),
+    across_all_suits!(1 << 1),
+    across_all_suits!(1 << 2),
+    across_all_suits!(1 << 3),
+    across_all_suits!(1 << 4),
+    across_all_suits!(1 << 5),
+    across_all_suits!(1 << 6),
+    across_all_suits!(1 << 7),
+    across_all_suits!(1 << 8),
+    across_all_suits!(1 << 9),
+    across_all_suits!(1 << 10),
+    across_all_suits!(1 << 11),
+    across_all_suits!(1 << 12),
+];
+
 pub mod can_play {
     use super::*;
 
-    #[derive(Clone, Copy, PartialEq, Eq)]
-    pub struct Edges(u64);
-
-    impl Edges {
-        pub fn new(edges: u64) -> Self {
-            Edges(edges & ((1 << 52) - 1))
-        }
-
-        pub fn has_card(&self, card: Card) -> bool {
-            self.0 & (1 << card) != 0
-        }
-
-        pub fn toggle_card(&mut self, card: Card) {
-            let was = self.has_card(card);
-            self.set_card_to(card, !was)
-        }
-
-        pub fn set_card_to(&mut self, card: Card, to: bool) {
-            if to {
-                self.set_card(card);
-            } else {
-                self.unset_card(card);
-            }
-        }
-
-        pub fn set_card(&mut self, card: Card) {
-            self.0 |= 1 << card;
-        }
-        pub fn unset_card(&mut self, card: Card) {
-            self.0 &= !(1 << card);
-        }
-
-        pub fn cards(&self) -> Vec<Card> {
-            let mut output = Vec::with_capacity(DECK_SIZE as _);
-
-            for card in 0..DECK_SIZE {
-                if self.has_card(card) {
-                    output.push(card);
-                }
-            }
-
-            output
-        }
-
-        pub fn get_bits(&self) -> u64 {
-            self.0
-        }
-    }
-
-    use std::ops::BitOr;
-
-    impl BitOr<Edges> for Edges {
-        type Output = Edges;
-        fn bitor(self, other: Edges) -> Self::Output {
-            Edges(self.0 | other.0)
-        }
-    }
-
-    impl BitOr<u64> for Edges {
-        type Output = Edges;
-        fn bitor(self, other: u64) -> Self::Output {
-            Edges(self.0 | other)
-        }
-    }
-
-    impl BitOr<Edges> for u64 {
-        type Output = Edges;
-        fn bitor(self, other: Edges) -> Self::Output {
-            Edges(self | other.0)
-        }
-    }
-
-    impl Default for Edges {
-        fn default() -> Self {
-            Edges(0)
-        }
-    }
-
-    impl fmt::Debug for Edges {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            let v = self.0;
-            if v >= 1 << 52 {
-                write!(f, "INVALID EDGES: {:?}, valid portion:", v);
-            }
-
-            write!(
-                f,
-                "{:?}",
-                self.cards()
-                    .into_iter()
-                    .map(get_card_string)
-                    .collect::<Vec<_>>(),
-            )
-        }
-    }
-
     #[derive(Clone)]
     pub struct Graph {
-        pub nodes: [Edges; DECK_SIZE as usize],
+        pub nodes: [CardFlags; DECK_SIZE as usize],
     }
 
     impl Graph {
@@ -119,47 +152,14 @@ pub mod can_play {
             edges & (1 << top_of_discard as u64) != 0
         }
 
-        pub fn get_edges(&self, card: Card) -> Edges {
+        pub fn get_edges(&self, card: Card) -> CardFlags {
             self.nodes[card as usize]
         }
 
-        pub fn set_edges(&mut self, card: Card, edges: Edges) {
+        pub fn set_edges(&mut self, card: Card, edges: CardFlags) {
             self.nodes[card as usize] = edges;
         }
     }
-
-    const CLUBS_FLAGS: u64 = 0b0001_1111_1111_1111;
-    const DIAMONDS_FLAGS: u64 = CLUBS_FLAGS << RANK_COUNT;
-    const HEARTS_FLAGS: u64 = CLUBS_FLAGS << (RANK_COUNT * 2);
-    const SPADES_FLAGS: u64 = CLUBS_FLAGS << (RANK_COUNT * 3);
-
-    const SUIT_FLAGS: [u64; SUIT_COUNT as usize] =
-        [CLUBS_FLAGS, DIAMONDS_FLAGS, HEARTS_FLAGS, SPADES_FLAGS];
-
-    macro_rules! across_all_suits {
-        ($flags:expr) => {
-            ($flags & 0b0001_1111_1111_1111)
-                | (($flags & 0b0001_1111_1111_1111) << RANK_COUNT)
-                | (($flags & 0b0001_1111_1111_1111) << (RANK_COUNT * 2))
-                | (($flags & 0b0001_1111_1111_1111) << (RANK_COUNT * 3))
-        };
-    }
-
-    const RANK_FLAGS: [u64; RANK_COUNT as usize] = [
-        across_all_suits!(1),
-        across_all_suits!(1 << 1),
-        across_all_suits!(1 << 2),
-        across_all_suits!(1 << 3),
-        across_all_suits!(1 << 4),
-        across_all_suits!(1 << 5),
-        across_all_suits!(1 << 6),
-        across_all_suits!(1 << 7),
-        across_all_suits!(1 << 8),
-        across_all_suits!(1 << 9),
-        across_all_suits!(1 << 10),
-        across_all_suits!(1 << 11),
-        across_all_suits!(1 << 12),
-    ];
 
     impl Default for Graph {
         fn default() -> Self {
@@ -167,13 +167,13 @@ pub mod can_play {
             // the cards go from 0-51, in ascending rank order,
             // and in ♣ ♦ ♥ ♠ suit order (alphabetical)
             // A♣, 2♣, ... K♣, A♦, ..., A♥, ..., A♠, ..., K♠.
-            let mut nodes = [Edges::default(); DECK_SIZE as usize];
+            let mut nodes = [CardFlags::default(); DECK_SIZE as usize];
 
             for suit in 0..SUIT_COUNT as usize {
                 for rank in 0..RANK_COUNT as usize {
                     let i = rank + suit * RANK_COUNT as usize;
 
-                    nodes[i] = Edges::new(SUIT_FLAGS[suit] | RANK_FLAGS[rank]);
+                    nodes[i] = CardFlags::new(SUIT_FLAGS[suit] | RANK_FLAGS[rank]);
                 }
             }
 
@@ -185,12 +185,12 @@ pub mod can_play {
     pub struct Change(u64);
 
     impl Change {
-        pub fn new(edges: Edges, card: Card) -> Self {
+        pub fn new(edges: CardFlags, card: Card) -> Self {
             Change(((card as u64) << DECK_SIZE) | edges.0)
         }
 
-        pub fn edges(&self) -> Edges {
-            Edges::new(self.0)
+        pub fn edges(&self) -> CardFlags {
+            CardFlags::new(self.0)
         }
 
         pub fn card(&self) -> Card {
@@ -232,7 +232,7 @@ pub mod can_play {
     pub struct ChoiceState {
         pub changes: Vec<can_play::Change>,
         pub card: Card,
-        pub edges: Edges,
+        pub edges: CardFlags,
         pub layer: Layer,
         pub scroll_card: Card,
         pub done: bool,
@@ -693,18 +693,25 @@ impl Default for Status {
     }
 }
 
-#[derive(Default)]
 pub struct Rules {
     pub can_play_graph: can_play::Graph,
+    pub wild: CardFlags,
 }
+
+impl Default for Rules {
+    fn default() -> Self {
+        Rules {
+            wild: CardFlags::new(RANK_FLAGS[Ranks::EIGHT as usize]),
+            can_play_graph: Default::default(),
+        }
+    }
+}
+
+use std::mem;
 
 impl Rules {
     fn empty() -> Self {
-        Rules {
-            can_play_graph: can_play::Graph {
-                nodes: [can_play::Edges::new(0); DECK_SIZE as usize],
-            },
-        }
+        unsafe { mem::zeroed() }
     }
 }
 
@@ -933,7 +940,6 @@ impl GameState {
                             b".",
                         ]
                             .concat();
-                        glog!(self, &text);
                         self.event_log.push(text);
                     }
                 };
@@ -943,7 +949,6 @@ impl GameState {
                 self.rules.can_play_graph.set_edges(new_card, new_edges);
             }
         }
-        glog!(self, &self.event_log);
     }
 
     pub fn add_rule_change_log_header(&mut self, player: PlayerID) {
