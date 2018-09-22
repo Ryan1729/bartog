@@ -1,12 +1,6 @@
-use choices::{
-    choose_can_play_graph, choose_play_again, choose_suit, do_bool_choice,
-    do_can_play_graph_choice, do_suit_choice, do_unit_choice,
-};
+use choices::{choose_can_play_graph, choose_play_again, choose_rule, choose_suit, do_choices};
 use common::*;
-use game_state::{
-    can_play, get_card_offset, get_card_position, Choice, GameState, Hand, LogHeading, Spread,
-    Status,
-};
+use game_state::{GameState, LogHeading, Status};
 use platform_types::{Button, Input, Speaker, State, StateParams, SFX};
 use rand::Rng;
 
@@ -227,13 +221,9 @@ fn move_cursor(state: &mut GameState, input: Input, speaker: &mut Speaker) -> bo
     }
 }
 
-fn is_wild(card: Card) -> bool {
-    get_rank(card) == Ranks::EIGHT
-}
-
 fn can_play(state: &GameState, &card: &Card) -> bool {
     if let Some(&top_of_discard) = state.discard.last() {
-        is_wild(card) || if is_wild(top_of_discard) {
+        state.is_wild(card) || if state.is_wild(top_of_discard) {
             state.top_wild_declared_as == Some(get_suit(card))
         } else {
             state
@@ -261,7 +251,7 @@ fn cpu_would_play(state: &mut GameState, playerId: PlayerID) -> Option<u8> {
 }
 
 fn move_to_discard(state: &mut GameState, card: Card) {
-    if !is_wild(card) {
+    if !state.is_wild(card) {
         state.top_wild_declared_as = None;
     }
 
@@ -370,7 +360,7 @@ fn get_discard_animation(
 
             state.event_log.push(event_str);
 
-            if is_wild(card.card) {
+            if state.is_wild(card.card) {
                 CardAnimation::new(card, DISCARD_X, DISCARD_Y, Action::SelectWild(player))
             } else {
                 CardAnimation::new(card, DISCARD_X, DISCARD_Y, Action::MoveToDiscard)
@@ -492,11 +482,30 @@ fn take_turn(state: &mut GameState, input: Input, speaker: &mut Speaker) {
 fn update(state: &mut GameState, input: Input, speaker: &mut Speaker) {
     match state.status {
         Status::InGame => update_in_game(state, input, speaker),
-        Status::RuleSelection => update_rule_selection(state, input, speaker),
+        Status::RuleSelection => update_rule_selection(state),
+        Status::RuleSelectionCanPlay => update_can_play_graph(state),
+        // Status::RuleSelectionWild => update_wild(state),
     }
 }
 
-fn update_rule_selection(state: &mut GameState, _input: Input, _speaker: &mut Speaker) {
+// fn update_wild(state: &mut GameState) {
+//     match choose_can_play_graph(state) {
+//         ref x if x.len() == 0 => {
+//             //wait until they choose
+//         }
+//         changes => {
+//             let player_id = state.player_id();
+//
+//             state.add_rule_change_log_header(player_id);
+//
+//             state.apply_can_play_graph_changes(changes, player_id);
+//
+//             state.status = Status::InGame;
+//         }
+//     }
+// }
+
+fn update_can_play_graph(state: &mut GameState) {
     match choose_can_play_graph(state) {
         ref x if x.len() == 0 => {
             //wait until they choose
@@ -509,6 +518,17 @@ fn update_rule_selection(state: &mut GameState, _input: Input, _speaker: &mut Sp
             state.apply_can_play_graph_changes(changes, player_id);
 
             state.status = Status::InGame;
+        }
+    }
+}
+
+fn update_rule_selection(state: &mut GameState) {
+    match choose_rule(state) {
+        None => {
+            //wait until they choose
+        }
+        Some(status) => {
+            state.status = status;
         }
     }
 }
@@ -622,14 +642,6 @@ pub fn update_and_render(
     if state.log_height > 0 {
         draw_event_log(framebuffer, &state);
     } else {
-        match state.choice {
-            Choice::OfCanPlayGraph(_) => {
-                do_can_play_graph_choice(framebuffer, state, input, speaker)
-            }
-            Choice::OfSuit => do_suit_choice(framebuffer, state, input, speaker),
-            Choice::OfBool => do_bool_choice(framebuffer, state, input, speaker),
-            Choice::OfUnit => do_unit_choice(framebuffer, state, input, speaker),
-            _ => {}
-        }
+        do_choices(framebuffer, state, input, speaker);
     }
 }

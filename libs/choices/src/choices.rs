@@ -1,5 +1,5 @@
 use common::*;
-use game_state::{can_play, Choice, Chosen, GameState};
+use game_state::{can_play, get_status_text, Choice, Chosen, GameState, Status, RULE_TYPES};
 use platform_types::{log, Button, Input, Logger, Speaker};
 use std::cmp::min;
 
@@ -657,5 +657,94 @@ pub fn do_can_play_graph_choice(
 
     if let Some(chosen) = chosen {
         state.choice = Choice::Already(Chosen::CanPlayGraph(chosen));
+    }
+}
+
+pub fn choose_rule(state: &mut GameState) -> Option<Status> {
+    match state.choice {
+        Choice::NoChoice => {
+            state.choice = Choice::OfStatus;
+            None
+        }
+        Choice::Already(Chosen::Status(status)) => {
+            state.choice = Choice::NoChoice;
+            Some(status)
+        }
+        _ => None,
+    }
+}
+
+#[inline]
+pub fn do_status_choice(
+    framebuffer: &mut Framebuffer,
+    state: &mut GameState,
+    input: Input,
+    speaker: &mut Speaker,
+) {
+    framebuffer.full_window();
+    {
+        let text = b"choose a type of rule";
+
+        let (x, _) = center_line_in_rect(
+            text.len() as u8,
+            (
+                (SPRITE_SIZE, SPRITE_SIZE),
+                (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+            ),
+        );
+
+        framebuffer.print(text, x, SPRITE_SIZE * 2, WHITE_INDEX);
+    }
+
+    let w = NINE_SLICE_MAX_INTERIOR_SIZE;
+    let h = SPRITE_SIZE * 3;
+    let x = SPRITE_SIZE;
+
+    for (i, status) in RULE_TYPES.iter().cloned().enumerate() {
+        let i = (i + 1) as u8;
+
+        let mut text = get_status_text(status).to_string();
+
+        let spec = ButtonSpec {
+            x,
+            y: h * i,
+            w,
+            h,
+            id: i,
+            text,
+        };
+
+        if do_button(framebuffer, &mut state.context, input, speaker, &spec) {
+            state.choice = Choice::Already(Chosen::Status(status));
+        }
+    }
+
+    #[allow(non_snake_case)]
+    let MAX_ID = RULE_TYPES.len() as UIId;
+
+    if state.context.hot == 0 || state.context.hot > MAX_ID {
+        state.context.set_next_hot(1);
+    } else if input.pressed_this_frame(Button::Up) {
+        let next = dice_mod(state.context.hot - 1, MAX_ID);
+        state.context.set_next_hot(next);
+    } else if input.pressed_this_frame(Button::Down) {
+        let next = dice_mod(state.context.hot + 1, MAX_ID);
+        state.context.set_next_hot(next);
+    }
+}
+
+pub fn do_choices(
+    framebuffer: &mut Framebuffer,
+    state: &mut GameState,
+    input: Input,
+    speaker: &mut Speaker,
+) {
+    match state.choice {
+        Choice::OfCanPlayGraph(_) => do_can_play_graph_choice(framebuffer, state, input, speaker),
+        Choice::OfStatus => do_status_choice(framebuffer, state, input, speaker),
+        Choice::OfSuit => do_suit_choice(framebuffer, state, input, speaker),
+        Choice::OfBool => do_bool_choice(framebuffer, state, input, speaker),
+        Choice::OfUnit => do_unit_choice(framebuffer, state, input, speaker),
+        Choice::NoChoice | Choice::Already(_) => {}
     }
 }
