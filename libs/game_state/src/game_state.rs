@@ -6,10 +6,17 @@ use std::fmt;
 
 use platform_types::{log, Logger};
 
+use rand::distributions::{Distribution, Standard};
 use rand::{Rng, SeedableRng, XorShiftRng};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct CardFlags(u64);
+
+impl Distribution<CardFlags> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> CardFlags {
+        CardFlags(rng.gen_range(0, 1 << DECK_SIZE as u64))
+    }
+}
 
 impl CardFlags {
     pub fn new(edges: u64) -> Self {
@@ -469,10 +476,17 @@ impl EventLog {
 }
 
 #[derive(Clone, Debug)]
+pub struct CardFlagsChoiceState {
+    pub flags: CardFlags,
+    pub card: Card,
+}
+
+#[derive(Clone, Debug)]
 pub enum Choice {
     NoChoice,
     Already(Chosen),
     OfCanPlayGraph(can_play::ChoiceState),
+    OfCardFlags(CardFlagsChoiceState),
     OfStatus,
     OfSuit,
     OfBool,
@@ -483,11 +497,7 @@ impl Choice {
     pub fn is_idle(&self) -> bool {
         match *self {
             Choice::NoChoice | Choice::Already(_) => true,
-            Choice::OfCanPlayGraph(_)
-            | Choice::OfStatus
-            | Choice::OfSuit
-            | Choice::OfBool
-            | Choice::OfUnit => false,
+            _ => false,
         }
     }
 }
@@ -495,6 +505,7 @@ impl Choice {
 #[derive(Clone, Debug)]
 pub enum Chosen {
     CanPlayGraph(Vec<can_play::Change>),
+    CardFlags(CardFlags),
     Status(Status),
     Suit(Suit),
     Bool(bool),
@@ -511,6 +522,7 @@ pub enum Status {
     InGame,
     RuleSelection,
     RuleSelectionCanPlay,
+    RuleSelectionWild,
 }
 
 impl Default for Status {
@@ -521,13 +533,14 @@ impl Default for Status {
     }
 }
 
-pub const RULE_TYPES: [Status; 1] = [Status::RuleSelectionCanPlay];
+pub const RULE_TYPES: [Status; 2] = [Status::RuleSelectionCanPlay, Status::RuleSelectionWild];
 
 pub fn get_status_text(status: Status) -> &'static str {
     match status {
         Status::InGame => "InGame!?",
         Status::RuleSelection => "RuleSelection!?",
         Status::RuleSelectionCanPlay => "card playability",
+        Status::RuleSelectionWild => "wildness",
     }
 }
 
@@ -672,6 +685,26 @@ impl GameState {
     }
 
     fn add_cpu_rule(&mut self, player: PlayerID) {
+        let rule_type = {
+            let index = self.rng.gen_range(0, RULE_TYPES.len());
+            RULE_TYPES[index]
+        };
+
+        match rule_type {
+            Status::RuleSelectionWild => self.add_cpu_wild_change(player),
+            Status::RuleSelectionCanPlay => self.add_cpu_can_play_graph_change(player),
+            Status::RuleSelection | Status::InGame => {
+                invariant_violation!("add_cpu_rule generated a non-rule type status");
+            }
+        }
+    }
+
+    fn add_cpu_wild_change(&mut self, player: PlayerID) {
+        //TODO log wild changes
+        self.rules.wild = self.rng.gen::<CardFlags>();
+    }
+
+    fn add_cpu_can_play_graph_change(&mut self, player: PlayerID) {
         self.add_rule_change_log_header(player);
 
         //TODO add single-strongly connected component checking and start
@@ -685,7 +718,7 @@ impl GameState {
         let mut changes = Vec::with_capacity(count);
         for card in cards {
             let old_edges = self.rules.can_play_graph.get_edges(card);
-            let edges = self.rng.gen_range(0, 1 << DECK_SIZE as u64) | old_edges;
+            let edges = self.rng.gen::<CardFlags>() | old_edges;
 
             changes.push(can_play::Change::new(edges, card));
         }

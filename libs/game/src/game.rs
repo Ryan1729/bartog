@@ -1,4 +1,7 @@
-use choices::{choose_can_play_graph, choose_play_again, choose_rule, choose_suit, do_choices};
+use choices::{
+    choose_can_play_graph, choose_play_again, choose_rule, choose_suit, choose_wild_flags,
+    do_choices,
+};
 use common::*;
 use game_state::{GameState, LogHeading, Status};
 use platform_types::{Button, Input, Speaker, State, StateParams, SFX};
@@ -484,26 +487,22 @@ fn update(state: &mut GameState, input: Input, speaker: &mut Speaker) {
         Status::InGame => update_in_game(state, input, speaker),
         Status::RuleSelection => update_rule_selection(state),
         Status::RuleSelectionCanPlay => update_can_play_graph(state),
-        // Status::RuleSelectionWild => update_wild(state),
+        Status::RuleSelectionWild => update_wild(state),
     }
 }
 
-// fn update_wild(state: &mut GameState) {
-//     match choose_can_play_graph(state) {
-//         ref x if x.len() == 0 => {
-//             //wait until they choose
-//         }
-//         changes => {
-//             let player_id = state.player_id();
-//
-//             state.add_rule_change_log_header(player_id);
-//
-//             state.apply_can_play_graph_changes(changes, player_id);
-//
-//             state.status = Status::InGame;
-//         }
-//     }
-// }
+fn update_wild(state: &mut GameState) {
+    match choose_wild_flags(state) {
+        None => {
+            //wait until they choose
+        }
+        Some(wild) => {
+            state.rules.wild = wild;
+
+            state.status = Status::InGame;
+        }
+    }
+}
 
 fn update_can_play_graph(state: &mut GameState) {
     match choose_can_play_graph(state) {

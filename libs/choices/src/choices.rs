@@ -1,5 +1,8 @@
 use common::*;
-use game_state::{can_play, get_status_text, Choice, Chosen, GameState, Status, RULE_TYPES};
+use game_state::{
+    can_play, get_status_text, CardFlags, CardFlagsChoiceState, Choice, Chosen, GameState, Status,
+    RULE_TYPES,
+};
 use platform_types::{log, Button, Input, Logger, Speaker};
 use std::cmp::min;
 
@@ -172,7 +175,7 @@ pub fn do_suit_choice(
 ) {
     framebuffer.full_window();
     {
-        let text = b"choose a suit for the 8 to be";
+        let text = b"choose a suit for the card";
 
         let (x, _) = center_line_in_rect(
             text.len() as u8,
@@ -500,6 +503,28 @@ fn can_play_graph_choose_edges(
 
     const FIRST_CHECKBOX_ID: UIId = 3;
 
+    do_scrolling_card_checkbox(
+        framebuffer,
+        context,
+        input,
+        speaker,
+        &mut choice_state.scroll_card,
+        &mut choice_state.edges,
+        FIRST_CHECKBOX_ID,
+        max_heading_y,
+    );
+}
+
+fn do_scrolling_card_checkbox(
+    framebuffer: &mut Framebuffer,
+    context: &mut UIContext,
+    input: Input,
+    speaker: &mut Speaker,
+    scroll_card: &mut Card,
+    card_flags: &mut CardFlags,
+    first_checkbox_id: UIId,
+    max_heading_y: u8,
+) {
     const SCROLL_ROWS_COUNT: u8 = 10;
     const SCROLL_COLS_COUNT: u8 = 2;
 
@@ -507,14 +532,14 @@ fn can_play_graph_choose_edges(
         (DECK_SIZE / SCROLL_COLS_COUNT) * SCROLL_COLS_COUNT,
         DECK_SIZE,
     );
-    let scroll_card = nth_next_card(choice_state.scroll_card, 0);
+    let current_scroll_card = nth_next_card(*scroll_card, 0);
 
     for y in 0..SCROLL_ROWS_COUNT {
         for x in 0..SCROLL_COLS_COUNT {
             let i = x + y * SCROLL_COLS_COUNT;
-            let id = i as UIId + FIRST_CHECKBOX_ID;
+            let id = i as UIId + first_checkbox_id;
 
-            let card = nth_next_card(scroll_card, i);
+            let card = nth_next_card(current_scroll_card, i);
             let text = get_suit_rank_pair(card);
 
             let spec = CheckboxSpec {
@@ -523,44 +548,44 @@ fn can_play_graph_choose_edges(
                 y: max_heading_y + SPRITE_SIZE * (y + 1) as u8 + (SPRITE_SIZE as u8 / 2),
                 id,
                 text,
-                checked: choice_state.edges.has_card(card),
+                checked: card_flags.has_card(card),
             };
 
             if do_checkbox(framebuffer, context, input, speaker, &spec) {
-                choice_state.edges.toggle_card(card);
+                card_flags.toggle_card(card);
             }
         }
     }
 
-    if context.hot < FIRST_CHECKBOX_ID as _ {
+    if context.hot < first_checkbox_id as _ {
         if context.hot == 0 {
             context.set_next_hot(1);
         } else if input.pressed_this_frame(Button::Up) {
-            let next = dice_mod(context.hot - 1, 2);
+            let next = dice_mod(context.hot - 1, first_checkbox_id - 1);
             context.set_next_hot(next);
         } else if input.pressed_this_frame(Button::Down) {
-            let next = dice_mod(context.hot + 1, 2);
+            let next = dice_mod(context.hot + 1, first_checkbox_id - 1);
             context.set_next_hot(next);
         } else if input.pressed_this_frame(Button::Right) {
             if context.hot == 1 {
-                context.set_next_hot(FIRST_CHECKBOX_ID);
+                context.set_next_hot(first_checkbox_id);
             } else {
-                context.set_next_hot(FIRST_CHECKBOX_ID + 3 * SCROLL_COLS_COUNT);
+                context.set_next_hot(first_checkbox_id + 3 * SCROLL_COLS_COUNT);
             }
         } else if input.pressed_this_frame(Button::Left) {
             if context.hot == 1 {
-                context.set_next_hot(FIRST_CHECKBOX_ID + 1);
+                context.set_next_hot(first_checkbox_id + 1);
             } else {
-                context.set_next_hot(FIRST_CHECKBOX_ID + 3 * SCROLL_COLS_COUNT + 1);
+                context.set_next_hot(first_checkbox_id + 3 * SCROLL_COLS_COUNT + 1);
             }
         }
     } else {
         if input.pressed_this_frame(Button::Left) {
             if context.hot & 1 == 1 {
-                if context.hot > FIRST_CHECKBOX_ID + 3 * SCROLL_COLS_COUNT {
-                    context.set_next_hot(FIRST_CHECKBOX_ID - 1);
+                if context.hot > first_checkbox_id + 3 * SCROLL_COLS_COUNT {
+                    context.set_next_hot(first_checkbox_id - 1);
                 } else {
-                    context.set_next_hot(FIRST_CHECKBOX_ID - 2);
+                    context.set_next_hot(first_checkbox_id - 2);
                 }
             } else {
                 let next = context.hot - 1;
@@ -571,31 +596,30 @@ fn can_play_graph_choose_edges(
                 let next = context.hot + 1;
                 context.set_next_hot(next);
             } else {
-                if context.hot > FIRST_CHECKBOX_ID + 3 * SCROLL_COLS_COUNT {
-                    context.set_next_hot(FIRST_CHECKBOX_ID - 1);
+                if context.hot > first_checkbox_id + 3 * SCROLL_COLS_COUNT {
+                    context.set_next_hot(first_checkbox_id - 1);
                 } else {
-                    context.set_next_hot(FIRST_CHECKBOX_ID - 2);
+                    context.set_next_hot(first_checkbox_id - 2);
                 }
             }
         } else {
-            let mut unoffset = context.hot - FIRST_CHECKBOX_ID;
+            let mut unoffset = context.hot - first_checkbox_id;
 
             if input.pressed_this_frame(Button::Up) {
                 if unoffset < 2 {
-                    choice_state.scroll_card =
-                        nth_next_card(choice_state.scroll_card, DECK_SIZE - 2) as _;
+                    *scroll_card = nth_next_card(*scroll_card, DECK_SIZE - 2) as _;
                 } else {
                     unoffset -= 2;
                 }
             } else if input.pressed_this_frame(Button::Down) {
                 if unoffset / SCROLL_COLS_COUNT >= SCROLL_ROWS_COUNT - 1 {
-                    choice_state.scroll_card = nth_next_card(choice_state.scroll_card, 2) as _;
+                    *scroll_card = nth_next_card(*scroll_card, 2) as _;
                 } else {
                     unoffset = nth_next_card(unoffset, 2);
                 }
             }
 
-            context.set_next_hot(unoffset + FIRST_CHECKBOX_ID);
+            context.set_next_hot(unoffset + first_checkbox_id);
         }
     }
 }
@@ -675,6 +699,111 @@ pub fn choose_rule(state: &mut GameState) -> Option<Status> {
 }
 
 #[inline]
+pub fn do_card_flags_choice(
+    framebuffer: &mut Framebuffer,
+    state: &mut GameState,
+    input: Input,
+    speaker: &mut Speaker,
+) {
+    let mut chosen = None;
+    if let Choice::OfCardFlags(ref mut card_flags_state) = state.choice {
+        let context = &mut state.context;
+
+        framebuffer.full_window();
+        {
+            let text = b"select which cards are wild";
+
+            let (x, _) = center_line_in_rect(
+                text.len() as u8,
+                (
+                    (SPRITE_SIZE, SPRITE_SIZE),
+                    (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+                ),
+            );
+
+            framebuffer.print(text, x, SPRITE_SIZE * 2, WHITE_INDEX);
+        }
+
+        let w = SPRITE_SIZE * 5;
+        let h = SPRITE_SIZE * 3;
+
+        {
+            let y = SPRITE_SIZE * 4;
+
+            let spec = ButtonSpec {
+                x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
+                y,
+                w,
+                h,
+                id: 1,
+                text: "ok".to_owned(),
+            };
+
+            if do_button(framebuffer, context, input, speaker, &spec) {
+                chosen = Some(card_flags_state.flags);
+            }
+        }
+
+        {
+            let y = SPRITE_SIZE * 7;
+
+            let spec = ButtonSpec {
+                x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
+                y,
+                w,
+                h,
+                id: 2,
+                text: "cancel".to_owned(),
+            };
+
+            if do_button(framebuffer, context, input, speaker, &spec) {
+                //TODO make an option-like that has a cancel variant?
+                state.status = Status::RuleSelection;
+            }
+        }
+
+        const FIRST_CHECKBOX_ID: UIId = 3;
+
+        do_scrolling_card_checkbox(
+            framebuffer,
+            context,
+            input,
+            speaker,
+            &mut card_flags_state.card,
+            &mut card_flags_state.flags,
+            FIRST_CHECKBOX_ID,
+            SPRITE_SIZE * 3,
+        );
+    } else {
+        invariant_violation!(
+            { state.choice = Choice::NoChoice },
+            "`do_card_flags_choice` was called with the wrong choice type!"
+        )
+    }
+
+    if let Some(chosen) = chosen {
+        state.choice = Choice::Already(Chosen::CardFlags(chosen));
+    }
+}
+
+pub fn choose_wild_flags(state: &mut GameState) -> Option<CardFlags> {
+    match state.choice {
+        Choice::NoChoice => {
+            state.choice = Choice::OfCardFlags(CardFlagsChoiceState {
+                flags: state.rules.wild,
+                card: Default::default(),
+            });
+            None
+        }
+        Choice::Already(Chosen::CardFlags(flags)) => {
+            state.choice = Choice::NoChoice;
+            Some(flags)
+        }
+        _ => None,
+    }
+}
+
+#[inline]
 pub fn do_status_choice(
     framebuffer: &mut Framebuffer,
     state: &mut GameState,
@@ -741,6 +870,7 @@ pub fn do_choices(
 ) {
     match state.choice {
         Choice::OfCanPlayGraph(_) => do_can_play_graph_choice(framebuffer, state, input, speaker),
+        Choice::OfCardFlags(_) => do_card_flags_choice(framebuffer, state, input, speaker),
         Choice::OfStatus => do_status_choice(framebuffer, state, input, speaker),
         Choice::OfSuit => do_suit_choice(framebuffer, state, input, speaker),
         Choice::OfBool => do_bool_choice(framebuffer, state, input, speaker),
