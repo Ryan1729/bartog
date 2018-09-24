@@ -114,6 +114,15 @@ pub const DECK_SIZE: u8 = RANK_COUNT * SUIT_COUNT;
 
 pub type Card = u8;
 
+use rand::Rng;
+pub fn gen_cards<R: Rng>(rng: &mut R, count: usize) -> Vec<Card> {
+    let mut cards = Vec::with_capacity(count);
+    for _ in 0..count {
+        cards.push(rng.gen_range(0, DECK_SIZE));
+    }
+    cards
+}
+
 pub fn get_card_string(card: Card) -> String {
     format!("{} of {}", get_rank_str(card), get_suit_str(get_suit(card)))
 }

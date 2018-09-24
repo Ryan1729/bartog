@@ -198,7 +198,7 @@ fn draw_event_log(framebuffer: &mut Framebuffer, state: &GameState) {
     framebuffer.bottom_six_slice(WINDOW_TOP_LEFT, 0, 0, SCREEN_WIDTH as u8, state.log_height);
 
     let mut y = SPRITE_SIZE;
-    for line in state.event_log.get_window_slice(state.log_top_index) {
+    for line in state.event_log.get_window_slice() {
         framebuffer.print_line(line, SPRITE_SIZE, y, WHITE_INDEX);
 
         y += FONT_SIZE;
@@ -226,6 +226,8 @@ fn move_cursor(state: &mut GameState, input: Input, speaker: &mut Speaker) -> bo
 
 fn can_play(state: &GameState, &card: &Card) -> bool {
     if let Some(&top_of_discard) = state.discard.last() {
+        // TODO should a card that is wild allow a non-wild card of the same rank
+        // to be played on it?
         state.is_wild(card) || if state.is_wild(top_of_discard) {
             state.top_wild_declared_as == Some(get_suit(card))
         } else {
@@ -497,7 +499,11 @@ fn update_wild(state: &mut GameState) {
             //wait until they choose
         }
         Some(wild) => {
-            state.rules.wild = wild;
+            let player_id = state.player_id();
+
+            state.add_rule_change_log_header(player_id);
+
+            state.apply_wild_change(wild, player_id);
 
             state.status = Status::InGame;
         }
@@ -553,11 +559,11 @@ fn update_in_game(state: &mut GameState, input: Input, speaker: &mut Speaker) {
 
     if state.log_height > 0 {
         if input.pressed_this_frame(Button::Up) {
-            state.log_top_index = state.log_top_index.saturating_sub(1);
+            state.event_log.top_index = state.event_log.top_index.saturating_sub(1);
         //TODO feedback when you hit the top edge
         } else if input.pressed_this_frame(Button::Down) {
-            if state.log_top_index < state.event_log.len() {
-                state.log_top_index += 1;
+            if state.event_log.top_index < state.event_log.len() {
+                state.event_log.top_index += 1;
             } else {
                 //TODO feedback when you hit the bottom edge
             }

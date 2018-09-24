@@ -12,15 +12,17 @@ use rand::{Rng, SeedableRng, XorShiftRng};
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct CardFlags(u64);
 
+const ONE_PAST_CARD_FLAGS_MAX: u64 = 1 << DECK_SIZE as u64;
+
 impl Distribution<CardFlags> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> CardFlags {
-        CardFlags(rng.gen_range(0, 1 << DECK_SIZE as u64))
+        CardFlags(rng.gen_range(0, ONE_PAST_CARD_FLAGS_MAX))
     }
 }
 
 impl CardFlags {
     pub fn new(edges: u64) -> Self {
-        CardFlags(edges & ((1 << 52) - 1))
+        CardFlags(edges & (ONE_PAST_CARD_FLAGS_MAX - 1))
     }
 
     pub fn has_card(&self, card: Card) -> bool {
@@ -59,8 +61,47 @@ impl CardFlags {
         output
     }
 
+    pub fn from_cards(cards: Vec<Card>) -> Self {
+        let mut output = CardFlags(0);
+
+        for card in cards {
+            output.set_card(card);
+        }
+
+        output
+    }
+
     pub fn get_bits(&self) -> u64 {
         self.0
+    }
+}
+
+struct CardFlagsDelta {
+    pub additions: Vec<Card>,
+    pub removals: Vec<Card>,
+}
+
+impl CardFlagsDelta {
+    fn new(previous_flags: CardFlags, new_flags: CardFlags) -> Self {
+        let mut additions = Vec::new();
+        let mut removals = Vec::new();
+
+        for card in 0..DECK_SIZE {
+            let mask = 1 << card as usize;
+            let p_edge = mask & previous_flags.get_bits() != 0;
+            let n_edge = mask & new_flags.get_bits() != 0;
+
+            match (p_edge, n_edge) {
+                (true, false) => removals.push(card),
+                (false, true) => additions.push(card),
+                _ => {}
+            }
+        }
+
+        CardFlagsDelta {
+            additions,
+            removals,
+        }
     }
 }
 
@@ -398,6 +439,7 @@ use std::cmp::min;
 #[derive(Debug)]
 pub struct EventLog {
     pub buffer: VecDeque<EventLine>,
+    pub top_index: usize,
 }
 
 type EventLine = [u8; EventLog::WIDTH];
@@ -410,7 +452,10 @@ impl EventLog {
 
     pub fn new() -> Self {
         let buffer = VecDeque::with_capacity(EventLog::BUFFER_SIZE);
-        EventLog { buffer }
+        EventLog {
+            buffer,
+            top_index: 0,
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -419,6 +464,7 @@ impl EventLog {
 
     pub fn clear(&mut self) {
         self.buffer.clear();
+        self.top_index = 0;
     }
 
     pub fn push(&mut self, bytes: &[u8]) {
@@ -470,8 +516,8 @@ impl EventLog {
         self.buffer.iter().map(|line| slice_until_first_0(line))
     }
 
-    pub fn get_window_slice<'a>(&'a self, top_index: usize) -> impl Iterator<Item = &'a [u8]> {
-        self.iter().skip(top_index).take(EventLog::HEIGHT)
+    pub fn get_window_slice<'a>(&'a self) -> impl Iterator<Item = &'a [u8]> {
+        self.iter().skip(self.top_index).take(EventLog::HEIGHT)
     }
 }
 
@@ -582,7 +628,6 @@ pub struct GameState {
     pub context: UIContext,
     pub rng: XorShiftRng,
     pub event_log: EventLog,
-    pub log_top_index: usize,
     pub log_height: u8,
     pub log_heading: LogHeading,
     pub logger: Logger,
@@ -624,6 +669,8 @@ impl GameState {
         log(logger, &format!("{:?}", seed));
 
         event_log.push_hr();
+        //TODO keep track of round count and change to "started round N"
+        //TODO scroll the event log to the start of the new round?
         event_log.push(b"started a new round.");
 
         let mut rng = XorShiftRng::from_seed(seed);
@@ -677,13 +724,13 @@ impl GameState {
             context: UIContext::new(),
             rng,
             event_log,
-            log_top_index: 0,
             log_height: 0,
             log_heading: LogHeading::Up,
             logger,
         }
     }
 
+    //TODO pull this rule stuff out to another crate since we know it will continue growing
     fn add_cpu_rule(&mut self, player: PlayerID) {
         let rule_type = {
             let index = self.rng.gen_range(0, RULE_TYPES.len());
@@ -700,8 +747,69 @@ impl GameState {
     }
 
     fn add_cpu_wild_change(&mut self, player: PlayerID) {
-        //TODO log wild changes
-        self.rules.wild = self.rng.gen::<CardFlags>();
+        self.add_rule_change_log_header(player);
+
+        let count = self.rng.gen_range(0, 9);
+        let cards = gen_cards(&mut self.rng, count);
+        let new_wild = CardFlags::from_cards(cards);
+
+        self.apply_wild_change(new_wild, player);
+    }
+
+    pub fn apply_wild_change(&mut self, new_wild: CardFlags, player: PlayerID) {
+        //logging
+        let CardFlagsDelta {
+            additions,
+            removals,
+        } = CardFlagsDelta::new(self.rules.wild, new_wild);
+
+        let pronoun = self.get_pronoun(player);
+
+        match (additions.len() > 0, removals.len() > 0) {
+            (false, false) => {}
+            (true, false) => {
+                let additions_string = get_card_list(&additions);
+                let text = &[
+                    pronoun.as_bytes(),
+                    b" made the following cards wild: ",
+                    additions_string.as_bytes(),
+                    b".",
+                ]
+                    .concat();
+                self.event_log.push(text);
+            }
+            (false, true) => {
+                let removals_string = get_card_list(&removals);
+                let text = &[
+                    pronoun.as_bytes(),
+                    b" made these cards not wild: ",
+                    removals_string.as_bytes(),
+                    b".",
+                ]
+                    .concat();
+                self.event_log.push(text);
+            }
+            (true, true) => {
+                let additions_string = get_card_list(&additions);
+                let removals_string = get_card_list(&removals);
+                let text = &[
+                    pronoun.as_bytes(),
+                    b" made the following cards wild: ",
+                    additions_string.as_bytes(),
+                    b". but ",
+                    pronoun.as_bytes(),
+                    b" also made these cards not wild: ",
+                    removals_string.as_bytes(),
+                    b".",
+                ]
+                    .concat();
+                self.event_log.push(text);
+            }
+        };
+
+        /////////
+
+        self.rules.wild = new_wild;
     }
 
     fn add_cpu_can_play_graph_change(&mut self, player: PlayerID) {
@@ -710,10 +818,7 @@ impl GameState {
         //TODO add single-strongly connected component checking and start
         //generating non-additive changes;
         let count = self.rng.gen_range(5, DECK_SIZE as usize);
-        let mut cards = Vec::with_capacity(count);
-        for _ in 0..count {
-            cards.push(self.rng.gen_range(0, DECK_SIZE));
-        }
+        let cards = gen_cards(&mut self.rng, count);
 
         let mut changes = Vec::with_capacity(count);
         for card in cards {
@@ -748,21 +853,10 @@ impl GameState {
 
                 //logging
                 let previous_edges = self.rules.can_play_graph.get_edges(new_card);
-
-                let mut additions = Vec::new();
-                let mut removals = Vec::new();
-
-                for card in 0..DECK_SIZE {
-                    let mask = 1 << card as usize;
-                    let p_edge = mask & previous_edges.get_bits() != 0;
-                    let n_edge = mask & new_edges.get_bits() != 0;
-
-                    match (p_edge, n_edge) {
-                        (true, false) => removals.push(card),
-                        (false, true) => additions.push(card),
-                        _ => {}
-                    }
-                }
+                let CardFlagsDelta {
+                    additions,
+                    removals,
+                } = CardFlagsDelta::new(previous_edges, new_edges);
 
                 let pronoun = self.get_pronoun(player);
                 let card_string = get_card_string(new_card);
@@ -860,6 +954,7 @@ impl GameState {
             &mut self.event_log,
             EventLog {
                 buffer: VecDeque::with_capacity(0),
+                top_index: 0,
             },
         );
         let old_rules = replace(&mut self.rules, Rules::empty());
