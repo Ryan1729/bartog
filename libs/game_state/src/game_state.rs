@@ -76,35 +76,6 @@ impl CardFlags {
     }
 }
 
-struct CardFlagsDelta {
-    pub additions: Vec<Card>,
-    pub removals: Vec<Card>,
-}
-
-impl CardFlagsDelta {
-    fn new(previous_flags: CardFlags, new_flags: CardFlags) -> Self {
-        let mut additions = Vec::new();
-        let mut removals = Vec::new();
-
-        for card in 0..DECK_SIZE {
-            let mask = 1 << card as usize;
-            let p_edge = mask & previous_flags.get_bits() != 0;
-            let n_edge = mask & new_flags.get_bits() != 0;
-
-            match (p_edge, n_edge) {
-                (true, false) => removals.push(card),
-                (false, true) => additions.push(card),
-                _ => {}
-            }
-        }
-
-        CardFlagsDelta {
-            additions,
-            removals,
-        }
-    }
-}
-
 use std::ops::BitOr;
 
 impl BitOr<CardFlags> for CardFlags {
@@ -521,6 +492,15 @@ impl EventLog {
     }
 }
 
+impl Empty for EventLog {
+    fn empty() -> Self {
+        EventLog {
+            buffer: VecDeque::with_capacity(0),
+            top_index: 0,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct CardFlagsChoiceState {
     pub flags: CardFlags,
@@ -545,6 +525,18 @@ impl Choice {
             Choice::NoChoice | Choice::Already(_) => true,
             _ => false,
         }
+    }
+}
+
+impl Default for Choice {
+    fn default() -> Self {
+        Choice::NoChoice
+    }
+}
+
+impl Empty for Choice {
+    fn empty() -> Self {
+        Self::default()
     }
 }
 
@@ -606,7 +598,7 @@ impl Default for Rules {
 
 use std::mem;
 
-impl Rules {
+impl Empty for Rules {
     fn empty() -> Self {
         unsafe { mem::zeroed() }
     }
@@ -730,237 +722,8 @@ impl GameState {
         }
     }
 
-    //TODO pull this rule stuff out to another crate since we know it will continue growing
-    fn add_cpu_rule(&mut self, player: PlayerID) {
-        let rule_type = {
-            let index = self.rng.gen_range(0, RULE_TYPES.len());
-            RULE_TYPES[index]
-        };
-
-        match rule_type {
-            Status::RuleSelectionWild => self.add_cpu_wild_change(player),
-            Status::RuleSelectionCanPlay => self.add_cpu_can_play_graph_change(player),
-            Status::RuleSelection | Status::InGame => {
-                invariant_violation!("add_cpu_rule generated a non-rule type status");
-            }
-        }
-    }
-
-    fn add_cpu_wild_change(&mut self, player: PlayerID) {
-        self.add_rule_change_log_header(player);
-
-        let count = self.rng.gen_range(0, 9);
-        let cards = gen_cards(&mut self.rng, count);
-        let new_wild = CardFlags::from_cards(cards);
-
-        self.apply_wild_change(new_wild, player);
-    }
-
-    pub fn apply_wild_change(&mut self, new_wild: CardFlags, player: PlayerID) {
-        //logging
-        let CardFlagsDelta {
-            additions,
-            removals,
-        } = CardFlagsDelta::new(self.rules.wild, new_wild);
-
-        let pronoun = self.get_pronoun(player);
-
-        match (additions.len() > 0, removals.len() > 0) {
-            (false, false) => {}
-            (true, false) => {
-                let additions_string = get_card_list(&additions);
-                let text = &[
-                    pronoun.as_bytes(),
-                    b" made the following cards wild: ",
-                    additions_string.as_bytes(),
-                    b".",
-                ]
-                    .concat();
-                self.event_log.push(text);
-            }
-            (false, true) => {
-                let removals_string = get_card_list(&removals);
-                let text = &[
-                    pronoun.as_bytes(),
-                    b" made these cards not wild: ",
-                    removals_string.as_bytes(),
-                    b".",
-                ]
-                    .concat();
-                self.event_log.push(text);
-            }
-            (true, true) => {
-                let additions_string = get_card_list(&additions);
-                let removals_string = get_card_list(&removals);
-                let text = &[
-                    pronoun.as_bytes(),
-                    b" made the following cards wild: ",
-                    additions_string.as_bytes(),
-                    b". but ",
-                    pronoun.as_bytes(),
-                    b" also made these cards not wild: ",
-                    removals_string.as_bytes(),
-                    b".",
-                ]
-                    .concat();
-                self.event_log.push(text);
-            }
-        };
-
-        /////////
-
-        self.rules.wild = new_wild;
-    }
-
-    fn add_cpu_can_play_graph_change(&mut self, player: PlayerID) {
-        self.add_rule_change_log_header(player);
-
-        //TODO add single-strongly connected component checking and start
-        //generating non-additive changes;
-        let count = self.rng.gen_range(5, DECK_SIZE as usize);
-        let cards = gen_cards(&mut self.rng, count);
-
-        let mut changes = Vec::with_capacity(count);
-        for card in cards {
-            let old_edges = self.rules.can_play_graph.get_edges(card);
-            let edges = self.rng.gen::<CardFlags>() | old_edges;
-
-            changes.push(can_play::Change::new(edges, card));
-        }
-
-        self.apply_can_play_graph_changes(changes, player);
-    }
-
-    pub fn apply_can_play_graph_changes(
-        &mut self,
-        changes: Vec<can_play::Change>,
-        player: PlayerID,
-    ) {
-        //TODO enforce a single strongly connected component in the graph
-
-        let mut flattened_changes = [None; DECK_SIZE as usize];
-
-        for &change in changes.iter() {
-            let index = change.card() as usize;
-
-            flattened_changes[index] = Some(change);
-        }
-
-        for possible_change in flattened_changes.into_iter() {
-            if let Some(change) = possible_change {
-                let new_card = change.card();
-                let new_edges = change.edges();
-
-                //logging
-                let previous_edges = self.rules.can_play_graph.get_edges(new_card);
-                let CardFlagsDelta {
-                    additions,
-                    removals,
-                } = CardFlagsDelta::new(previous_edges, new_edges);
-
-                let pronoun = self.get_pronoun(player);
-                let card_string = get_card_string(new_card);
-
-                match (additions.len() > 0, removals.len() > 0) {
-                    (false, false) => {}
-                    (true, false) => {
-                        let additions_string = get_suit_rank_pair_list(&additions);
-                        let text = &[
-                            pronoun.as_bytes(),
-                            b" allowed the ",
-                            card_string.as_bytes(),
-                            b" to be played on the following cards: ",
-                            additions_string.as_bytes(),
-                            b".",
-                        ]
-                            .concat();
-                        self.event_log.push(text);
-                    }
-                    (false, true) => {
-                        let removals_string = get_suit_rank_pair_list(&removals);
-                        let text = &[
-                            pronoun.as_bytes(),
-                            b" prevented the ",
-                            card_string.as_bytes(),
-                            b" from being played on the following cards: ",
-                            removals_string.as_bytes(),
-                            b".",
-                        ]
-                            .concat();
-                        self.event_log.push(text);
-                    }
-                    (true, true) => {
-                        let additions_string = get_suit_rank_pair_list(&additions);
-                        let removals_string = get_suit_rank_pair_list(&removals);
-                        let text = &[
-                            pronoun.as_bytes(),
-                            b" allowed the ",
-                            card_string.as_bytes(),
-                            b" to be played on the following cards: ",
-                            additions_string.as_bytes(),
-                            b". but ",
-                            pronoun.as_bytes(),
-                            b" also prevented it from being played on the following cards: ",
-                            removals_string.as_bytes(),
-                            b".",
-                        ]
-                            .concat();
-                        self.event_log.push(text);
-                    }
-                };
-
-                /////////
-
-                self.rules.can_play_graph.set_edges(new_card, new_edges);
-            }
-        }
-    }
-
-    pub fn add_rule_change_log_header(&mut self, player: PlayerID) {
-        self.event_log.push_hr();
-
-        let player_name = self.player_name(player);
-
-        let text = &[player_name.as_bytes(), b" changed the rules as follows:"].concat();
-
-        self.event_log.push(text);
-    }
-
     pub fn player_id(&self) -> PlayerID {
         self.cpu_hands.len() as PlayerID
-    }
-
-    pub fn reset(&mut self) {
-        use std::mem::replace;
-
-        let status = {
-            let mut status = Status::InGame;
-
-            let player_id = self.player_id();
-
-            for &id in self.winners.clone().iter() {
-                if id >= player_id {
-                    status = Status::RuleSelection;
-                    continue;
-                }
-
-                self.add_cpu_rule(id);
-            }
-
-            status
-        };
-
-        let old_log = replace(
-            &mut self.event_log,
-            EventLog {
-                buffer: VecDeque::with_capacity(0),
-                top_index: 0,
-            },
-        );
-        let old_rules = replace(&mut self.rules, Rules::empty());
-
-        *self =
-            GameState::new_with_previous(self.rng.gen(), status, old_rules, self.logger, old_log);
     }
 
     pub fn missing_cards(&self) -> Vec<Card> {

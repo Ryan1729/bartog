@@ -6,6 +6,7 @@ use common::*;
 use game_state::{GameState, LogHeading, Status};
 use platform_types::{Button, Input, Speaker, State, StateParams, SFX};
 use rand::Rng;
+use rule_changes::{apply_can_play_graph_changes, apply_wild_change, reset};
 
 pub struct BartogState {
     pub game_state: GameState,
@@ -501,9 +502,7 @@ fn update_wild(state: &mut GameState) {
         Some(wild) => {
             let player_id = state.player_id();
 
-            state.add_rule_change_log_header(player_id);
-
-            state.apply_wild_change(wild, player_id);
+            apply_wild_change(state, wild, player_id);
 
             state.status = Status::InGame;
         }
@@ -518,9 +517,7 @@ fn update_can_play_graph(state: &mut GameState) {
         changes => {
             let player_id = state.player_id();
 
-            state.add_rule_change_log_header(player_id);
-
-            state.apply_can_play_graph_changes(changes, player_id);
+            apply_can_play_graph_changes(state, changes, player_id);
 
             state.status = Status::InGame;
         }
@@ -640,7 +637,7 @@ pub fn update_and_render(
 
     if state.winners.len() > 0 && state.card_animations.len() == 0 {
         if let Some(()) = choose_play_again(state) {
-            state.reset();
+            reset(state);
         }
     }
 

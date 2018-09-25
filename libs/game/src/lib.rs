@@ -3,6 +3,8 @@ extern crate common;
 
 extern crate platform_types;
 
+extern crate rule_changes;
+
 extern crate game_state;
 
 extern crate choices;

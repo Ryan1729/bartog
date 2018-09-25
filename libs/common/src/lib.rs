@@ -122,3 +122,6 @@ pub use gui::*;
 
 mod hand;
 pub use hand::*;
+
+mod traits;
+pub use traits::*;

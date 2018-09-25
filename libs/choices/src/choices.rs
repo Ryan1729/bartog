@@ -233,8 +233,6 @@ fn dice_mod(x: u8, m: u8) -> u8 {
     }
 }
 
-use std::mem;
-
 pub fn choose_can_play_graph(state: &mut GameState) -> Vec<can_play::Change> {
     match state.choice {
         Choice::NoChoice => {
@@ -242,9 +240,7 @@ pub fn choose_can_play_graph(state: &mut GameState) -> Vec<can_play::Change> {
             Vec::new()
         }
         Choice::Already(Chosen::CanPlayGraph(_)) => {
-            if let Choice::Already(Chosen::CanPlayGraph(changes)) =
-                mem::replace(&mut state.choice, Choice::NoChoice)
-            {
+            if let Choice::Already(Chosen::CanPlayGraph(changes)) = state.choice.take() {
                 changes
             } else {
                 invariant_violation!({ Vec::new() }, "Somehow we're multi-threaded or somthing?!")
@@ -658,7 +654,7 @@ pub fn do_can_play_graph_choice(
                 }
 
                 if choice_state.done {
-                    //This is already kind of convoluted. I think we'll juat the clone,
+                    //This is already kind of convoluted. I think we'll just eat the clone,
                     //since it now only happens when the choice is actually made.
                     chosen = Some(choice_state.changes.clone());
                 }
