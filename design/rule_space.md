@@ -163,3 +163,13 @@ That leaves us with some possible bit patterns left over. If we want to later, w
 It may or may not be desirable to combine together changes before putting them in the log. For example, if all the cards of a particular rank, (say twos) can now be played on a suit (say spades), then should we figure this out and log "PLAYER_NAME has changed the rules to allow playing all 2s on spades"? This seems rather difficult to cover all the cases for. It seems like there would be ambiguous cases where we could end up saying something true that obscures the more meaningful effects of the actual change. If we did add buttons for more complicated changes, then recognizing exactly those kinds of changes might make sense. Waiting and seeing how readable the logs are in practice seems wise.
 
 We will also need to allow the player to check what the current playability graph is. It seems impossible to present the whole graph "at a glance" so instead, they will have to indicate the card they are interested in looking at, then be shown a list of cards that card is playable on. I'm not currently sure of the best way to present that in our limited screen space. Would it be possible to create a readable string for each of the 2^52 possible outgoing connections? Otherwise, we can display the checkboxes from the outgoing connection selection screen.
+
+____
+
+We have now implemented the changing the can-play graph and a set of flags which determines which cards are wild.
+
+One thing we could do now is allow toggling what wild means, including fiddly details that don't come up under the usual rules. For example, whether a non-wild card of a given rank can be played on a wild card of the same rank.
+
+The thing is it would nice to use a representation of the rules that didn't require observing these edge/corner cases directly. Bytecode that is run when deciding whether a card is wild, and what that means would fit that description. More generally, so would byte code that is run whenever a card is played at all.
+
+However, the average bytecode that can represent all the possibilities we might want, can also represent would also be able to represent things we do not want. We need someway of restricting, (or restricting our interpretation of) our bytecode so things like infinite loops are not representable.
