@@ -183,3 +183,7 @@ In previous experiments involving program generation, early termination has been
 One approach to making a dense bytecode, with some issues, is making each instruction do a lot. The main issue with this is that then the instructions likely don’t compose as well. We may be able to avoid this problem with care though. 
 
 What makes bytecode composable? If any instruction can be ran after any other instruction then that would be maximally composable. In other experiments involving program generation, a difficult part that needed to be repeatedly fixed up was generating instructions that relied on data being on the stack. So it would appear that the best way forward would be to make every, or most every, bytecode not read the stack. Given that constraint it doesn’t really seem useful to write to the stack, and therefore a stack seems unnecessary. At that point all that’s left of the bytecode is the representation of modifications to the state, which might be enough. 
+
+Even this restricted form of “bytecode” might allow too many ways to not do anything. For every state change the inverse change exists. This means for a series of instructions of length L there are n*L/2 ways to represent “do nothing” where n is the number of possible state changes. 
+
+Say L = 2. Then out of the possible values for the instruction pair, there are n ways of representing “do nothing”, where the total possibilities for the pair is n^2. The fraction of “do nothing” pairs = n/(n^2). The limit of that function approaches 0, so maybe this is fine?
