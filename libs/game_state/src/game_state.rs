@@ -585,6 +585,32 @@ pub fn get_status_text(status: Status) -> &'static str {
 pub struct Rules {
     pub can_play_graph: can_play::Graph,
     pub wild: CardFlags,
+    pub when_played: CardChanges,
+}
+
+pub struct CardChanges(pub [Vec<in_game::Change>; DECK_SIZE as usize]);
+
+impl Default for CardChanges {
+    fn default() -> Self {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        CardChanges(
+            [
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+            ]
+        )
+    }
 }
 
 impl Default for Rules {
@@ -592,6 +618,7 @@ impl Default for Rules {
         Rules {
             wild: CardFlags::new(RANK_FLAGS[Ranks::EIGHT as usize]),
             can_play_graph: Default::default(),
+            when_played: Default::default(),
         }
     }
 }
@@ -600,7 +627,43 @@ use std::mem;
 
 impl Empty for Rules {
     fn empty() -> Self {
-        unsafe { mem::zeroed() }
+        Rules {
+            can_play_graph: unsafe { mem::zeroed() },
+            wild: unsafe { mem::zeroed() },
+            when_played: Default::default(),
+        }
+    }
+}
+
+mod in_game {
+    use super::*;
+
+    #[derive(Copy, Clone)]
+    pub enum Change {
+        CurrentPlayer(CurrentPlayer),
+        //CardLocation(CardLocation),
+        //TopWild(TopWild),
+    }
+
+    const MAX_PLAYER_ID: PlayerID = 3;
+
+    //This relies on MAX_PLAYER_ID being 3, and will require structural changes if it changes!
+    #[derive(Copy, Clone)]
+    pub struct CurrentPlayer(u8);
+
+    impl CurrentPlayer {
+        pub fn apply(&self, playerId: PlayerID) -> PlayerID {
+            match playerId {
+                0 => self.0 & 0b11,
+                1 => (self.0 & 0b1100) >> 2,
+                2 => (self.0 & 0b11_0000) >> 4,
+                MAX_PLAYER_ID => (self.0 & 0b1100_0000) >> 6,
+                _ => {
+                    // The player is least likely to be annoyed with extra turns for them.
+                    MAX_PLAYER_ID
+                }
+            }
+        }
     }
 }
 
@@ -610,12 +673,12 @@ pub struct GameState {
     pub discard: Hand,
     pub cpu_hands: [Hand; 3],
     pub hand: Hand,
-    pub hand_index: u8,
     pub current_player: PlayerID,
-    pub card_animations: Vec<CardAnimation>,
     pub winners: Vec<PlayerID>,
     pub top_wild_declared_as: Option<Suit>,
+    pub card_animations: Vec<CardAnimation>,
     // end in-game state
+    pub hand_index: u8,
     pub choice: Choice,
     pub rules: Rules,
     pub status: Status,
