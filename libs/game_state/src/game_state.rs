@@ -604,39 +604,6 @@ impl Empty for Rules {
     }
 }
 
-macro_rules! compile_time_assert {
-    ($bool_expr:expr) => {
-        let _ = [(); 0 - !($bool_expr) as usize];
-    };
-}
-
-fn compile_time_asserts() {
-    use std::mem;
-    compile_time_assert!({
-        let in_game_size = mem::size_of::<InGame>();
-        let in_game_size_f = in_game_size as f64;
-
-        //The is the number of possible functions from this type back to itself
-        let mut possibilities = 1;
-        let mut counter = in_game_size;
-        while counter > 0 {
-            counter -= 1;
-            possibilities *= in_game_size
-        }
-        mem::size_of::<InGameChange>() as f64 == (possibilities as f64).log2()
-    });
-}
-
-pub struct InGameChange {
-    test: [u8; 256],
-}
-
-//TODO remove test field,
-// move labeled properites in GameState to this struct, and add an instnace to gaem_state
-pub struct InGame {
-    test: u8,
-}
-
 pub struct GameState {
     // start in-game state
     pub deck: Hand,
