@@ -118,9 +118,13 @@ use rand::Rng;
 pub fn gen_cards<R: Rng>(rng: &mut R, count: usize) -> Vec<Card> {
     let mut cards = Vec::with_capacity(count);
     for _ in 0..count {
-        cards.push(rng.gen_range(0, DECK_SIZE));
+        cards.push(gen_card(rng));
     }
     cards
+}
+
+pub fn gen_card<R: Rng>(rng: &mut R) -> Card {
+    rng.gen_range(0, DECK_SIZE)
 }
 
 pub fn get_card_string(card: Card) -> String {

@@ -63,12 +63,150 @@ fn add_cpu_rule(state: &mut GameState, player: PlayerID) {
     };
 
     match rule_type {
-        Status::RuleSelectionWild => add_cpu_wild_change(state, player),
         Status::RuleSelectionCanPlay => add_cpu_can_play_graph_change(state, player),
+        Status::RuleSelectionWild => add_cpu_wild_change(state, player),
+        Status::RuleSelectionWhenPlayed => add_cpu_when_played_change(state, player),
         Status::RuleSelection | Status::InGame => {
             invariant_violation!("add_cpu_rule generated a non-rule type status");
         }
     }
+}
+
+fn add_cpu_when_played_change(state: &mut GameState, player: PlayerID) {
+    let card = gen_card(&mut state.rng);
+    let changes: Vec<in_game::Change> = state.rng.gen();
+
+    when_played_change(state, changes, card, player);
+}
+
+pub fn when_played_change(
+    state: &mut GameState,
+    changes: Vec<in_game::Change>,
+    card: Card,
+    player: PlayerID,
+) {
+    let mut card_changes = state.rules.when_played[card as usize];
+
+    let in_game::ChangeDelta {
+        additions,
+        removals,
+    } = in_game::ChangeDelta::new(state.rules.when_played, changes);
+
+    // let insertions = card_changes {
+    //     v if v.is_empty() => changes.iter().enumerate(),
+    //     v => {
+    //         let len = card_changes.len();
+    //         let mut max_used_index = 0;
+    //         let mut result = Vec::with_capacity(changes.len())
+    //         for change in changes {
+    //             let index = state.rng.gen_range(max_used_index, len);
+    //             max_used_index = max(max_used_index, index);
+    //             result.push((index, change));
+    //         }
+    //         result
+    //     }
+    // };
+
+    //logging
+    add_rule_change_log_header(state, player);
+
+    let pronoun = state.get_pronoun(player);
+    {
+        let text = &[
+            pronoun.as_bytes(),
+            b" changed what happens when the ",
+            get_card_string(card).as_bytes()
+            b" is played:",
+        ]
+            .concat();
+        state.event_log.push(text);
+    }
+
+
+    if (removals.len() > 0)
+    {
+        let removals_string = in_game::changes_string(&removals);
+        let text = &[
+            "The following things no longer happen:",
+            removals_string.as_bytes()
+            "."
+        ]
+            .concat();
+        state.event_log.push(text);
+    }
+
+    let card_changes_after_removals = ();
+
+    let len = card_changes_after_removals.len();
+    for i in 0..len {
+        let inserted_at_i = ;
+        if inserted_at_i.is_empty() {
+            continue;
+        }
+
+        let inserted_at_i_string = in_game::changes_string(&inserted_at_i);
+        match (i == 0, i == len) {
+            (false, false) => {
+                let previous = ();
+                let next = ();
+
+                let text = &[
+                    b"between the previously decided ",
+                    in_game::change_string(previous),
+                    b" and "
+                    in_game::change_string(next),
+                    b" the following things happen:",
+                    inserted_at_i_string.as_bytes(),
+                    b"",
+                ]
+                    .concat();
+                state.event_log.push(text);
+            }
+            (true, false) => {
+                let next = ();
+
+                let text = &[
+                    b"before the previously decided ",
+                    in_game::change_string(next),
+                    b" the following things happen:",
+                    inserted_at_i_string.as_bytes(),
+                    b"",
+                ]
+                    .concat();
+                state.event_log.push(text);
+            }
+            (false, true) => {
+                let previous = ();
+
+                let text = &[
+                    b"after the previously decided ",
+                    in_game::change_string(previous),
+                    b" the following things happen:",
+                    inserted_at_i_string.as_bytes(),
+                    b"",
+                ]
+                    .concat();
+                state.event_log.push(text);
+            }
+            (true, true) => {
+                let text = &[
+                    b" the following things happen:",
+                    inserted_at_i_string.as_bytes(),
+                    b"",
+                ]
+                    .concat();
+                state.event_log.push(text);
+            }
+        };
+    }
+
+    /////////
+
+    let mut new_when_played = Vec::with_capacity(
+        card_changes_after_removals.len() + additions.len()
+    );
+
+    state.rules.when_played = new_when_played;
 }
 
 fn add_cpu_wild_change(state: &mut GameState, player: PlayerID) {

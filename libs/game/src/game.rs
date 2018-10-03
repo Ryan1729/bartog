@@ -3,7 +3,7 @@ use choices::{
     do_choices,
 };
 use common::*;
-use game_state::{GameState, LogHeading, Status};
+use game_state::{in_game, GameState, LogHeading, Status};
 use platform_types::{Button, Input, Speaker, State, StateParams, SFX};
 use rand::Rng;
 use rule_changes::{apply_can_play_graph_changes, apply_wild_change, reset};
@@ -262,6 +262,14 @@ fn move_to_discard(state: &mut GameState, card: Card) {
     }
 
     state.discard.push(card);
+
+    for change in state.rules.when_played.0[card as usize].iter() {
+        match change {
+            in_game::Change::CurrentPlayer(func) => {
+                state.current_player = func.apply(state.current_player)
+            }
+        }
+    }
 }
 
 fn log_wild_selection(state: &mut GameState, player: PlayerID) {

@@ -561,6 +561,7 @@ pub enum Status {
     RuleSelection,
     RuleSelectionCanPlay,
     RuleSelectionWild,
+    RuleSelectionWhenPlayed,
 }
 
 impl Default for Status {
@@ -571,7 +572,11 @@ impl Default for Status {
     }
 }
 
-pub const RULE_TYPES: [Status; 2] = [Status::RuleSelectionCanPlay, Status::RuleSelectionWild];
+pub const RULE_TYPES: [Status; 3] = [
+    Status::RuleSelectionCanPlay,
+    Status::RuleSelectionWild,
+    Status::RuleSelectionWhenPlayed,
+];
 
 pub fn get_status_text(status: Status) -> &'static str {
     match status {
@@ -579,6 +584,7 @@ pub fn get_status_text(status: Status) -> &'static str {
         Status::RuleSelection => "RuleSelection!?",
         Status::RuleSelectionCanPlay => "card playability",
         Status::RuleSelectionWild => "wildness",
+        Status::RuleSelectionWhenPlayed => "when played",
     }
 }
 
@@ -635,7 +641,7 @@ impl Empty for Rules {
     }
 }
 
-mod in_game {
+pub mod in_game {
     use super::*;
 
     #[derive(Copy, Clone)]
