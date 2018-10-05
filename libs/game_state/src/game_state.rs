@@ -644,7 +644,7 @@ impl Empty for Rules {
 pub mod in_game {
     use super::*;
 
-    #[derive(Copy, Clone)]
+    #[derive(Copy, Clone, PartialEq, Eq)]
     pub enum Change {
         CurrentPlayer(CurrentPlayer),
         //CardLocation(CardLocation),
@@ -654,7 +654,7 @@ pub mod in_game {
     const MAX_PLAYER_ID: PlayerID = 3;
 
     //This relies on MAX_PLAYER_ID being 3, and will require structural changes if it changes!
-    #[derive(Copy, Clone)]
+    #[derive(Copy, Clone, PartialEq, Eq)]
     pub struct CurrentPlayer(u8);
 
     impl CurrentPlayer {
