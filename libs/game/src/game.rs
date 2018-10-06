@@ -499,6 +499,22 @@ fn update(state: &mut GameState, input: Input, speaker: &mut Speaker) {
         Status::RuleSelection => update_rule_selection(state),
         Status::RuleSelectionCanPlay => update_can_play_graph(state),
         Status::RuleSelectionWild => update_wild(state),
+        Status::RuleSelectionWhenPlayed => update_when_played(state),
+    }
+}
+
+fn update_when_played(state: &mut GameState) {
+    match choose_in_game_changes(state) {
+        ref x if x.len() == 0 => {
+            //wait until they choose
+        }
+        changes => {
+            let player_id = state.player_id();
+
+            apply_when_played_changes(state, changes, player_id);
+
+            state.status = Status::InGame;
+        }
     }
 }
 

@@ -1,7 +1,7 @@
 use common::*;
 use game_state::{
-    can_play, get_status_text, CardFlags, CardFlagsChoiceState, Choice, Chosen, GameState, Status,
-    RULE_TYPES,
+    can_play, get_status_text, in_game, CardFlags, CardFlagsChoiceState, Choice, Chosen, GameState,
+    Status, RULE_TYPES,
 };
 use platform_types::{log, Button, Input, Logger, Speaker};
 use std::cmp::min;
@@ -230,6 +230,23 @@ fn dice_mod(x: u8, m: u8) -> u8 {
         m
     } else {
         (x.saturating_sub(1) % m).saturating_add(1)
+    }
+}
+
+pub fn choose_in_game_changes(state: &mut GameState) -> Vec<in_game::Change> {
+    match state.choice {
+        Choice::NoChoice => {
+            state.choice = Choice::OfInGameChanges(Default::default());
+            Vec::new()
+        }
+        Choice::Already(Chosen::InGameChanges(_)) => {
+            if let Choice::Already(Chosen::InGameChanges(changes)) = state.choice.take() {
+                changes
+            } else {
+                invariant_violation!({ Vec::new() }, "Somehow we're multi-threaded or somthing?!")
+            }
+        }
+        _ => Vec::new(),
     }
 }
 

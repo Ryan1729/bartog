@@ -660,6 +660,15 @@ pub mod in_game {
         }
     }
 
+    impl Distribution<Change> for Standard {
+        #[inline]
+        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Change {
+            match rng.gen_range(0, 1) {
+                _ => Change::CurrentPlayer(rng.gen()),
+            }
+        }
+    }
+
     const MAX_PLAYER_ID: PlayerID = 3;
 
     //This relies on MAX_PLAYER_ID being 3, and will require structural changes if it changes!
@@ -672,6 +681,13 @@ pub mod in_game {
             match byte {
                 _ => unimplemented!("TODO fmt::Display for CurrentPlayer"),
             }
+        }
+    }
+
+    impl Distribution<CurrentPlayer> for Standard {
+        #[inline]
+        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> CurrentPlayer {
+            CurrentPlayer(rng.gen())
         }
     }
 

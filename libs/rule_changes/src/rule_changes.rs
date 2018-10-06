@@ -75,18 +75,23 @@ fn add_cpu_rule(state: &mut GameState, player: PlayerID) {
 fn add_cpu_when_played_change(state: &mut GameState, player: PlayerID) {
     let card = gen_card(&mut state.rng);
     //TODO choose changes that usually contain the previous changes
-    let new_card_changes: Vec<in_game::Change> = state.rng.gen();
+    let count = state.rng.gen_range(1, 3);
+    let mut new_card_changes: Vec<in_game::Change> = Vec::with_capacity(count);
+    for _ in 0..count {
+        new_card_changes.push(state.rng.gen());
+    }
 
-    when_played_change(state, new_card_changes, card, player);
+    apply_when_played_changes(state, new_card_changes, card, player);
 }
 
+#[allow(dead_code)]
 enum Edit<T> {
     Same(T),
     Add(T),
     Remove(T),
 }
 
-fn get_edits<T: Eq>(old_changes: Vec<T>, new_changes: Vec<T>) -> Vec<Edit<T>> {
+fn get_edits<T: Eq + Copy>(old_changes: &Vec<T>, new_changes: &Vec<T>) -> Vec<Edit<T>> {
     // TODO use an actual diffing algorithm instead of punting like this.
     // see https://blog.jcoglan.com/2017/02/12/the-myers-diff-algorithm-part-1/
     let mut additions: Vec<T> = Vec::new();
@@ -107,7 +112,7 @@ fn get_edits<T: Eq>(old_changes: Vec<T>, new_changes: Vec<T>) -> Vec<Edit<T>> {
     };
 
     for &c in old.iter() {
-        removals.push(c);
+        removals.push(c.clone());
     }
 
     let new = if let Some(i) = tighter_start {
@@ -116,8 +121,8 @@ fn get_edits<T: Eq>(old_changes: Vec<T>, new_changes: Vec<T>) -> Vec<Edit<T>> {
         &new_changes
     };
 
-    for &c in new {
-        additions.push(c);
+    for &c in new.iter() {
+        additions.push(c.clone());
     }
 
     removals
@@ -127,20 +132,23 @@ fn get_edits<T: Eq>(old_changes: Vec<T>, new_changes: Vec<T>) -> Vec<Edit<T>> {
         .collect()
 }
 
-pub fn when_played_change(
+pub fn apply_when_played_changes(
     state: &mut GameState,
     new_card_changes: Vec<in_game::Change>,
     card: Card,
     player: PlayerID,
 ) {
-    let card_changes = state.rules.when_played.0[card as usize];
-
-    let edits = get_edits(card_changes, new_card_changes);
-
     //logging
     add_rule_change_log_header(state, player);
 
     let pronoun = state.get_pronoun(player);
+
+    let rules = &mut state.rules;
+
+    let card_changes = &mut rules.when_played.0[card as usize];
+
+    let edits = get_edits(card_changes, &new_card_changes);
+
     {
         let text = &[
             pronoun.as_bytes(),
@@ -152,20 +160,21 @@ pub fn when_played_change(
         state.event_log.push(text);
     }
 
-    let len = edits.len();
-    for (i, &edit) in edits.iter().enumerate() {
-        let text: &[u8] = match edit {
-            Edit::Same(c) => &[b"   ", (c).to_string().as_bytes()].concat(),
-            Edit::Add(c) => &[b" + ", (c).to_string().as_bytes()].concat(),
-            Edit::Remove(c) => &[b" - ", (c).to_string().as_bytes()].concat(),
+    for edit in edits.into_iter() {
+        let (prefix, c_string) = match edit {
+            Edit::Same(c) => (b"   ", (c).to_string()),
+            Edit::Add(c) => (b" + ", (c).to_string()),
+            Edit::Remove(c) => (b" - ", (c).to_string()),
         };
+
+        let text: &[u8] = &[prefix, c_string.as_bytes()].concat();
 
         state.event_log.push(text);
     }
 
     /////////
 
-    state.rules.when_played.0[card as usize] = new_card_changes;
+    *card_changes = new_card_changes;
 }
 
 fn add_cpu_wild_change(state: &mut GameState, player: PlayerID) {
