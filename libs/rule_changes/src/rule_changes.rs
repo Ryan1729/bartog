@@ -1,5 +1,5 @@
 use common::*;
-use game_state::{can_play, CardFlags, GameState, Status, RULE_TYPES};
+use game_state::{can_play, in_game, CardFlags, GameState, Status, RULE_TYPES};
 use rand::Rng;
 
 struct CardFlagsDelta {
@@ -123,7 +123,7 @@ fn get_edits<T: Eq>(old_changes: Vec<T>, new_changes: Vec<T>) -> Vec<Edit<T>> {
     removals
         .into_iter()
         .map(Edit::Remove)
-        .concat(additions.into_iter().map(Edit::Add))
+        .chain(additions.into_iter().map(Edit::Add))
         .collect()
 }
 
@@ -154,10 +154,10 @@ pub fn when_played_change(
 
     let len = edits.len();
     for (i, &edit) in edits.iter().enumerate() {
-        let text = match edit {
-            Edit::Same(c) => &[b"   ", in_game::change_string(c).as_bytes()],
-            Edit::Add(c) => &[b" + ", in_game::change_string(c).as_bytes()],
-            Edit::Remove(c) => &[b" - ", in_game::change_string(c).as_bytes()],
+        let text: &[u8] = match edit {
+            Edit::Same(c) => &[b"   ", (c).to_string().as_bytes()].concat(),
+            Edit::Add(c) => &[b" + ", (c).to_string().as_bytes()].concat(),
+            Edit::Remove(c) => &[b" - ", (c).to_string().as_bytes()].concat(),
         };
 
         state.event_log.push(text);

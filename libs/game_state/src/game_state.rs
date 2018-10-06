@@ -643,6 +643,7 @@ impl Empty for Rules {
 
 pub mod in_game {
     use super::*;
+    use std::fmt;
 
     #[derive(Copy, Clone, PartialEq, Eq)]
     pub enum Change {
@@ -651,11 +652,28 @@ pub mod in_game {
         //TopWild(TopWild),
     }
 
+    impl fmt::Display for Change {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match *self {
+                Change::CurrentPlayer(v) => write!(f, "{}", v.to_string()),
+            }
+        }
+    }
+
     const MAX_PLAYER_ID: PlayerID = 3;
 
     //This relies on MAX_PLAYER_ID being 3, and will require structural changes if it changes!
     #[derive(Copy, Clone, PartialEq, Eq)]
     pub struct CurrentPlayer(u8);
+
+    impl fmt::Display for CurrentPlayer {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            let CurrentPlayer(byte) = *self;
+            match byte {
+                _ => unimplemented!("TODO fmt::Display for CurrentPlayer"),
+            }
+        }
+    }
 
     impl CurrentPlayer {
         pub fn apply(&self, playerId: PlayerID) -> PlayerID {
