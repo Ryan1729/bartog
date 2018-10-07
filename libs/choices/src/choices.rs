@@ -233,21 +233,86 @@ fn dice_mod(x: u8, m: u8) -> u8 {
     }
 }
 
-pub fn choose_in_game_changes(state: &mut GameState) -> Vec<in_game::Change> {
+pub fn choose_in_game_changes(state: &mut GameState) -> in_game::ChoiceState {
     match state.choice {
         Choice::NoChoice => {
             state.choice = Choice::OfInGameChanges(Default::default());
-            Vec::new()
+            Default::default()
         }
         Choice::Already(Chosen::InGameChanges(_)) => {
-            if let Choice::Already(Chosen::InGameChanges(changes)) = state.choice.take() {
-                changes
+            if let Choice::Already(Chosen::InGameChanges(choice_state)) = state.choice.take() {
+                choice_state
             } else {
-                invariant_violation!({ Vec::new() }, "Somehow we're multi-threaded or somthing?!")
+                invariant_violation!(
+                    { Default::default() },
+                    "Somehow we're multi-threaded or somthing?!"
+                )
             }
         }
-        _ => Vec::new(),
+        _ => Default::default(),
     }
+}
+
+#[inline]
+pub fn do_in_game_changes_choice(
+    framebuffer: &mut Framebuffer,
+    state: &mut GameState,
+    input: Input,
+    speaker: &mut Speaker,
+) {
+    unimplemented!();
+
+    // let logger = state.get_logger();
+    // let mut chosen = None;
+    // if let Choice::OfInGameChanges(ref mut choice_state) = state.choice {
+    //     match choice_state.layer {
+    //         in_game::Layer::Card => {
+    //             in_game_graph_choose_card(
+    //                 framebuffer,
+    //                 &mut state.context,
+    //                 input,
+    //                 speaker,
+    //                 choice_state,
+    //                 logger,
+    //             );
+    //
+    //             if let in_game::Layer::Edges = choice_state.layer {
+    //                 let in_game_graph = &state.rules.in_game_graph;
+    //
+    //                 choice_state.edges = choice_state
+    //                     .changes
+    //                     .iter()
+    //                     .rev()
+    //                     .find(|c| c.card() == choice_state.card)
+    //                     .map(|c| c.edges())
+    //                     .unwrap_or_else(|| in_game_graph.get_edges(choice_state.card));
+    //             }
+    //
+    //             if choice_state.done {
+    //                 //This is already kind of convoluted. I think we'll just eat the clone,
+    //                 //since it now only happens when the choice is actually made.
+    //                 chosen = Some(choice_state.changes.clone());
+    //             }
+    //         }
+    //         in_game::Layer::Changes => in_game_graph_choose_changes(
+    //             framebuffer,
+    //             &mut state.context,
+    //             input,
+    //             speaker,
+    //             choice_state,
+    //             logger,
+    //         ),
+    //     }
+    // } else {
+    //     invariant_violation!(
+    //         { state.choice = Choice::NoChoice },
+    //         "`do_in_game_changes_choice` was called with the wrong choice type!"
+    //     )
+    // }
+    //
+    // if let Some(chosen) = chosen {
+    //     state.choice = Choice::Already(Chosen::InGameChanges(chosen));
+    // }
 }
 
 pub fn choose_can_play_graph(state: &mut GameState) -> Vec<can_play::Change> {
@@ -882,6 +947,7 @@ pub fn do_choices(
     speaker: &mut Speaker,
 ) {
     match state.choice {
+        Choice::OfInGameChanges(_) => do_in_game_changes_choice(framebuffer, state, input, speaker),
         Choice::OfCanPlayGraph(_) => do_can_play_graph_choice(framebuffer, state, input, speaker),
         Choice::OfCardFlags(_) => do_card_flags_choice(framebuffer, state, input, speaker),
         Choice::OfStatus => do_status_choice(framebuffer, state, input, speaker),

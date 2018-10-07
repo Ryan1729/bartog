@@ -81,7 +81,7 @@ fn add_cpu_when_played_change(state: &mut GameState, player: PlayerID) {
         new_card_changes.push(state.rng.gen());
     }
 
-    apply_when_played_changes(state, new_card_changes, card, player);
+    apply_when_played_changes(state, card, new_card_changes, player);
 }
 
 #[allow(dead_code)]
@@ -91,7 +91,7 @@ enum Edit<T> {
     Remove(T),
 }
 
-fn get_edits<T: Eq + Copy>(old_changes: &Vec<T>, new_changes: &Vec<T>) -> Vec<Edit<T>> {
+fn get_edits<T: Eq + Copy>(old_changes: &[T], new_changes: &[T]) -> Vec<Edit<T>> {
     // TODO use an actual diffing algorithm instead of punting like this.
     // see https://blog.jcoglan.com/2017/02/12/the-myers-diff-algorithm-part-1/
     let mut additions: Vec<T> = Vec::new();
@@ -134,8 +134,8 @@ fn get_edits<T: Eq + Copy>(old_changes: &Vec<T>, new_changes: &Vec<T>) -> Vec<Ed
 
 pub fn apply_when_played_changes(
     state: &mut GameState,
-    new_card_changes: Vec<in_game::Change>,
     card: Card,
+    new_card_changes: Vec<in_game::Change>,
     player: PlayerID,
 ) {
     //logging

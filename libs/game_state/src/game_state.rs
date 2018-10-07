@@ -513,6 +513,7 @@ pub enum Choice {
     Already(Chosen),
     OfCanPlayGraph(can_play::ChoiceState),
     OfCardFlags(CardFlagsChoiceState),
+    OfInGameChanges(in_game::ChoiceState),
     OfStatus,
     OfSuit,
     OfBool,
@@ -542,6 +543,7 @@ impl Empty for Choice {
 
 #[derive(Clone, Debug)]
 pub enum Chosen {
+    InGameChanges(in_game::ChoiceState),
     CanPlayGraph(Vec<can_play::Change>),
     CardFlags(CardFlags),
     Status(Status),
@@ -652,6 +654,12 @@ pub mod in_game {
         //TopWild(TopWild),
     }
 
+    impl fmt::Debug for Change {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "{}", self)
+        }
+    }
+
     impl fmt::Display for Change {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match *self {
@@ -705,6 +713,13 @@ pub mod in_game {
             }
         }
     }
+
+    #[derive(Clone, Debug, Default)]
+    pub struct ChoiceState {
+        pub card: Option<Card>,
+        pub changes: Vec<Change>,
+    }
+
 }
 
 pub struct GameState {

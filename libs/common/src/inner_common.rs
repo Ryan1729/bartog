@@ -131,7 +131,7 @@ pub fn get_card_string(card: Card) -> String {
     format!("{} of {}", get_rank_str(card), get_suit_str(get_suit(card)))
 }
 
-pub fn get_card_list(cards: &Vec<Card>) -> String {
+pub fn get_card_list(cards: &[Card]) -> String {
     //TODO better size estimate.
     let mut output = String::with_capacity(cards.len() * 20);
     let len = cards.len();
@@ -164,7 +164,7 @@ pub fn get_suit_rank_pair(card: Card) -> String {
     output
 }
 
-pub fn get_suit_rank_pair_list(cards: &Vec<Card>) -> String {
+pub fn get_suit_rank_pair_list(cards: &[Card]) -> String {
     //TODO better size estimate.
     let mut output = String::with_capacity(cards.len() * RANK_SUIT_PAIR_WITH_IN_CHARS as usize * 2);
     let len = cards.len();

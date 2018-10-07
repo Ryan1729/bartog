@@ -1,12 +1,14 @@
 use choices::{
-    choose_can_play_graph, choose_play_again, choose_rule, choose_suit, choose_wild_flags,
-    do_choices,
+    choose_can_play_graph, choose_in_game_changes, choose_play_again, choose_rule, choose_suit,
+    choose_wild_flags, do_choices,
 };
 use common::*;
 use game_state::{in_game, GameState, LogHeading, Status};
 use platform_types::{Button, Input, Speaker, State, StateParams, SFX};
 use rand::Rng;
-use rule_changes::{apply_can_play_graph_changes, apply_wild_change, reset};
+use rule_changes::{
+    apply_can_play_graph_changes, apply_when_played_changes, apply_wild_change, reset,
+};
 
 pub struct BartogState {
     pub game_state: GameState,
@@ -505,15 +507,20 @@ fn update(state: &mut GameState, input: Input, speaker: &mut Speaker) {
 
 fn update_when_played(state: &mut GameState) {
     match choose_in_game_changes(state) {
-        ref x if x.len() == 0 => {
-            //wait until they choose
+        in_game::ChoiceState {
+            card: Some(card),
+            ref changes,
         }
-        changes => {
+            if changes.len() > 0 =>
+        {
             let player_id = state.player_id();
 
-            apply_when_played_changes(state, changes, player_id);
+            apply_when_played_changes(state, card, changes.clone(), player_id);
 
             state.status = Status::InGame;
+        }
+        _ => {
+            //wait until they choose
         }
     }
 }
