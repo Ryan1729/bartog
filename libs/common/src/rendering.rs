@@ -649,6 +649,15 @@ impl Framebuffer {
         self.window(0, 0, SCREEN_WIDTH as u8, SCREEN_HEIGHT as u8);
     }
 
+    pub fn center_half_window(&mut self) {
+        self.window(
+            SCREEN_WIDTH as u8 / 4,
+            SCREEN_HEIGHT as u8 / 4,
+            SCREEN_WIDTH as u8 / 2,
+            SCREEN_HEIGHT as u8 / 2,
+        );
+    }
+
     pub fn window(&mut self, x: u8, y: u8, w: u8, h: u8) {
         self.nine_slice(WINDOW_TOP_LEFT, x, y, w, h);
     }

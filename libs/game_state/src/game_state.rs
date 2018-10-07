@@ -238,6 +238,7 @@ pub mod can_play {
     pub enum Layer {
         Card,
         Edges,
+        Done,
     }
 
     impl Default for Layer {
@@ -253,7 +254,6 @@ pub mod can_play {
         pub edges: CardFlags,
         pub layer: Layer,
         pub scroll_card: Card,
-        pub done: bool,
     }
 }
 

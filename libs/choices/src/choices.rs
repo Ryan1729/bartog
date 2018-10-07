@@ -261,13 +261,12 @@ pub fn do_in_game_changes_choice(
     speaker: &mut Speaker,
 ) {
     unimplemented!();
-
     // let logger = state.get_logger();
     // let mut chosen = None;
-    // if let Choice::OfInGameChanges(ref mut choice_state) = state.choice {
+    // if let Choice::OfCanPlayGraph(ref mut choice_state) = state.choice {
     //     match choice_state.layer {
-    //         in_game::Layer::Card => {
-    //             in_game_graph_choose_card(
+    //         can_play::Layer::Card => {
+    //             can_play_graph_choose_card(
     //                 framebuffer,
     //                 &mut state.context,
     //                 input,
@@ -276,25 +275,27 @@ pub fn do_in_game_changes_choice(
     //                 logger,
     //             );
     //
-    //             if let in_game::Layer::Edges = choice_state.layer {
-    //                 let in_game_graph = &state.rules.in_game_graph;
+    //             match choice_state.layer {
+    //                 can_play::Layer::Edges => {
+    //                     let can_play_graph = &state.rules.can_play_graph;
     //
-    //                 choice_state.edges = choice_state
-    //                     .changes
-    //                     .iter()
-    //                     .rev()
-    //                     .find(|c| c.card() == choice_state.card)
-    //                     .map(|c| c.edges())
-    //                     .unwrap_or_else(|| in_game_graph.get_edges(choice_state.card));
-    //             }
-    //
-    //             if choice_state.done {
-    //                 //This is already kind of convoluted. I think we'll just eat the clone,
-    //                 //since it now only happens when the choice is actually made.
-    //                 chosen = Some(choice_state.changes.clone());
+    //                     choice_state.edges = choice_state
+    //                         .changes
+    //                         .iter()
+    //                         .rev()
+    //                         .find(|c| c.card() == choice_state.card)
+    //                         .map(|c| c.edges())
+    //                         .unwrap_or_else(|| can_play_graph.get_edges(choice_state.card));
+    //                 }
+    //                 can_play::Layer::Done => {
+    //                     chosen = Some(Choice::Already(Chosen::CanPlayGraph(
+    //                         choice_state.changes.clone(),
+    //                     )));
+    //                 }
+    //                 can_play::Layer::Card => {}
     //             }
     //         }
-    //         in_game::Layer::Changes => in_game_graph_choose_changes(
+    //         can_play::Layer::Edges => can_play_graph_choose_edges(
     //             framebuffer,
     //             &mut state.context,
     //             input,
@@ -302,6 +303,9 @@ pub fn do_in_game_changes_choice(
     //             choice_state,
     //             logger,
     //         ),
+    //         can_play::Layer::Done => {
+    //             framebuffer.center_half_window();
+    //         }
     //     }
     // } else {
     //     invariant_violation!(
@@ -310,8 +314,9 @@ pub fn do_in_game_changes_choice(
     //     )
     // }
     //
+    // //This could be done in the above match with non-lexical lifetimes
     // if let Some(chosen) = chosen {
-    //     state.choice = Choice::Already(Chosen::InGameChanges(chosen));
+    //     state.choice = chosen
     // }
 }
 
@@ -409,7 +414,7 @@ fn can_play_graph_choose_card(
         };
 
         if do_button(framebuffer, context, input, speaker, &spec) {
-            choice_state.done = true;
+            choice_state.layer = can_play::Layer::Done;
         }
     }
 
@@ -723,22 +728,24 @@ pub fn do_can_play_graph_choice(
                     logger,
                 );
 
-                if let can_play::Layer::Edges = choice_state.layer {
-                    let can_play_graph = &state.rules.can_play_graph;
+                match choice_state.layer {
+                    can_play::Layer::Edges => {
+                        let can_play_graph = &state.rules.can_play_graph;
 
-                    choice_state.edges = choice_state
-                        .changes
-                        .iter()
-                        .rev()
-                        .find(|c| c.card() == choice_state.card)
-                        .map(|c| c.edges())
-                        .unwrap_or_else(|| can_play_graph.get_edges(choice_state.card));
-                }
-
-                if choice_state.done {
-                    //This is already kind of convoluted. I think we'll just eat the clone,
-                    //since it now only happens when the choice is actually made.
-                    chosen = Some(choice_state.changes.clone());
+                        choice_state.edges = choice_state
+                            .changes
+                            .iter()
+                            .rev()
+                            .find(|c| c.card() == choice_state.card)
+                            .map(|c| c.edges())
+                            .unwrap_or_else(|| can_play_graph.get_edges(choice_state.card));
+                    }
+                    can_play::Layer::Done => {
+                        chosen = Some(Choice::Already(Chosen::CanPlayGraph(
+                            choice_state.changes.clone(),
+                        )));
+                    }
+                    can_play::Layer::Card => {}
                 }
             }
             can_play::Layer::Edges => can_play_graph_choose_edges(
@@ -749,6 +756,9 @@ pub fn do_can_play_graph_choice(
                 choice_state,
                 logger,
             ),
+            can_play::Layer::Done => {
+                framebuffer.center_half_window();
+            }
         }
     } else {
         invariant_violation!(
@@ -757,8 +767,9 @@ pub fn do_can_play_graph_choice(
         )
     }
 
+    //This could be done in the above match with non-lexical lifetimes
     if let Some(chosen) = chosen {
-        state.choice = Choice::Already(Chosen::CanPlayGraph(chosen));
+        state.choice = chosen
     }
 }
 
