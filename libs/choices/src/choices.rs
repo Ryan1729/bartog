@@ -6,6 +6,14 @@ use game_state::{
 use platform_types::{log, Button, Input, Logger, Speaker};
 use std::cmp::min;
 
+//This is needed because we want to use it in scopes where other parts of the state are borrowwed.
+macro_rules! cancel_rule_selection {
+    ($state:expr) => {
+        $state.choice = Choice::NoChoice;
+        $state.status = Status::RuleSelection;
+    };
+}
+
 pub fn choose_play_again(state: &mut GameState) -> Option<()> {
     match state.choice {
         Choice::NoChoice => {
@@ -337,6 +345,11 @@ pub fn choose_can_play_graph(state: &mut GameState) -> Vec<can_play::Change> {
     }
 }
 
+enum CancelRuleChoice {
+    No,
+    Yes,
+}
+
 fn can_play_graph_choose_card(
     framebuffer: &mut Framebuffer,
     context: &mut UIContext,
@@ -344,7 +357,9 @@ fn can_play_graph_choose_card(
     speaker: &mut Speaker,
     choice_state: &mut can_play::ChoiceState,
     logger: Logger,
-) {
+) -> CancelRuleChoice {
+    let mut output = CancelRuleChoice::No;
+
     framebuffer.full_window();
 
     {
@@ -395,7 +410,7 @@ fn can_play_graph_choose_card(
         };
 
         if do_button(framebuffer, context, input, speaker, &spec) {
-            log(logger, "cancel: TODO go back to rule type choosing screen");
+            output = CancelRuleChoice::Yes;
         }
     }
 
@@ -500,6 +515,8 @@ fn can_play_graph_choose_card(
             context.set_next_hot(unoffset + FIRST_SCROLL_ID);
         }
     }
+
+    output
 }
 
 fn heading_y(i: i8) -> u8 {
@@ -716,10 +733,12 @@ pub fn do_can_play_graph_choice(
 ) {
     let logger = state.get_logger();
     let mut chosen = None;
+    let mut cancel = CancelRuleChoice::No;
+
     if let Choice::OfCanPlayGraph(ref mut choice_state) = state.choice {
         match choice_state.layer {
             can_play::Layer::Card => {
-                can_play_graph_choose_card(
+                cancel = can_play_graph_choose_card(
                     framebuffer,
                     &mut state.context,
                     input,
@@ -769,7 +788,12 @@ pub fn do_can_play_graph_choice(
 
     //This could be done in the above match with non-lexical lifetimes
     if let Some(chosen) = chosen {
-        state.choice = chosen
+        state.choice = chosen;
+    }
+
+    //possibly this could be avoided with NLL too.
+    if let CancelRuleChoice::Yes = cancel {
+        cancel_rule_selection!(state);
     }
 }
 
@@ -795,6 +819,8 @@ pub fn do_card_flags_choice(
     speaker: &mut Speaker,
 ) {
     let mut chosen = None;
+    let mut cancel = CancelRuleChoice::No;
+
     if let Choice::OfCardFlags(ref mut card_flags_state) = state.choice {
         let context = &mut state.context;
 
@@ -846,8 +872,7 @@ pub fn do_card_flags_choice(
             };
 
             if do_button(framebuffer, context, input, speaker, &spec) {
-                //TODO make an option-like that has a cancel variant?
-                state.status = Status::RuleSelection;
+                cancel = CancelRuleChoice::Yes;
             }
         }
 
@@ -872,6 +897,10 @@ pub fn do_card_flags_choice(
 
     if let Some(chosen) = chosen {
         state.choice = Choice::Already(Chosen::CardFlags(chosen));
+    }
+
+    if let CancelRuleChoice::Yes = cancel {
+        cancel_rule_selection!(state);
     }
 }
 
@@ -965,6 +994,13 @@ pub fn do_choices(
         Choice::OfSuit => do_suit_choice(framebuffer, state, input, speaker),
         Choice::OfBool => do_bool_choice(framebuffer, state, input, speaker),
         Choice::OfUnit => do_unit_choice(framebuffer, state, input, speaker),
-        Choice::NoChoice | Choice::Already(_) => {}
+        Choice::NoChoice => {
+            //TODO should we unify Status and Choice to avoid this code?
+            if let Status::InGame = state.status {
+            } else {
+                framebuffer.full_window();
+            }
+        }
+        Choice::Already(_) => {}
     }
 }
