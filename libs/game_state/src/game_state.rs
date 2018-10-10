@@ -247,13 +247,59 @@ pub mod can_play {
         }
     }
 
-    #[derive(Debug, Default, Clone)]
+    #[derive(Clone, Debug, Default)]
     pub struct ChoiceState {
-        pub changes: Vec<can_play::Change>,
+        pub changes: Vec<Change>,
         pub card: Card,
         pub edges: CardFlags,
         pub layer: Layer,
         pub scroll_card: Card,
+    }
+
+    macro_rules! implement {
+        (BorrowMut<$borrowed:ty> for $implementing:ty: $that:ident, $ref_expr:expr) => {
+            use std::borrow::Borrow;
+            impl Borrow<$borrowed> for $implementing {
+                fn borrow(&self) -> &$borrowed {
+                    let $that = self;
+                    &$ref_expr
+                }
+            }
+
+            use std::borrow::BorrowMut;
+            impl BorrowMut<$borrowed> for $implementing {
+                fn borrow_mut(&mut self) -> &mut $borrowed {
+                    let $that = self;
+                    &mut $ref_expr
+                }
+            }
+        };
+    }
+
+    implement!(BorrowMut<Card> for ChoiceState: s, s.card);
+
+    impl CardSubChoice for ChoiceState {
+        fn should_show_done_button(&self) -> bool {
+            let changes_len = self.changes.len();
+            changes_len > 0
+        }
+        fn mark_done(&mut self) {
+            self.layer = can_play::Layer::Done;
+        }
+        fn next_layer(&mut self) {
+            self.layer = can_play::Layer::Edges;
+        }
+        fn get_status_lines(&self) -> StatusLines {
+            let changes_len = self.changes.len();
+            [
+                bytes_to_status_line(format!("{}", changes_len).as_bytes()),
+                bytes_to_status_line(if changes_len == 1 {
+                    b"change. "
+                } else {
+                    b"changes."
+                }),
+            ]
+        }
     }
 }
 
@@ -543,7 +589,7 @@ impl Empty for Choice {
 
 #[derive(Clone, Debug)]
 pub enum Chosen {
-    InGameChanges(in_game::ChoiceState),
+    InGameChanges(Vec<in_game::Change>, Card),
     CanPlayGraph(Vec<can_play::Change>),
     CardFlags(CardFlags),
     Status(Status),
@@ -714,10 +760,24 @@ pub mod in_game {
         }
     }
 
+    #[derive(Clone, Debug)]
+    pub enum Layer {
+        Card,
+        Changes,
+        Done,
+    }
+
+    impl Default for Layer {
+        fn default() -> Self {
+            Layer::Card
+        }
+    }
+
     #[derive(Clone, Debug, Default)]
     pub struct ChoiceState {
         pub card: Option<Card>,
         pub changes: Vec<Change>,
+        pub layer: Layer,
     }
 
 }

@@ -1,4 +1,4 @@
-/// A trait meant for creating an instance of a tyoe to be swapped with std::mem::repalce.
+/// A trait meant for creating an instance of a tyoe to be swapped with std::mem::replace.
 /// This is sometimes necessary in order to take data from a mutable reference, even if
 /// the reference is about to be overwritten. One place this comes up is switching the
 /// varaint of an enum given a mutable reference to it. For example, given this type:
@@ -31,4 +31,26 @@ pub trait Empty {
 
         replace(self, Empty::empty())
     }
+}
+
+/// A trait that is used to avoid having multiple copies of the card selection menu procedure.
+use inner_common::Card;
+use std::borrow::BorrowMut;
+pub trait CardSubChoice: BorrowMut<Card> + Default {
+    fn should_show_done_button(&self) -> bool;
+    fn mark_done(&mut self);
+    fn next_layer(&mut self);
+    fn get_status_lines(&self) -> StatusLines;
+}
+
+pub type StatusLine = [u8; 8];
+pub type StatusLines = [StatusLine; 2];
+
+pub fn bytes_to_status_line(bytes: &[u8]) -> StatusLine {
+    use std::cmp::min;
+    let mut output = [0; 8];
+    for i in 0..min(bytes.len(), 8) {
+        output[i] = bytes[i];
+    }
+    output
 }

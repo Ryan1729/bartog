@@ -3,7 +3,7 @@ use game_state::{
     can_play, get_status_text, in_game, CardFlags, CardFlagsChoiceState, Choice, Chosen, GameState,
     Status, RULE_TYPES,
 };
-use platform_types::{log, Button, Input, Logger, Speaker};
+use platform_types::{Button, Input, Logger, Speaker};
 use std::cmp::min;
 
 //This is needed because we want to use it in scopes where other parts of the state are borrowwed.
@@ -268,64 +268,159 @@ pub fn do_in_game_changes_choice(
     input: Input,
     speaker: &mut Speaker,
 ) {
-    unimplemented!();
-    // let logger = state.get_logger();
-    // let mut chosen = None;
-    // if let Choice::OfCanPlayGraph(ref mut choice_state) = state.choice {
-    //     match choice_state.layer {
-    //         can_play::Layer::Card => {
-    //             can_play_graph_choose_card(
-    //                 framebuffer,
-    //                 &mut state.context,
-    //                 input,
-    //                 speaker,
-    //                 choice_state,
-    //                 logger,
-    //             );
-    //
-    //             match choice_state.layer {
-    //                 can_play::Layer::Edges => {
-    //                     let can_play_graph = &state.rules.can_play_graph;
-    //
-    //                     choice_state.edges = choice_state
-    //                         .changes
-    //                         .iter()
-    //                         .rev()
-    //                         .find(|c| c.card() == choice_state.card)
-    //                         .map(|c| c.edges())
-    //                         .unwrap_or_else(|| can_play_graph.get_edges(choice_state.card));
-    //                 }
-    //                 can_play::Layer::Done => {
-    //                     chosen = Some(Choice::Already(Chosen::CanPlayGraph(
-    //                         choice_state.changes.clone(),
-    //                     )));
-    //                 }
-    //                 can_play::Layer::Card => {}
-    //             }
-    //         }
-    //         can_play::Layer::Edges => can_play_graph_choose_edges(
-    //             framebuffer,
-    //             &mut state.context,
-    //             input,
-    //             speaker,
-    //             choice_state,
-    //             logger,
-    //         ),
-    //         can_play::Layer::Done => {
-    //             framebuffer.center_half_window();
-    //         }
-    //     }
-    // } else {
-    //     invariant_violation!(
-    //         { state.choice = Choice::NoChoice },
-    //         "`do_in_game_changes_choice` was called with the wrong choice type!"
-    //     )
-    // }
-    //
-    // //This could be done in the above match with non-lexical lifetimes
-    // if let Some(chosen) = chosen {
-    //     state.choice = chosen
-    // }
+    let logger = state.get_logger();
+    let mut chosen = None;
+    let mut cancel = CancelRuleChoice::No;
+
+    if let Choice::OfInGameChanges(ref mut choice_state) = state.choice {
+        match choice_state.layer {
+            in_game::Layer::Card => {
+                cancel = do_card_sub_choice(
+                    framebuffer,
+                    &mut state.context,
+                    input,
+                    speaker,
+                    choice_state,
+                    logger,
+                );
+
+                if let Some(card) = choice_state.card {
+                    match choice_state.layer {
+                        in_game::Layer::Changes => {}
+                        in_game::Layer::Done => {
+                            chosen = Some(Choice::Already(Chosen::InGameChanges(
+                                choice_state.changes.clone(),
+                                card,
+                            )));
+                        }
+                        in_game::Layer::Card => {}
+                    }
+                }
+            }
+            in_game::Layer::Changes => in_game_changes_choose_changes(
+                framebuffer,
+                &mut state.context,
+                input,
+                speaker,
+                choice_state,
+                logger,
+            ),
+            in_game::Layer::Done => {
+                framebuffer.center_half_window();
+            }
+        }
+    } else {
+        invariant_violation!(
+            { state.choice = Choice::NoChoice },
+            "`do_in_game_changes_choice` was called with the wrong choice type!"
+        )
+    }
+
+    //This could be done in the above match with non-lexical lifetimes
+    if let Some(chosen) = chosen {
+        state.choice = chosen
+    }
+
+    //possibly this could be avoided with NLL too.
+    if let CancelRuleChoice::Yes = cancel {
+        cancel_rule_selection!(state);
+    }
+}
+
+fn print_choice_header(framebuffer: &mut Framebuffer, text: &[u8]) -> u8 {
+    let mut max_heading_y = heading_y(-1);
+
+    let reflowed = bytes_reflow(text, NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as _);
+    let lines = bytes_lines(&reflowed);
+
+    for (i, line) in lines.enumerate() {
+        let (x, _) = center_line_in_rect(
+            line.len() as u8,
+            (
+                (SPRITE_SIZE, SPRITE_SIZE),
+                (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+            ),
+        );
+
+        max_heading_y = heading_y(i as i8);
+
+        framebuffer.print(line, x, max_heading_y, WHITE_INDEX);
+    }
+
+    max_heading_y
+}
+
+fn in_game_changes_choose_changes(
+    framebuffer: &mut Framebuffer,
+    context: &mut UIContext,
+    input: Input,
+    speaker: &mut Speaker,
+    choice_state: &mut in_game::ChoiceState,
+    _logger: Logger,
+) {
+    framebuffer.full_window();
+
+    let text = &[
+        b"choose what will happen when ",
+        get_card_string(choice_state.card).as_bytes(),
+        b" is played.",
+    ]
+        .concat();
+
+    let max_heading_y = print_choice_header(framebuffer, text);
+
+    let w = SPRITE_SIZE * 5;
+    let h = SPRITE_SIZE * 3;
+
+    {
+        let y = SPRITE_SIZE * 4;
+
+        let spec = ButtonSpec {
+            x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
+            y,
+            w,
+            h,
+            id: 1,
+            text: "ok".to_owned(),
+        };
+
+        if do_button(framebuffer, context, input, speaker, &spec) {
+            choice_state
+                .changes
+                .push(can_play::Change::new(choice_state.edges, choice_state.card));
+            choice_state.layer = Default::default();
+        }
+    }
+
+    {
+        let y = SPRITE_SIZE * 7;
+
+        let spec = ButtonSpec {
+            x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
+            y,
+            w,
+            h,
+            id: 2,
+            text: "cancel".to_owned(),
+        };
+
+        if do_button(framebuffer, context, input, speaker, &spec) {
+            choice_state.layer = Default::default();
+        }
+    }
+
+    const FIRST_CHECKBOX_ID: UIId = 3;
+
+    do_scrolling_card_checkbox(
+        framebuffer,
+        context,
+        input,
+        speaker,
+        &mut choice_state.scroll_card,
+        &mut choice_state.edges,
+        FIRST_CHECKBOX_ID,
+        max_heading_y,
+    );
 }
 
 pub fn choose_can_play_graph(state: &mut GameState) -> Vec<can_play::Change> {
@@ -350,12 +445,12 @@ enum CancelRuleChoice {
     Yes,
 }
 
-fn can_play_graph_choose_card(
+fn do_card_sub_choice<C: CardSubChoice>(
     framebuffer: &mut Framebuffer,
     context: &mut UIContext,
     input: Input,
     speaker: &mut Speaker,
-    choice_state: &mut can_play::ChoiceState,
+    choice_state: &mut C,
     logger: Logger,
 ) -> CancelRuleChoice {
     let mut output = CancelRuleChoice::No;
@@ -414,9 +509,7 @@ fn can_play_graph_choose_card(
         }
     }
 
-    let changes_len = choice_state.changes.len();
-
-    if changes_len > 0 {
+    if choice_state.should_show_done_button() {
         let y = SPRITE_SIZE * 10;
 
         let spec = ButtonSpec {
@@ -429,7 +522,7 @@ fn can_play_graph_choose_card(
         };
 
         if do_button(framebuffer, context, input, speaker, &spec) {
-            choice_state.layer = can_play::Layer::Done;
+            choice_state.mark_done();
         }
     }
 
@@ -437,14 +530,10 @@ fn can_play_graph_choose_card(
         let x = SPRITE_SIZE * 11;
         let y = SPRITE_SIZE * 13;
 
-        let text = if changes_len == 1 {
-            b"change. "
-        } else {
-            b"changes."
-        };
+        let lines = choice_state.get_status_lines();
 
-        framebuffer.print_line(format!("{}", changes_len).as_bytes(), x, y, WHITE_INDEX);
-        framebuffer.print_line(text, x, y + FONT_SIZE, WHITE_INDEX);
+        framebuffer.print_line(&lines[0], x, y, WHITE_INDEX);
+        framebuffer.print_line(&lines[1], x, y + FONT_SIZE, WHITE_INDEX);
     }
 
     let w = SPRITE_SIZE * 10;
@@ -456,7 +545,7 @@ fn can_play_graph_choose_card(
     const SCROLL_BUTTON_COUNT: u8 = 4;
     for i in 0..SCROLL_BUTTON_COUNT {
         let id = i as UIId + FIRST_SCROLL_ID;
-        let card = nth_next_card(choice_state.card, i);
+        let card = nth_next_card(*choice_state.borrow_mut(), i);
         let text = get_card_string(card);
 
         let spec = ButtonSpec {
@@ -469,8 +558,8 @@ fn can_play_graph_choose_card(
         };
 
         if do_button(framebuffer, context, input, speaker, &spec) {
-            choice_state.card = card;
-            choice_state.layer = can_play::Layer::Edges;
+            *choice_state.borrow_mut() = card;
+            choice_state.next_layer();
         }
     }
 
@@ -498,15 +587,16 @@ fn can_play_graph_choose_card(
         } else {
             let mut unoffset = context.hot - FIRST_SCROLL_ID;
 
+            let card = choice_state.borrow_mut();
             if input.pressed_this_frame(Button::Up) {
                 if unoffset == 0 {
-                    choice_state.card = nth_next_card(choice_state.card, DECK_SIZE - 1) as _;
+                    *card = nth_next_card(*card, DECK_SIZE - 1) as _;
                 } else {
                     unoffset -= 1;
                 }
             } else if input.pressed_this_frame(Button::Down) {
                 if unoffset == SCROLL_BUTTON_COUNT - 1 {
-                    choice_state.card = nth_next_card(choice_state.card, 1) as _;
+                    *card = nth_next_card(*card, 1) as _;
                 } else {
                     unoffset = nth_next_card(unoffset, 1);
                 }
@@ -533,33 +623,14 @@ fn can_play_graph_choose_edges(
 ) {
     framebuffer.full_window();
 
-    let mut max_heading_y = heading_y(-1);
+    let text = &[
+        b"choose the cards the ",
+        get_card_string(choice_state.card).as_bytes(),
+        b" can be played on.",
+    ]
+        .concat();
 
-    {
-        let text = &[
-            b"choose the cards the ",
-            get_card_string(choice_state.card).as_bytes(),
-            b" can be played on.",
-        ]
-            .concat();
-
-        let reflowed = bytes_reflow(text, NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as _);
-        let lines = bytes_lines(&reflowed);
-
-        for (i, line) in lines.enumerate() {
-            let (x, _) = center_line_in_rect(
-                line.len() as u8,
-                (
-                    (SPRITE_SIZE, SPRITE_SIZE),
-                    (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
-                ),
-            );
-
-            max_heading_y = heading_y(i as i8);
-
-            framebuffer.print(line, x, max_heading_y, WHITE_INDEX);
-        }
-    }
+    let max_heading_y = print_choice_header(framebuffer, text);
 
     let w = SPRITE_SIZE * 5;
     let h = SPRITE_SIZE * 3;
@@ -738,7 +809,7 @@ pub fn do_can_play_graph_choice(
     if let Choice::OfCanPlayGraph(ref mut choice_state) = state.choice {
         match choice_state.layer {
             can_play::Layer::Card => {
-                cancel = can_play_graph_choose_card(
+                cancel = do_card_sub_choice(
                     framebuffer,
                     &mut state.context,
                     input,

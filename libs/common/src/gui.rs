@@ -141,8 +141,6 @@ pub fn do_checkbox(
         framebuffer.checkbox(spec.x, spec.y, spec.checked);
     }
 
-    let text = spec.text.as_bytes();
-
     //Long labels aren't great UX anyway, I think, so don't bother reflowing.
     //Add the extra bit to `y` because the current graphics looks better that way.
     framebuffer.print(
