@@ -508,8 +508,7 @@ fn update(state: &mut GameState, input: Input, speaker: &mut Speaker) {
 fn update_when_played(state: &mut GameState) {
     match choose_in_game_changes(state) {
         in_game::ChoiceState {
-            card: Some(card),
-            ref changes,
+            card, ref changes, ..
         }
             if changes.len() > 0 =>
         {

@@ -4,6 +4,7 @@ use game_state::{
     Status, RULE_TYPES,
 };
 use platform_types::{Button, Input, Logger, Speaker};
+use std::borrow::BorrowMut;
 use std::cmp::min;
 
 //This is needed because we want to use it in scopes where other parts of the state are borrowwed.
@@ -283,28 +284,25 @@ pub fn do_in_game_changes_choice(
                     choice_state,
                     logger,
                 );
+            }
+            in_game::Layer::Changes => {
+                in_game_changes_choose_changes(
+                    framebuffer,
+                    &mut state.context,
+                    input,
+                    speaker,
+                    choice_state,
+                    logger,
+                );
 
-                if let Some(card) = choice_state.card {
-                    match choice_state.layer {
-                        in_game::Layer::Changes => {}
-                        in_game::Layer::Done => {
-                            chosen = Some(Choice::Already(Chosen::InGameChanges(
-                                choice_state.changes.clone(),
-                                card,
-                            )));
-                        }
-                        in_game::Layer::Card => {}
+                match choice_state.layer {
+                    in_game::Layer::Changes => {}
+                    in_game::Layer::Done => {
+                        chosen = Some(Choice::Already(Chosen::InGameChanges(choice_state.clone())));
                     }
+                    in_game::Layer::Card => {}
                 }
             }
-            in_game::Layer::Changes => in_game_changes_choose_changes(
-                framebuffer,
-                &mut state.context,
-                input,
-                speaker,
-                choice_state,
-                logger,
-            ),
             in_game::Layer::Done => {
                 framebuffer.center_half_window();
             }
@@ -362,7 +360,7 @@ fn in_game_changes_choose_changes(
 
     let text = &[
         b"choose what will happen when ",
-        get_card_string(choice_state.card).as_bytes(),
+        get_card_string(*choice_state.borrow_mut()).as_bytes(),
         b" is played.",
     ]
         .concat();
@@ -373,54 +371,22 @@ fn in_game_changes_choose_changes(
     let h = SPRITE_SIZE * 3;
 
     {
-        let y = SPRITE_SIZE * 4;
+        let y = SPRITE_SIZE * 10;
 
         let spec = ButtonSpec {
             x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
             y,
             w,
             h,
-            id: 1,
-            text: "ok".to_owned(),
+            id: 3,
+            text: "done".to_owned(),
         };
 
         if do_button(framebuffer, context, input, speaker, &spec) {
-            choice_state
-                .changes
-                .push(can_play::Change::new(choice_state.edges, choice_state.card));
-            choice_state.layer = Default::default();
+            choice_state.layer = in_game::Layer::Done;
         }
     }
-
-    {
-        let y = SPRITE_SIZE * 7;
-
-        let spec = ButtonSpec {
-            x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
-            y,
-            w,
-            h,
-            id: 2,
-            text: "cancel".to_owned(),
-        };
-
-        if do_button(framebuffer, context, input, speaker, &spec) {
-            choice_state.layer = Default::default();
-        }
-    }
-
     const FIRST_CHECKBOX_ID: UIId = 3;
-
-    do_scrolling_card_checkbox(
-        framebuffer,
-        context,
-        input,
-        speaker,
-        &mut choice_state.scroll_card,
-        &mut choice_state.edges,
-        FIRST_CHECKBOX_ID,
-        max_heading_y,
-    );
 }
 
 pub fn choose_can_play_graph(state: &mut GameState) -> Vec<can_play::Change> {
