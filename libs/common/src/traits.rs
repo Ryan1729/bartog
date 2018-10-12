@@ -33,14 +33,30 @@ pub trait Empty {
     }
 }
 
-/// A trait that is used to avoid having multiple copies of the card selection menu procedure.
+/// A trait that requires a method which should reset the object to an particular state.
+/// Originally designed to be called when a reset button is pressed, returning the relevant state
+/// to the way it was before.
+pub trait Reset {
+    fn reset(&mut self);
+}
+
+impl<T> Reset for T
+where
+    T: Default,
+{
+    fn reset(&mut self) {
+        *self = Default::default();
+    }
+}
+
 use inner_common::Card;
 use std::borrow::BorrowMut;
-pub trait CardSubChoice: BorrowMut<Card> + Default {
+/// A trait that is used to avoid having multiple copies of the card selection menu procedure.
+pub trait CardSubChoice: BorrowMut<Card> + Reset {
     fn should_show_done_button(&self) -> bool;
     fn mark_done(&mut self);
     fn next_layer(&mut self);
-    fn get_status_lines(&self) -> StatusLines;
+    fn get_status_lines(&self, card: Card) -> StatusLines;
 }
 
 pub type StatusLine = [u8; 8];

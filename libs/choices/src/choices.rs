@@ -3,8 +3,7 @@ use game_state::{
     can_play, get_status_text, in_game, CardFlags, CardFlagsChoiceState, Choice, Chosen, GameState,
     Status, RULE_TYPES,
 };
-use platform_types::{Button, Input, Logger, Speaker};
-use std::borrow::BorrowMut;
+use platform_types::{log, Button, Input, Logger, Speaker};
 use std::cmp::min;
 
 //This is needed because we want to use it in scopes where other parts of the state are borrowwed.
@@ -276,12 +275,17 @@ pub fn do_in_game_changes_choice(
     if let Choice::OfInGameChanges(ref mut choice_state) = state.choice {
         match choice_state.layer {
             in_game::Layer::Card => {
+                let mut card_sub_choice = in_game::ChoiceStateAndRules {
+                    choice_state,
+                    rules: &state.rules,
+                };
+
                 cancel = do_card_sub_choice(
                     framebuffer,
                     &mut state.context,
                     input,
                     speaker,
-                    choice_state,
+                    &mut card_sub_choice,
                     logger,
                 );
             }
@@ -360,7 +364,7 @@ fn in_game_changes_choose_changes(
 
     let text = &[
         b"choose what will happen when ",
-        get_card_string(*choice_state.borrow_mut()).as_bytes(),
+        get_card_string(choice_state.card).as_bytes(),
         b" is played.",
     ]
         .concat();
@@ -454,7 +458,7 @@ fn do_card_sub_choice<C: CardSubChoice>(
 
         if do_button(framebuffer, context, input, speaker, &spec) {
             //TODO add confirm dialog
-            *choice_state = Default::default();
+            choice_state.reset();
         }
     }
 
@@ -496,7 +500,10 @@ fn do_card_sub_choice<C: CardSubChoice>(
         let x = SPRITE_SIZE * 11;
         let y = SPRITE_SIZE * 13;
 
-        let lines = choice_state.get_status_lines();
+        let current_highlighted_card =
+            (*choice_state.borrow_mut() + context.hot.wrapping_sub(FIRST_SCROLL_ID)) % DECK_SIZE;
+
+        let lines = choice_state.get_status_lines(current_highlighted_card);
 
         framebuffer.print_line(&lines[0], x, y, WHITE_INDEX);
         framebuffer.print_line(&lines[1], x, y + FONT_SIZE, WHITE_INDEX);

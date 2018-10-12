@@ -27,6 +27,23 @@ macro_rules! implement {
             }
         }
     };
+    (<$a:lifetime> BorrowMut<$borrowed:ty> for $implementing:ty: $that:ident, $ref_expr:expr) => {
+        use std::borrow::Borrow;
+        impl<$a> Borrow<$borrowed> for $implementing {
+            fn borrow(&self) -> &$borrowed {
+                let $that = self;
+                &$ref_expr
+            }
+        }
+
+        use std::borrow::BorrowMut;
+        impl<$a> BorrowMut<$borrowed> for $implementing {
+            fn borrow_mut(&mut self) -> &mut $borrowed {
+                let $that = self;
+                &mut $ref_expr
+            }
+        }
+    };
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -675,7 +692,7 @@ pub mod can_play {
         fn next_layer(&mut self) {
             self.layer = Layer::Edges;
         }
-        fn get_status_lines(&self) -> StatusLines {
+        fn get_status_lines(&self, _card: Card) -> StatusLines {
             let changes_len = self.changes.len();
             [
                 bytes_to_status_line(format!("{}", changes_len).as_bytes()),
@@ -780,27 +797,34 @@ pub mod in_game {
         pub layer: Layer,
     }
 
-    implement!(BorrowMut<Card> for ChoiceState: s, s.card);
+    pub struct ChoiceStateAndRules<'a> {
+        pub choice_state: &'a mut ChoiceState,
+        pub rules: &'a Rules,
+    }
 
-    impl CardSubChoice for ChoiceState {
+    implement!(<'a> BorrowMut<Card> for ChoiceStateAndRules<'a>: s, s.choice_state.card);
+
+    impl<'a> Reset for ChoiceStateAndRules<'a> {
+        fn reset(&mut self) {
+            self.choice_state.reset();
+        }
+    }
+
+    impl<'a> CardSubChoice for ChoiceStateAndRules<'a> {
         fn should_show_done_button(&self) -> bool {
             true //TODO check if there has been any change to the changes
         }
         fn mark_done(&mut self) {
-            self.layer = Layer::Done;
+            self.choice_state.layer = Layer::Done;
         }
         fn next_layer(&mut self) {
-            self.layer = Layer::Changes;
+            self.choice_state.layer = Layer::Changes;
         }
-        fn get_status_lines(&self) -> StatusLines {
-            let changes_len = self.changes.len();
+        fn get_status_lines(&self, card: Card) -> StatusLines {
+            let len = self.rules.when_played.0[card as usize].len();
             [
-                bytes_to_status_line(format!("{}", changes_len).as_bytes()),
-                bytes_to_status_line(if changes_len == 1 {
-                    b"change. "
-                } else {
-                    b"changes."
-                }),
+                bytes_to_status_line(format!("{}", len).as_bytes()),
+                bytes_to_status_line(if len == 1 { b"change. " } else { b"changes." }),
             ]
         }
     }
