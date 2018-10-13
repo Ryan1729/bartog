@@ -375,7 +375,7 @@ fn in_game_changes_choose_changes(
     let h = SPRITE_SIZE * 3;
 
     {
-        let y = SPRITE_SIZE * 10;
+        let y = SPRITE_SIZE * 12;
 
         let spec = ButtonSpec {
             x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
@@ -390,7 +390,7 @@ fn in_game_changes_choose_changes(
             choice_state.layer = in_game::Layer::Done;
         }
     }
-    const FIRST_CHECKBOX_ID: UIId = 3;
+    const FIRST_FREE_ID: UIId = 4;
 }
 
 pub fn choose_can_play_graph(state: &mut GameState) -> Vec<can_play::Change> {

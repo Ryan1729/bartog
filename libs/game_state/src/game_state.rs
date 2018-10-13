@@ -939,7 +939,11 @@ impl GameState {
             card_animations,
             winners,
             top_wild_declared_as: None,
-            choice: Choice::NoChoice,
+            choice: Choice::OfInGameChanges(in_game::ChoiceState {
+                //for testing
+                layer: in_game::Layer::Changes,
+                ..Default::default()
+            }), // Choice::NoChoice,
             rules,
             status,
             context: UIContext::new(),
