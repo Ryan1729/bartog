@@ -358,7 +358,7 @@ fn in_game_changes_choose_changes(
     input: Input,
     speaker: &mut Speaker,
     choice_state: &mut in_game::ChoiceState,
-    _logger: Logger,
+    logger: Logger,
 ) {
     framebuffer.full_window();
 
@@ -390,7 +390,69 @@ fn in_game_changes_choose_changes(
             choice_state.layer = in_game::Layer::Done;
         }
     }
-    const FIRST_FREE_ID: UIId = 4;
+    const FIRST_SCROLL_ID: UIId = 4;
+
+    let min_scroll_y = max_heading_y + 2;
+
+    const SCROLL_ROW_COUNT: u8 = 7;
+
+    let w = SPRITE_SIZE * 6;
+    let x = SPRITE_SIZE;
+
+    for i in 0..SCROLL_ROW_COUNT {
+        // let id = i as UIId + FIRST_SCROLL_ID;
+        //
+        // let card = nth_next_card(choice_state.card, i);
+        // let text = in_game::get_change_string(card);
+        //
+        // let spec = in_game::ChangeRowSpec {
+        //     x,
+        //     y: min_scroll_y + i,
+        //     w,
+        //     id,
+        //     text,
+        // };
+        //
+        // if do_in_game_change_row(framebuffer, context, input, speaker, &spec) {
+        //     llog!(logger, i);
+        // }
+    }
+
+    if context.hot < FIRST_SCROLL_ID as _ {
+        if context.hot == 0 {
+            context.set_next_hot(1);
+        } else if input.pressed_this_frame(Button::Up) {
+            let next = dice_mod(context.hot - 1, 3);
+            context.set_next_hot(next);
+        } else if input.pressed_this_frame(Button::Down) {
+            let next = dice_mod(context.hot + 1, 3);
+            context.set_next_hot(next);
+        } else if input.pressed_this_frame(Button::Right) || input.pressed_this_frame(Button::Left)
+        {
+            let next = (FIRST_SCROLL_ID - 1) + context.hot;
+            context.set_next_hot(next);
+        }
+    } else {
+        if input.pressed_this_frame(Button::Right) || input.pressed_this_frame(Button::Left) {
+            let next = min(
+                context.hot.saturating_sub(FIRST_SCROLL_ID) + 1,
+                FIRST_SCROLL_ID - 1,
+            );
+            context.set_next_hot(next);
+        } else {
+            let card = &mut choice_state.card;
+            *card = handle_scroll_movement(
+                context,
+                input,
+                FIRST_SCROLL_ID..FIRST_SCROLL_ID + SCROLL_ROW_COUNT,
+                ModOffset {
+                    modulus: nu8!(DECK_SIZE),
+                    current: *card,
+                    ..Default::default()
+                },
+            );
+        }
+    }
 }
 
 pub fn choose_can_play_graph(state: &mut GameState) -> Vec<can_play::Change> {
@@ -558,26 +620,61 @@ fn do_card_sub_choice<C: CardSubChoice>(
             );
             context.set_next_hot(next);
         } else {
-            let mut unoffset = context.hot - FIRST_SCROLL_ID;
-
             let card = choice_state.borrow_mut();
-            if input.pressed_this_frame(Button::Up) {
-                if unoffset == 0 {
-                    *card = nth_next_card(*card, DECK_SIZE - 1) as _;
-                } else {
-                    unoffset -= 1;
-                }
-            } else if input.pressed_this_frame(Button::Down) {
-                if unoffset == SCROLL_BUTTON_COUNT - 1 {
-                    *card = nth_next_card(*card, 1) as _;
-                } else {
-                    unoffset = nth_next_card(unoffset, 1);
-                }
-            }
-
-            context.set_next_hot(unoffset + FIRST_SCROLL_ID);
+            *card = handle_scroll_movement(
+                context,
+                input,
+                FIRST_SCROLL_ID..FIRST_SCROLL_ID + SCROLL_BUTTON_COUNT,
+                ModOffset {
+                    modulus: nu8!(DECK_SIZE),
+                    current: *card,
+                    ..Default::default()
+                },
+            );
         }
     }
+
+    output
+}
+
+use std::ops::Range;
+
+fn handle_scroll_movement(
+    context: &mut UIContext,
+    input: Input,
+    Range { start, end }: Range<UIId>,
+    mod_offset: ModOffset,
+) -> u8 {
+    let mut output = mod_offset.current;
+
+    let column_count = mod_offset.offset;
+
+    let mut unoffset = context.hot - start;
+    let visible_rows = end - start;
+
+    invariant_assert_eq!(
+        (mod_offset.modulus / column_count) * column_count,
+        mod_offset.modulus,
+    );
+
+    if input.pressed_this_frame(Button::Up) {
+        if unoffset < column_count {
+            output = previous_mod(mod_offset);
+        } else {
+            unoffset -= column_count;
+        }
+    } else if input.pressed_this_frame(Button::Down) {
+        if unoffset / column_count >= visible_rows - 1 {
+            output = next_mod(mod_offset);
+        } else {
+            unoffset = next_mod(ModOffset {
+                current: unoffset,
+                ..mod_offset
+            });
+        }
+    }
+
+    context.set_next_hot(unoffset + start);
 
     output
 }
@@ -747,23 +844,16 @@ fn do_scrolling_card_checkbox(
                 }
             }
         } else {
-            let mut unoffset = context.hot - first_checkbox_id;
-
-            if input.pressed_this_frame(Button::Up) {
-                if unoffset < 2 {
-                    *scroll_card = nth_next_card(*scroll_card, DECK_SIZE - 2) as _;
-                } else {
-                    unoffset -= 2;
-                }
-            } else if input.pressed_this_frame(Button::Down) {
-                if unoffset / SCROLL_COLS_COUNT >= SCROLL_ROWS_COUNT - 1 {
-                    *scroll_card = nth_next_card(*scroll_card, 2) as _;
-                } else {
-                    unoffset = nth_next_card(unoffset, 2);
-                }
-            }
-
-            context.set_next_hot(unoffset + first_checkbox_id);
+            *scroll_card = handle_scroll_movement(
+                context,
+                input,
+                first_checkbox_id..first_checkbox_id + SCROLL_ROWS_COUNT,
+                ModOffset {
+                    modulus: nu8!(DECK_SIZE),
+                    current: *scroll_card,
+                    offset: SCROLL_COLS_COUNT,
+                },
+            );
         }
     }
 }

@@ -211,8 +211,70 @@ pub fn get_short_card_string_and_colour(card: Card) -> (String, u8) {
     (output, colour)
 }
 
-pub fn nth_next_card(card: Card, offset: u8) -> Card {
-    (card + offset) % DECK_SIZE
+use std::num::NonZeroU8;
+
+pub struct ModOffset {
+    pub modulus: NonZeroU8,
+    pub current: u8,
+    pub offset: u8,
+}
+
+#[macro_export]
+macro_rules! nu8 {
+    ($byte:expr) => {{
+        use std::num::NonZeroU8;
+        NonZeroU8::new($byte).unwrap()
+    }};
+}
+
+impl Default for ModOffset {
+    fn default() -> Self {
+        ModOffset {
+            modulus: nu8!(1),
+            current: 0,
+            offset: 1,
+        }
+    }
+}
+
+#[inline]
+pub fn next_mod(
+    ModOffset {
+        modulus,
+        current,
+        offset,
+    }: ModOffset,
+) -> u8 {
+    (current + offset) % modulus.get()
+}
+
+#[inline]
+pub fn previous_mod(
+    ModOffset {
+        modulus,
+        current,
+        offset,
+    }: ModOffset,
+) -> u8 {
+    (current + (modulus.get() - offset)) % modulus.get()
+}
+
+#[inline]
+pub fn nth_next_card(current: Card, offset: u8) -> Card {
+    previous_mod(ModOffset {
+        modulus: nu8!(DECK_SIZE),
+        current,
+        offset,
+    })
+}
+
+#[inline]
+pub fn nth_previous_card(current: Card, offset: u8) -> Card {
+    previous_mod(ModOffset {
+        modulus: nu8!(DECK_SIZE),
+        current,
+        offset,
+    })
 }
 
 pub type Suit = u8;
