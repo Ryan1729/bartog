@@ -261,7 +261,7 @@ pub fn previous_mod(
 
 #[inline]
 pub fn nth_next_card(current: Card, offset: u8) -> Card {
-    previous_mod(ModOffset {
+    next_mod(ModOffset {
         modulus: nu8!(DECK_SIZE),
         current,
         offset,
