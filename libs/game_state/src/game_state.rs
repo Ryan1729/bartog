@@ -716,6 +716,16 @@ pub mod in_game {
         //TopWild(TopWild),
     }
 
+    impl AllValues for Change {
+        //TODO write a procedural macro or something to make mainatining this easier.
+        fn all_values() -> Vec<Self> {
+            CurrentPlayer::all_values()
+                .into_iter()
+                .map(Change::CurrentPlayer)
+                .collect()
+        }
+    }
+
     impl fmt::Debug for Change {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             write!(f, "{}", self)
@@ -744,6 +754,12 @@ pub mod in_game {
     //This relies on MAX_PLAYER_ID being 3, and will require structural changes if it changes!
     #[derive(Copy, Clone, PartialEq, Eq)]
     pub struct CurrentPlayer(u8);
+
+    impl AllValues for CurrentPlayer {
+        fn all_values() -> Vec<Self> {
+            u8::all_values().into_iter().map(CurrentPlayer).collect()
+        }
+    }
 
     impl fmt::Display for CurrentPlayer {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

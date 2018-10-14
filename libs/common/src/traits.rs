@@ -70,3 +70,23 @@ pub fn bytes_to_status_line(bytes: &[u8]) -> StatusLine {
     }
     output
 }
+
+use std::marker::Sized;
+/// A trait which should return exactly one of all possible values of the type in question.
+// TODO add a method that returns a &'static Vec<Self> or otherwise prevent this being called
+// more than necessary.
+pub trait AllValues {
+    fn all_values() -> Vec<Self>
+    where
+        Self: Sized;
+}
+
+impl AllValues for u8 {
+    fn all_values() -> Vec<Self> {
+        let mut output = Vec::with_capacity(256);
+        for i in 0u8..=255u8 {
+            output.push(i);
+        }
+        output
+    }
+}
