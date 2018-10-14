@@ -376,9 +376,8 @@ impl EventLog {
 
     pub fn push(&mut self, bytes: &[u8]) {
         let reflowed = bytes_reflow(bytes, EventLog::WIDTH);
-        let lines = bytes_lines(&reflowed);
 
-        for line in lines {
+        for line in bytes_lines(&reflowed) {
             debug_assert!(line.len() <= EventLog::WIDTH);
             self.push_line(line);
         }
@@ -792,9 +791,10 @@ pub mod in_game {
 
     #[derive(Clone, Debug, Default)]
     pub struct ChoiceState {
-        pub card: Card,
         pub changes: Vec<Change>,
         pub layer: Layer,
+        pub card: Card,
+        pub scroll: u8,
     }
 
     pub struct ChoiceStateAndRules<'a> {
@@ -939,7 +939,11 @@ impl GameState {
             card_animations,
             winners,
             top_wild_declared_as: None,
-            choice: Choice::NoChoice,
+            choice: Choice::OfInGameChanges(in_game::ChoiceState {
+                //for testing
+                layer: in_game::Layer::Changes,
+                ..Default::default()
+            }), // Choice::NoChoice,
             rules,
             status,
             context: UIContext::new(),

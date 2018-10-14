@@ -470,9 +470,7 @@ impl Framebuffer {
     }
 
     pub fn print(&mut self, bytes: &[u8], x: u8, mut y: u8, colour: u8) {
-        let lines = bytes_lines(bytes);
-
-        for line in lines {
+        for line in bytes_lines(bytes) {
             self.print_line(line, x, y, colour);
             y = y.saturating_add(FONT_SIZE);
         }
@@ -892,11 +890,9 @@ impl From<Rect> for ((u8, u8), (u8, u8)) {
 }
 
 pub fn get_text_dimensions(bytes: &[u8]) -> (u8, u8) {
-    let lines = bytes_lines(bytes);
-
     let mut width: u8 = 0;
     let mut height: u8 = 0;
-    for line in lines {
+    for line in bytes_lines(bytes) {
         height = height.saturating_add(1);
         width = max(width, line.len() as u8);
     }

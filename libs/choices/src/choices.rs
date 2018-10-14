@@ -333,9 +333,8 @@ fn print_choice_header(framebuffer: &mut Framebuffer, text: &[u8]) -> u8 {
     let mut max_heading_y = heading_y(-1);
 
     let reflowed = bytes_reflow(text, NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as _);
-    let lines = bytes_lines(&reflowed);
 
-    for (i, line) in lines.enumerate() {
+    for (i, line) in bytes_lines(&reflowed).enumerate() {
         let (x, _) = center_line_in_rect(
             line.len() as u8,
             (
@@ -392,30 +391,33 @@ fn in_game_changes_choose_changes(
     }
     const FIRST_SCROLL_ID: UIId = 4;
 
-    let min_scroll_y = max_heading_y + 2;
+    let min_scroll_y = max_heading_y + SPRITE_SIZE * 2;
 
     const SCROLL_ROW_COUNT: u8 = 7;
 
     let w = SPRITE_SIZE * 6;
     let x = SPRITE_SIZE;
 
-    for i in 0..SCROLL_ROW_COUNT {
-        // let id = i as UIId + FIRST_SCROLL_ID;
-        //
-        // let card = nth_next_card(choice_state.card, i);
-        // let text = in_game::get_change_string(card);
-        //
-        // let spec = in_game::ChangeRowSpec {
-        //     x,
-        //     y: min_scroll_y + i,
-        //     w,
-        //     id,
-        //     text,
-        // };
-        //
-        // if do_in_game_change_row(framebuffer, context, input, speaker, &spec) {
-        //     llog!(logger, i);
-        // }
+    let id_range = FIRST_SCROLL_ID..FIRST_SCROLL_ID + SCROLL_ROW_COUNT;
+
+    for id in id_range.clone() {
+        let i = id - FIRST_SCROLL_ID;
+
+        if let Some(change) = choice_state.changes.get(choice_state.scroll as usize) {
+            let text = change.to_string();
+
+            // let spec = in_game::ChangeRowSpec {
+            //     x,
+            //     y: min_scroll_y + SPRITE_SIZE * i,
+            //     w,
+            //     id,
+            //     text,
+            // };
+            //
+            // if do_in_game_change_row(framebuffer, context, input, speaker, &spec) {
+            llog!(logger, text);
+            // }
+        }
     }
 
     if context.hot < FIRST_SCROLL_ID as _ {
@@ -440,14 +442,14 @@ fn in_game_changes_choose_changes(
             );
             context.set_next_hot(next);
         } else {
-            let card = &mut choice_state.card;
-            *card = handle_scroll_movement(
+            let scroll = &mut choice_state.scroll;
+            *scroll = handle_scroll_movement(
                 context,
                 input,
-                FIRST_SCROLL_ID..FIRST_SCROLL_ID + SCROLL_ROW_COUNT,
+                id_range,
                 ModOffset {
                     modulus: nu8!(DECK_SIZE),
-                    current: *card,
+                    current: *scroll,
                     ..Default::default()
                 },
             );
@@ -578,8 +580,9 @@ fn do_card_sub_choice<C: CardSubChoice>(
     const FIRST_SCROLL_ID: UIId = 4;
 
     const SCROLL_BUTTON_COUNT: u8 = 4;
-    for i in 0..SCROLL_BUTTON_COUNT {
-        let id = i as UIId + FIRST_SCROLL_ID;
+    let id_range = FIRST_SCROLL_ID..FIRST_SCROLL_ID + SCROLL_BUTTON_COUNT;
+    for id in id_range.clone() {
+        let i = id - FIRST_SCROLL_ID;
         let card = nth_next_card(*choice_state.borrow_mut(), i);
         let text = get_card_string(card);
 
@@ -624,7 +627,7 @@ fn do_card_sub_choice<C: CardSubChoice>(
             *card = handle_scroll_movement(
                 context,
                 input,
-                FIRST_SCROLL_ID..FIRST_SCROLL_ID + SCROLL_BUTTON_COUNT,
+                id_range,
                 ModOffset {
                     modulus: nu8!(DECK_SIZE),
                     current: *card,

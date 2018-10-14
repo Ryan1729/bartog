@@ -129,8 +129,7 @@ mod tests {
         }
 
         let reflowed = bytes_reflow(bytes, width);
-        let lines = bytes_lines(&reflowed);
-        for line in lines {
+        for line in bytes_lines(&reflowed) {
             assert!(line.len() <= width);
         }
 
