@@ -232,19 +232,12 @@ impl GameState {
     }
 
     pub fn player_ids(&self) -> Vec<PlayerID> {
-        (0..=self.cpu_hands.len()).map(|id| id as u8).collect()
-    }
-
-    pub fn player_name(&self, playerId: PlayerID) -> String {
-        let len = self.cpu_hands.len() as PlayerID;
-
-        if playerId < len {
-            format!("cpu {}", playerId)
-        } else if playerId == len {
-            "you".to_string()
-        } else {
-            "???".to_string()
-        }
+        // While we don't expect to change the maximum number of players,
+        // we might allow a smaller minimum. So this seems like it should
+        // stay here.
+        (0..=self.cpu_hands.len())
+            .map(|id| id as PlayerID)
+            .collect()
     }
 
     pub fn get_pronoun(&self, playerId: PlayerID) -> String {
@@ -261,7 +254,7 @@ impl GameState {
         let winner_names: Vec<_> = self
             .winners
             .iter()
-            .map(|&player| self.player_name(player))
+            .map(|&player| player_name(player))
             .collect();
 
         let mut winner_text = get_sentence_list(&winner_names);
@@ -705,6 +698,27 @@ pub mod can_play {
     }
 }
 
+pub const MAX_PLAYER_ID: PlayerID = 3;
+pub const PLAYER_ID_COUNT: usize = (MAX_PLAYER_ID + 1) as _;
+
+pub fn all_player_ids() -> [PlayerID; PLAYER_ID_COUNT] {
+    let mut output = [0; PLAYER_ID_COUNT];
+    for i in 0..=MAX_PLAYER_ID {
+        output[i as usize] = i;
+    }
+    output
+}
+
+pub fn player_name(playerId: PlayerID) -> String {
+    if playerId < MAX_PLAYER_ID {
+        format!("cpu {}", playerId)
+    } else if playerId == MAX_PLAYER_ID {
+        "you".to_string()
+    } else {
+        "???".to_string()
+    }
+}
+
 pub mod in_game {
     use super::*;
     use std::fmt;
@@ -749,8 +763,6 @@ pub mod in_game {
         }
     }
 
-    const MAX_PLAYER_ID: PlayerID = 3;
-
     //This relies on MAX_PLAYER_ID being 3, and will require structural changes if it changes!
     #[derive(Copy, Clone, PartialEq, Eq)]
     pub struct CurrentPlayer(u8);
@@ -763,10 +775,18 @@ pub mod in_game {
 
     impl fmt::Display for CurrentPlayer {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            let CurrentPlayer(byte) = *self;
-            match byte {
-                _ => unimplemented!("TODO fmt::Display for CurrentPlayer"),
+            write!(
+                f,
+                "change whose turn it is based on the current player as follows: "
+            )?;
+            for &id in all_player_ids().into_iter() {
+                write!(f, "{} -> {}", player_name(id), player_name(self.apply(id)))?;
+
+                if id != MAX_PLAYER_ID {
+                    write!(f, ", ")?;
+                }
             }
+            Ok(())
         }
     }
 

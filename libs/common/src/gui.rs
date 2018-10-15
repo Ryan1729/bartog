@@ -1,6 +1,7 @@
 use inner_common::*;
 use platform_types::{Button, Input, Speaker, SFX};
 use rendering::{center_line_in_rect, Framebuffer};
+use std::cmp::min;
 
 pub type UIId = u8;
 
@@ -39,6 +40,10 @@ impl UIContext {
         self.next_hot = 0;
     }
 }
+
+// Add the extra bit to `y` because the current graphics looks better that way.
+// In particular, it centers the character vertically within the tile.
+const TEXT_HEIGHT_OFFSET: u8 = (FONT_SIZE / 4);
 
 pub struct ButtonSpec {
     pub text: String,
@@ -91,8 +96,7 @@ pub fn do_button(
     let (x, y) = center_line_in_rect(text.len() as u8, ((spec.x, spec.y), (spec.w, spec.h)));
 
     //Long labels aren't great UX anyway, I think, so don't bother reflowing.
-    //Add the extra bit to `y` because the current graphics looks better that way.
-    framebuffer.print(spec.text.as_bytes(), x, y + (FONT_SIZE / 4), WHITE_INDEX);
+    framebuffer.print(text, x, y + TEXT_HEIGHT_OFFSET, WHITE_INDEX);
 
     return result;
 }
@@ -149,6 +153,67 @@ pub fn do_checkbox(
         spec.y + (FONT_SIZE / 4),
         WHITE_INDEX,
     );
+
+    return result;
+}
+
+pub struct RowSpec {
+    pub text: String,
+    pub x: u8,
+    pub y: u8,
+    pub w: u8,
+    pub id: UIId,
+}
+
+//calling this once will swallow multiple presses on the row. We could either
+//pass in and return the number of presses to fix that, or this could simply be
+//called multiple times per frame (once for each click).
+pub fn do_pressable_row(
+    framebuffer: &mut Framebuffer,
+    context: &mut UIContext,
+    input: Input,
+    speaker: &mut Speaker,
+    spec: &RowSpec,
+) -> bool {
+    let mut result = false;
+
+    let id = spec.id;
+
+    if context.active == id {
+        if input.released_this_frame(Button::A) {
+            result = context.hot == id;
+
+            context.set_not_active();
+        }
+        context.set_next_hot(id);
+    } else if context.hot == id {
+        if input.pressed_this_frame(Button::A) {
+            context.set_active(id);
+            speaker.request_sfx(SFX::ButtonPress);
+        }
+        context.set_next_hot(id);
+    }
+
+    // TODO implement
+    // if context.active == id && input.gamepad.contains(Button::A) {
+    //     framebuffer.row_pressed(spec.x, spec.y, spec.w);
+    // } else if context.hot == id {
+    //     framebuffer.row_hot(spec.x, spec.y, spec.w);
+    // } else {
+    //     framebuffer.row(spec.x, spec.y, spec.w);
+    // }
+
+    // TODO make an elipisis character and draw it instead of the last character of text.
+    // Seems like the best way would be to center on the length + 1 and then draw the
+    // first `len` characters then figure out where the elipisis should go and draw that.
+    let full_text = spec.text.as_bytes();
+
+    let text = &full_text[..min(full_text.len(), (spec.w / FONT_ADVANCE) as usize)];
+
+    let (x, y) = center_line_in_rect(text.len() as u8, ((spec.x, spec.y), (spec.w, 1)));
+
+    //The row is meant to be only one ... row ... high. So don't bother reflowing.
+    framebuffer.print(text, x, y + TEXT_HEIGHT_OFFSET, WHITE_INDEX);
 
     return result;
 }

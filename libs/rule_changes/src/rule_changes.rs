@@ -1,5 +1,5 @@
 use common::*;
-use game_state::{can_play, in_game, CardFlags, GameState, Status, RULE_TYPES};
+use game_state::{can_play, in_game, player_name, CardFlags, GameState, Status, RULE_TYPES};
 use rand::Rng;
 
 struct CardFlagsDelta {
@@ -350,7 +350,7 @@ pub fn apply_can_play_graph_changes(
 fn add_rule_change_log_header(state: &mut GameState, player: PlayerID) {
     state.event_log.push_hr();
 
-    let player_name = state.player_name(player);
+    let player_name = player_name(player);
 
     let text = &[player_name.as_bytes(), b" changed the rules as follows:"].concat();
 

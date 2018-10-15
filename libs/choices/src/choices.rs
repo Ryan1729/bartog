@@ -403,20 +403,21 @@ fn in_game_changes_choose_changes(
     for id in id_range.clone() {
         let i = id - FIRST_SCROLL_ID;
 
-        if let Some(change) = in_game::Change::all_values().get(choice_state.scroll as usize) {
+        if let Some(change) = in_game::Change::all_values().get((choice_state.scroll + i) as usize)
+        {
             let text = change.to_string();
 
-            // let spec = in_game::ChangeRowSpec {
-            //     x,
-            //     y: min_scroll_y + SPRITE_SIZE * i,
-            //     w,
-            //     id,
-            //     text,
-            // };
-            //
-            // if do_in_game_change_row(framebuffer, context, input, speaker, &spec) {
-            llog!(logger, text);
-            // }
+            let spec = RowSpec {
+                x,
+                y: min_scroll_y + SPRITE_SIZE * i,
+                w,
+                id,
+                text,
+            };
+
+            if do_pressable_row(framebuffer, context, input, speaker, &spec) {
+                llog!(logger, change.to_string());
+            }
         }
     }
 

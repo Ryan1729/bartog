@@ -3,7 +3,7 @@ use choices::{
     choose_wild_flags, do_choices,
 };
 use common::*;
-use game_state::{in_game, GameState, LogHeading, Status};
+use game_state::{in_game, player_name, GameState, LogHeading, Status};
 use platform_types::{Button, Input, Speaker, State, StateParams, SFX};
 use rand::Rng;
 use rule_changes::{
@@ -276,7 +276,7 @@ fn move_to_discard(state: &mut GameState, card: Card) {
 
 fn log_wild_selection(state: &mut GameState, player: PlayerID) {
     if let Some(suit) = state.top_wild_declared_as {
-        let player_name = state.player_name(player);
+        let player_name = player_name(player);
         let suit_str = get_suit_str(suit);
         let event_str = &[
             player_name.as_bytes(),
@@ -356,7 +356,7 @@ fn get_discard_animation(
     state
         .remove_positioned_card(player, card_index)
         .map(|card| {
-            let player_name = state.player_name(player);
+            let player_name = player_name(player);
 
             let card_string = get_card_string(card.card);
 
@@ -407,7 +407,7 @@ fn get_draw_animation(state: &mut GameState, player: PlayerID) -> Option<CardAni
 
     let (x, y) = get_card_position(spread, len + 1, len);
 
-    let player_name = state.player_name(player);
+    let player_name = player_name(player);
 
     let event_str = &[player_name.as_bytes(), b" drew a card."].concat();
 
