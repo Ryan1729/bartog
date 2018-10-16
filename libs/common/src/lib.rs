@@ -98,6 +98,13 @@ macro_rules! llog {
     }};
 }
 
+#[macro_export]
+macro_rules! d {
+    () => {
+        Default::default()
+    };
+}
+
 #[cfg(test)]
 extern crate quickcheck;
 

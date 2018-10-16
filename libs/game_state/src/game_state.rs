@@ -553,8 +553,8 @@ impl Default for Rules {
     fn default() -> Self {
         Rules {
             wild: CardFlags::new(RANK_FLAGS[Ranks::EIGHT as usize]),
-            can_play_graph: Default::default(),
-            when_played: Default::default(),
+            can_play_graph: d!(),
+            when_played: d!(),
         }
     }
 }
@@ -566,7 +566,7 @@ impl Empty for Rules {
         Rules {
             can_play_graph: unsafe { mem::zeroed() },
             wild: unsafe { mem::zeroed() },
-            when_played: Default::default(),
+            when_played: d!(),
         }
     }
 }
@@ -907,13 +907,7 @@ macro_rules! dealt_hand {
 impl GameState {
     pub fn new(seed: [u8; 16], logger: Logger) -> GameState {
         let event_log = EventLog::new();
-        GameState::new_with_previous(
-            seed,
-            Default::default(),
-            Default::default(),
-            logger,
-            event_log,
-        )
+        GameState::new_with_previous(seed, d!(), d!(), logger, event_log)
     }
 
     pub fn new_with_previous(
@@ -978,7 +972,7 @@ impl GameState {
             choice: Choice::OfInGameChanges(in_game::ChoiceState {
                 //for testing
                 layer: in_game::Layer::Changes,
-                ..Default::default()
+                ..d!()
             }), // Choice::NoChoice,
             rules,
             status,

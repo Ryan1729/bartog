@@ -45,7 +45,7 @@ where
     T: Default,
 {
     fn reset(&mut self) {
-        *self = Default::default();
+        *self = d!();
     }
 }
 

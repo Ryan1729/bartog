@@ -244,20 +244,17 @@ fn dice_mod(x: u8, m: u8) -> u8 {
 pub fn choose_in_game_changes(state: &mut GameState) -> in_game::ChoiceState {
     match state.choice {
         Choice::NoChoice => {
-            state.choice = Choice::OfInGameChanges(Default::default());
-            Default::default()
+            state.choice = Choice::OfInGameChanges(d!());
+            d!()
         }
         Choice::Already(Chosen::InGameChanges(_)) => {
             if let Choice::Already(Chosen::InGameChanges(choice_state)) = state.choice.take() {
                 choice_state
             } else {
-                invariant_violation!(
-                    { Default::default() },
-                    "Somehow we're multi-threaded or somthing?!"
-                )
+                invariant_violation!({ d!() }, "Somehow we're multi-threaded or somthing?!")
             }
         }
-        _ => Default::default(),
+        _ => d!(),
     }
 }
 
@@ -451,7 +448,7 @@ fn in_game_changes_choose_changes(
                 ModOffset {
                     modulus: nu8!(DECK_SIZE),
                     current: *scroll,
-                    ..Default::default()
+                    ..d!()
                 },
             );
         }
@@ -461,7 +458,7 @@ fn in_game_changes_choose_changes(
 pub fn choose_can_play_graph(state: &mut GameState) -> Vec<can_play::Change> {
     match state.choice {
         Choice::NoChoice => {
-            state.choice = Choice::OfCanPlayGraph(Default::default());
+            state.choice = Choice::OfCanPlayGraph(d!());
             Vec::new()
         }
         Choice::Already(Chosen::CanPlayGraph(_)) => {
@@ -632,7 +629,7 @@ fn do_card_sub_choice<C: CardSubChoice>(
                 ModOffset {
                     modulus: nu8!(DECK_SIZE),
                     current: *card,
-                    ..Default::default()
+                    ..d!()
                 },
             );
         }
@@ -725,7 +722,7 @@ fn can_play_graph_choose_edges(
             choice_state
                 .changes
                 .push(can_play::Change::new(choice_state.edges, choice_state.card));
-            choice_state.layer = Default::default();
+            choice_state.layer = d!();
         }
     }
 
@@ -742,7 +739,7 @@ fn can_play_graph_choose_edges(
         };
 
         if do_button(framebuffer, context, input, speaker, &spec) {
-            choice_state.layer = Default::default();
+            choice_state.layer = d!();
         }
     }
 
@@ -1047,7 +1044,7 @@ pub fn choose_wild_flags(state: &mut GameState) -> Option<CardFlags> {
         Choice::NoChoice => {
             state.choice = Choice::OfCardFlags(CardFlagsChoiceState {
                 flags: state.rules.wild,
-                card: Default::default(),
+                card: d!(),
             });
             None
         }
