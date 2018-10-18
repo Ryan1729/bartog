@@ -378,7 +378,7 @@ fn in_game_changes_choose_changes(
             y,
             w,
             h,
-            id: 3,
+            id: 1,
             text: "done".to_owned(),
         };
 
@@ -386,26 +386,28 @@ fn in_game_changes_choose_changes(
             choice_state.layer = in_game::Layer::Done;
         }
     }
-    const FIRST_SCROLL_ID: UIId = 4;
-
-    let min_scroll_y = max_heading_y + SPRITE_SIZE * 2;
+    const FIRST_SCROLL_START_ID: UIId = 2;
 
     const SCROLL_ROW_COUNT: u8 = 7;
 
+    const SECOND_SCROLL_START_ID: UIId = FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT;
+
+    let min_scroll_y = max_heading_y + SPRITE_SIZE * 2;
+
     let w = SPRITE_SIZE * 6;
-    let x = SPRITE_SIZE;
 
-    let id_range = FIRST_SCROLL_ID..FIRST_SCROLL_ID + SCROLL_ROW_COUNT;
+    let left_id_range = FIRST_SCROLL_START_ID..FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT;
 
-    for id in id_range.clone() {
-        let i = id - FIRST_SCROLL_ID;
+    for id in left_id_range.clone() {
+        let i = id - FIRST_SCROLL_START_ID;
 
-        if let Some(change) = in_game::Change::all_values().get((choice_state.scroll + i) as usize)
+        if let Some(change) =
+            in_game::Change::all_values().get((choice_state.left_scroll + i) as usize)
         {
             let text = change.to_string();
 
             let spec = RowSpec {
-                x,
+                x: SPRITE_SIZE,
                 y: min_scroll_y + SPRITE_SIZE * i,
                 w,
                 id,
@@ -415,44 +417,102 @@ fn in_game_changes_choose_changes(
             if do_pressable_row(framebuffer, context, input, speaker, &spec) {
                 llog!(logger, change.to_string());
             }
+        } else {
+            let spec = RowSpec {
+                x: SPRITE_SIZE + w + SPRITE_SIZE,
+                y: min_scroll_y + SPRITE_SIZE * i,
+                w,
+                id,
+                text: "".to_owned(),
+            };
+
+            do_pressable_row(framebuffer, context, input, speaker, &spec);
         }
     }
 
-    if context.hot < FIRST_SCROLL_ID as _ {
+    let right_id_range = SECOND_SCROLL_START_ID..SECOND_SCROLL_START_ID + SCROLL_ROW_COUNT;
+
+    for id in right_id_range.clone() {
+        let i = id - SECOND_SCROLL_START_ID;
+
+        if let Some(change) = choice_state
+            .changes
+            .get((choice_state.right_scroll + i) as usize)
+        {
+            let text = change.to_string();
+
+            let spec = RowSpec {
+                x: SPRITE_SIZE + w + SPRITE_SIZE,
+                y: min_scroll_y + SPRITE_SIZE * i,
+                w,
+                id,
+                text,
+            };
+
+            if do_pressable_row(framebuffer, context, input, speaker, &spec) {
+                llog!(logger, change.to_string());
+            }
+        } else {
+            let spec = RowSpec {
+                x: SPRITE_SIZE + w + SPRITE_SIZE,
+                y: min_scroll_y + SPRITE_SIZE * i,
+                w,
+                id,
+                text: "".to_owned(),
+            };
+
+            do_pressable_row(framebuffer, context, input, speaker, &spec);
+        }
+    }
+
+    if context.hot < FIRST_SCROLL_START_ID as _ {
         if context.hot == 0 {
             context.set_next_hot(1);
         } else if input.pressed_this_frame(Button::Up) {
-            let next = dice_mod(context.hot - 1, 3);
-            context.set_next_hot(next);
+            context.set_next_hot(SECOND_SCROLL_START_ID + SCROLL_ROW_COUNT - 1);
         } else if input.pressed_this_frame(Button::Down) {
-            let next = dice_mod(context.hot + 1, 3);
-            context.set_next_hot(next);
+            context.set_next_hot(SECOND_SCROLL_START_ID);
         } else if input.pressed_this_frame(Button::Right) || input.pressed_this_frame(Button::Left)
         {
-            let next = (FIRST_SCROLL_ID - 1) + context.hot;
-            context.set_next_hot(next);
+            context.set_next_hot(FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT - 1);
         }
     } else {
         if input.pressed_this_frame(Button::Right) || input.pressed_this_frame(Button::Left) {
-            let next = min(
-                context.hot.saturating_sub(FIRST_SCROLL_ID) + 1,
-                FIRST_SCROLL_ID - 1,
-            );
+            let next = if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
+                context.hot + SCROLL_ROW_COUNT
+            } else {
+                context.hot - SCROLL_ROW_COUNT
+            };
             context.set_next_hot(next);
         } else {
-            let scroll = &mut choice_state.scroll;
-            *scroll = handle_scroll_movement(
-                context,
-                input,
-                id_range,
-                ModOffset {
-                    modulus: nu8!(DECK_SIZE),
-                    current: *scroll,
-                    ..d!()
-                },
-            );
+            if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
+                let left_scroll = &mut choice_state.left_scroll;
+                *left_scroll = handle_scroll_movement(
+                    context,
+                    input,
+                    left_id_range,
+                    ModOffset {
+                        modulus: nu8!(DECK_SIZE),
+                        current: *left_scroll,
+                        ..d!()
+                    },
+                );
+            } else {
+                let right_scroll = &mut choice_state.right_scroll;
+                *right_scroll = handle_scroll_movement(
+                    context,
+                    input,
+                    right_id_range,
+                    ModOffset {
+                        modulus: nu8!(DECK_SIZE),
+                        current: *right_scroll,
+                        ..d!()
+                    },
+                );
+            }
         }
     }
+    llog!(logger, context);
 }
 
 pub fn choose_can_play_graph(state: &mut GameState) -> Vec<can_play::Change> {

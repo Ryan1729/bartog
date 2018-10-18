@@ -830,7 +830,8 @@ pub mod in_game {
         pub changes: Vec<Change>,
         pub layer: Layer,
         pub card: Card,
-        pub scroll: u8,
+        pub left_scroll: u8,
+        pub right_scroll: u8,
     }
 
     pub struct ChoiceStateAndRules<'a> {

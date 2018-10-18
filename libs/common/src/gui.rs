@@ -41,6 +41,27 @@ impl UIContext {
     }
 }
 
+fn button_press(context: &mut UIContext, input: Input, speaker: &mut Speaker, id: UIId) -> bool {
+    let mut result = false;
+
+    if context.active == id {
+        if input.released_this_frame(Button::A) {
+            result = context.hot == id;
+
+            context.set_not_active();
+        }
+        context.set_next_hot(id);
+    } else if context.hot == id {
+        if input.pressed_this_frame(Button::A) {
+            context.set_active(id);
+            speaker.request_sfx(SFX::ButtonPress);
+        }
+        context.set_next_hot(id);
+    }
+
+    result
+}
+
 // Add the extra bit to `y` because the current graphics looks better that way.
 // In particular, it centers the character vertically within the tile.
 const TEXT_HEIGHT_OFFSET: u8 = (FONT_SIZE / 4);
@@ -64,24 +85,9 @@ pub fn do_button(
     speaker: &mut Speaker,
     spec: &ButtonSpec,
 ) -> bool {
-    let mut result = false;
-
     let id = spec.id;
 
-    if context.active == id {
-        if input.released_this_frame(Button::A) {
-            result = context.hot == id;
-
-            context.set_not_active();
-        }
-        context.set_next_hot(id);
-    } else if context.hot == id {
-        if input.pressed_this_frame(Button::A) {
-            context.set_active(id);
-            speaker.request_sfx(SFX::ButtonPress);
-        }
-        context.set_next_hot(id);
-    }
+    let result = button_press(context, input, speaker, id);
 
     if context.active == id && input.gamepad.contains(Button::A) {
         framebuffer.button_pressed(spec.x, spec.y, spec.w, spec.h);
@@ -98,7 +104,7 @@ pub fn do_button(
     //Long labels aren't great UX anyway, I think, so don't bother reflowing.
     framebuffer.print(text, x, y + TEXT_HEIGHT_OFFSET, WHITE_INDEX);
 
-    return result;
+    result
 }
 
 pub struct CheckboxSpec {
@@ -118,24 +124,9 @@ pub fn do_checkbox(
     speaker: &mut Speaker,
     spec: &CheckboxSpec,
 ) -> bool {
-    let mut result = false;
-
     let id = spec.id;
 
-    if context.active == id {
-        if input.released_this_frame(Button::A) {
-            result = context.hot == id;
-
-            context.set_not_active();
-        }
-        context.set_next_hot(id);
-    } else if context.hot == id {
-        if input.pressed_this_frame(Button::A) {
-            context.set_active(id);
-            speaker.request_sfx(SFX::ButtonPress);
-        }
-        context.set_next_hot(id);
-    }
+    let result = button_press(context, input, speaker, id);
 
     if context.active == id && input.gamepad.contains(Button::A) {
         framebuffer.checkbox_pressed(spec.x, spec.y, spec.checked);
@@ -154,7 +145,7 @@ pub fn do_checkbox(
         WHITE_INDEX,
     );
 
-    return result;
+    result
 }
 
 pub struct RowSpec {
@@ -175,33 +166,17 @@ pub fn do_pressable_row(
     speaker: &mut Speaker,
     spec: &RowSpec,
 ) -> bool {
-    let mut result = false;
-
     let id = spec.id;
 
-    if context.active == id {
-        if input.released_this_frame(Button::A) {
-            result = context.hot == id;
+    let result = button_press(context, input, speaker, id);
 
-            context.set_not_active();
-        }
-        context.set_next_hot(id);
+    if context.active == id && input.gamepad.contains(Button::A) {
+        framebuffer.row_pressed(spec.x, spec.y, spec.w);
     } else if context.hot == id {
-        if input.pressed_this_frame(Button::A) {
-            context.set_active(id);
-            speaker.request_sfx(SFX::ButtonPress);
-        }
-        context.set_next_hot(id);
+        framebuffer.row_hot(spec.x, spec.y, spec.w);
+    } else {
+        framebuffer.row(spec.x, spec.y, spec.w);
     }
-
-    // TODO implement
-    // if context.active == id && input.gamepad.contains(Button::A) {
-    //     framebuffer.row_pressed(spec.x, spec.y, spec.w);
-    // } else if context.hot == id {
-    //     framebuffer.row_hot(spec.x, spec.y, spec.w);
-    // } else {
-    //     framebuffer.row(spec.x, spec.y, spec.w);
-    // }
 
     // TODO make an elipisis character and draw it instead of the last character of text.
     // Seems like the best way would be to center on the length + 1 and then draw the
@@ -213,7 +188,7 @@ pub fn do_pressable_row(
     let (x, y) = center_line_in_rect(text.len() as u8, ((spec.x, spec.y), (spec.w, 1)));
 
     //The row is meant to be only one ... row ... high. So don't bother reflowing.
-    framebuffer.print(text, x, y + TEXT_HEIGHT_OFFSET, WHITE_INDEX);
+    framebuffer.print(text, x, y + 3 * TEXT_HEIGHT_OFFSET, WHITE_INDEX);
 
-    return result;
+    result
 }

@@ -754,6 +754,35 @@ impl Framebuffer {
         self.spr(BOTTOM_RIGHT, before_right_corner, above_bottom_corner);
     }
 
+    fn three_slice(&mut self, left_edge: u8, x: u8, y: u8, w: u8) {
+        let LEFT: u8 = left_edge;
+        let MIDDLE: u8 = LEFT + 1;
+        let RIGHT: u8 = MIDDLE + 1;
+
+        let after_left_corner = x.saturating_add(SPRITE_SIZE);
+        let before_right_corner = x.saturating_add(w).saturating_sub(SPRITE_SIZE);
+
+        self.spr(LEFT, x, y);
+
+        for fill_x in (after_left_corner..before_right_corner).step_by(SPRITE_SIZE as _) {
+            self.spr(MIDDLE, fill_x, y);
+        }
+
+        self.spr(RIGHT, before_right_corner, y);
+    }
+
+    pub fn row(&mut self, x: u8, y: u8, w: u8) {
+        self.three_slice(ROW_LEFT_EDGE, x, y, w);
+    }
+
+    pub fn row_hot(&mut self, x: u8, y: u8, w: u8) {
+        self.three_slice(ROW_HOT_LEFT_EDGE, x, y, w);
+    }
+
+    pub fn row_pressed(&mut self, x: u8, y: u8, w: u8) {
+        self.three_slice(ROW_PRESSED_LEFT_EDGE, x, y, w);
+    }
+
     pub fn checkbox(&mut self, x: u8, y: u8, checked: bool) {
         self.spr(
             if checked {

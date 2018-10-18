@@ -4,9 +4,9 @@ extern crate png;
 use std::fs::File;
 use std::io::prelude::*;
 
-//const IMAGE_FILENAME: &'static str = "../../assets/gfx.png";
+const IMAGE_FILENAME: &'static str = "../../assets/gfx.png";
 // for relatively rare font extension
-const IMAGE_FILENAME: &'static str = "../../assets/font.png";
+//const IMAGE_FILENAME: &'static str = "../../assets/font.png";
 // for testing
 // const IMAGE_FILENAME: &'static str = "assets/pallete.png";
 
