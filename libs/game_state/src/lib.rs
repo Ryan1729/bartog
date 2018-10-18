@@ -8,3 +8,6 @@ extern crate rand;
 
 mod game_state;
 pub use game_state::*;
+
+mod card_flags;
+pub use card_flags::*;

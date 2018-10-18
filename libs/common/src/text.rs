@@ -67,6 +67,40 @@ pub fn bytes_reflow(bytes: &[u8], width: usize) -> Vec<u8> {
     output
 }
 
+pub fn bytes_reflow_in_place(bytes: Vec<u8>, width: usize) {
+    unimplemented!();
+    // if width == 0 {
+    //     return Vec::new();
+    // }
+    // test_log!(width);
+    // let mut output = Vec::with_capacity(bytes.len() + bytes.len() / width);
+    //
+    // let mut x = 0;
+    // for word in bytes_split_whitespace(bytes) {
+    //     test_log!(word);
+    //     x += word.len();
+    //     test_log!(x);
+    //     test_log!(output);
+    //     if x == width && x == word.len() {
+    //         output.extend(word.iter());
+    //         continue;
+    //     }
+    //
+    //     if x >= width {
+    //         output.push(b'\n');
+    //
+    //         x = word.len();
+    //     } else if x > word.len() {
+    //         output.push(b' ');
+    //
+    //         x += 1;
+    //     }
+    //     output.extend(word.iter());
+    // }
+    //
+    // output
+}
+
 pub fn slice_until_first_0<'a>(bytes: &'a [u8]) -> &'a [u8] {
     let mut usable_len = 255;
 
@@ -221,5 +255,38 @@ mod tests {
     #[test]
     fn bytes_reflow_does_not_add_a_space_if_there_is_no_room() {
         assert_eq!(bytes_reflow(b"12345 67890", 5), b"12345\n67890");
+    }
+
+    #[test]
+    fn test_bytes_reflow_in_place_matches_bytes_reflow() {
+        quickcheck(
+            bytes_reflow_in_place_matches_bytes_reflow
+                as fn((Vec<u8>, usize)) -> TestResult,
+        )
+    }
+    fn bytes_reflow_in_place_matches_bytes_reflow(
+        (s, width): (Vec<u8>, usize),
+    ) -> TestResult {
+        if width == 0 {
+            return TestResult::discard();
+        }
+        let bytes = &s;
+        //TODO should these be uncommented? if so, let's pull the other use out into a fn
+        // if bytes.iter().cloned().all(is_byte_whitespace) {
+        //     return TestResult::discard();
+        // }
+        //
+        // if bytes_split_whitespace(bytes).any(|w| w.len() > width) {
+        //     return TestResult::discard();
+        // }
+
+        let copied = bytes_reflow(bytes, width);
+        bytes_reflow_in_place(&mut bytes, width);
+        let in_place = bytes;
+        for (c, i) in copied.into_iter().zip(in_place.into_iter()) {
+            assert_eq!(c, i);
+        }
+
+        TestResult::from_bool(true)
     }
 }

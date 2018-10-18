@@ -392,7 +392,10 @@ fn in_game_changes_choose_changes(
 
     const SECOND_SCROLL_START_ID: UIId = FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT;
 
+    const TEXT_SCROLL_START_ID: UIId = SECOND_SCROLL_START_ID + SCROLL_ROW_COUNT;
+
     let min_scroll_y = max_heading_y + SPRITE_SIZE * 2;
+    let max_scroll_y = min_scroll_y + SPRITE_SIZE * SCROLL_ROW_COUNT;
 
     let w = SPRITE_SIZE * 6;
 
@@ -401,26 +404,30 @@ fn in_game_changes_choose_changes(
     for id in left_id_range.clone() {
         let i = id - FIRST_SCROLL_START_ID;
 
+        let x = SPRITE_SIZE;
+        let y = min_scroll_y + SPRITE_SIZE * i;
+
         if let Some(change) =
             in_game::Change::all_values().get((choice_state.left_scroll + i) as usize)
         {
             let text = change.to_string();
 
-            let spec = RowSpec {
-                x: SPRITE_SIZE,
-                y: min_scroll_y + SPRITE_SIZE * i,
-                w,
-                id,
-                text,
-            };
+            if id == context.hot {
+                choice_state.description.clear();
+                for &b in text.as_bytes() {
+                    choice_state.description.push(b);
+                }
+            }
+
+            let spec = RowSpec { x, y, w, id, text };
 
             if do_pressable_row(framebuffer, context, input, speaker, &spec) {
                 llog!(logger, change.to_string());
             }
         } else {
             let spec = RowSpec {
-                x: SPRITE_SIZE + w + SPRITE_SIZE,
-                y: min_scroll_y + SPRITE_SIZE * i,
+                x,
+                y,
                 w,
                 id,
                 text: "".to_owned(),
@@ -435,33 +442,42 @@ fn in_game_changes_choose_changes(
     for id in right_id_range.clone() {
         let i = id - SECOND_SCROLL_START_ID;
 
+        let x = SPRITE_SIZE + w + SPRITE_SIZE;
+        let y = min_scroll_y + SPRITE_SIZE * i;
+
         if let Some(change) = choice_state
             .changes
             .get((choice_state.right_scroll + i) as usize)
         {
             let text = change.to_string();
 
-            let spec = RowSpec {
-                x: SPRITE_SIZE + w + SPRITE_SIZE,
-                y: min_scroll_y + SPRITE_SIZE * i,
-                w,
-                id,
-                text,
-            };
+            let spec = RowSpec { x, y, w, id, text };
 
             if do_pressable_row(framebuffer, context, input, speaker, &spec) {
                 llog!(logger, change.to_string());
             }
         } else {
             let spec = RowSpec {
-                x: SPRITE_SIZE + w + SPRITE_SIZE,
-                y: min_scroll_y + SPRITE_SIZE * i,
+                x,
+                y,
                 w,
                 id,
                 text: "".to_owned(),
             };
 
             do_pressable_row(framebuffer, context, input, speaker, &spec);
+        }
+    }
+
+    let mut y = max_scroll_y;
+    let max_y = SCREEN_HEIGHT as u8 - SPRITE_SIZE;
+    //TODO allow scrolling?
+    for line in bytes_lines(&choice_state.description) {
+        framebuffer.print_line(line, SPRITE_SIZE, y, WHITE_INDEX);
+
+        y += FONT_SIZE;
+        if y >= max_y {
+            break;
         }
     }
 
@@ -477,9 +493,16 @@ fn in_game_changes_choose_changes(
             context.set_next_hot(FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT - 1);
         }
     } else {
-        if input.pressed_this_frame(Button::Right) || input.pressed_this_frame(Button::Left) {
+        if input.pressed_this_frame(Button::Right) {
             let next = if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
                 context.hot + SCROLL_ROW_COUNT
+            } else {
+                TEXT_SCROLL_START_ID
+            };
+            context.set_next_hot(next);
+        } else if input.pressed_this_frame(Button::Left) {
+            let next = if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
+                1
             } else {
                 context.hot - SCROLL_ROW_COUNT
             };
