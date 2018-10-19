@@ -67,38 +67,113 @@ pub fn bytes_reflow(bytes: &[u8], width: usize) -> Vec<u8> {
     output
 }
 
-pub fn bytes_reflow_in_place(bytes: Vec<u8>, width: usize) {
-    unimplemented!();
-    // if width == 0 {
-    //     return Vec::new();
-    // }
-    // test_log!(width);
-    // let mut output = Vec::with_capacity(bytes.len() + bytes.len() / width);
-    //
-    // let mut x = 0;
-    // for word in bytes_split_whitespace(bytes) {
-    //     test_log!(word);
-    //     x += word.len();
-    //     test_log!(x);
-    //     test_log!(output);
-    //     if x == width && x == word.len() {
-    //         output.extend(word.iter());
-    //         continue;
-    //     }
-    //
-    //     if x >= width {
-    //         output.push(b'\n');
-    //
-    //         x = word.len();
-    //     } else if x > word.len() {
-    //         output.push(b' ');
-    //
-    //         x += 1;
-    //     }
-    //     output.extend(word.iter());
-    // }
-    //
-    // output
+//TODO benchmark to figure out if this will actually be worth it.
+pub fn bytes_reflow_in_place(bytes: &mut Vec<u8>, width: usize) {
+    if width == 0 {
+        return;
+    }
+    test_log!(width);
+    let used_len = bytes.len();
+    let extra = bytes.len() / width;
+    bytes.reserve(extra);
+
+    //fill with 0's to capacity
+    for _ in 0..extra {
+        bytes.push(0);
+    }
+
+    //shift used parts down to the end
+    {
+        let mut index = bytes.len();
+        for i in (0..used_len).rev() {
+            bytes[index] = bytes[i];
+            index += 1;
+        }
+    }
+
+    struct SplitBytesWhitespace<'a> {
+        i: usize,
+        end: usize,
+        bytes: &'a mut [u8],
+    }
+
+    impl<'a> Iterator for SplitBytesWhitespace<'a> {
+        type Item = (usize, usize);
+
+        fn next(&mut self) -> Option<(usize, usize)> {
+            let out_i = self.i;
+
+            let bytes = &self.bytes;
+            let end = self.end;
+
+            for index in self.i..end {
+                if is_byte_whitespace(bytes[index]) {
+                    let len = index - out_i;
+
+                    for i in index + 1..end {
+                        self.i = i;
+                        if !is_byte_whitespace(bytes[i]) {
+                            break;
+                        }
+                    }
+                    if self.i == end - 1 {
+                        self.i = end;
+                    }
+
+                    return Some((out_i, len));
+                }
+            }
+
+            None
+        }
+    }
+
+    let mut index = 0;
+    {
+        //full length - used_len == (used_len + extra) - used_len == extra
+        let shifted_start = extra;
+        let iter = SplitBytesWhitespace {
+            i: shifted_start,
+            end: bytes.len(),
+            bytes,
+        };
+
+        //scan from the start of the (moved) used portion and copy it back to the front
+        //inserting newlines where appropiate.
+        let mut x = 0;
+        for (w_i, len) in iter {
+            test_log!(&bytes[w_i..w_i + len]);
+            x += len;
+            test_log!(x);
+
+            if x == width && x == len {
+                for i in w_i..w_i + len {
+                    bytes[index] = bytes[i];
+                    index += 1;
+                }
+                continue;
+            }
+
+            if x >= width {
+                bytes[index] = b'\n';
+                index += 1;
+
+                x = len;
+            } else if x > len {
+                bytes[index] = b' ';
+                index += 1;
+
+                x += 1;
+            }
+
+            for i in w_i..w_i + len {
+                bytes[index] = bytes[i];
+                index += 1;
+            }
+        }
+    }
+
+    bytes.truncate(index);
 }
 
 pub fn slice_until_first_0<'a>(bytes: &'a [u8]) -> &'a [u8] {
@@ -259,18 +334,13 @@ mod tests {
 
     #[test]
     fn test_bytes_reflow_in_place_matches_bytes_reflow() {
-        quickcheck(
-            bytes_reflow_in_place_matches_bytes_reflow
-                as fn((Vec<u8>, usize)) -> TestResult,
-        )
+        quickcheck(bytes_reflow_in_place_matches_bytes_reflow as fn((Vec<u8>, usize)) -> TestResult)
     }
-    fn bytes_reflow_in_place_matches_bytes_reflow(
-        (s, width): (Vec<u8>, usize),
-    ) -> TestResult {
+    fn bytes_reflow_in_place_matches_bytes_reflow((mut s, width): (Vec<u8>, usize)) -> TestResult {
         if width == 0 {
             return TestResult::discard();
         }
-        let bytes = &s;
+        let bytes = &mut s;
         //TODO should these be uncommented? if so, let's pull the other use out into a fn
         // if bytes.iter().cloned().all(is_byte_whitespace) {
         //     return TestResult::discard();
@@ -281,9 +351,9 @@ mod tests {
         // }
 
         let copied = bytes_reflow(bytes, width);
-        bytes_reflow_in_place(&mut bytes, width);
+        bytes_reflow_in_place(bytes, width);
         let in_place = bytes;
-        for (c, i) in copied.into_iter().zip(in_place.into_iter()) {
+        for (c, i) in copied.iter().zip(in_place) {
             assert_eq!(c, i);
         }
 
