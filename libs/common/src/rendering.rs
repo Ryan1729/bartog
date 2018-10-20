@@ -1003,7 +1003,7 @@ mod tests {
             return TestResult::discard();
         }
 
-        let (x, y) = center_rect_in_rect((w, h), rect);
+        let (x, _y) = center_rect_in_rect((w, h), rect);
         let left_side = x.saturating_sub(rect.x);
         let right_side = (rect.x + rect.w).saturating_sub(x + w);
 
@@ -1030,7 +1030,7 @@ mod tests {
         }
         let w = length * FONT_ADVANCE;
 
-        let (x, y) = center_line_in_rect(length, rect);
+        let (x, _y) = center_line_in_rect(length, rect);
         let left_side = (x as usize).saturating_sub(rect.x as usize);
         let right_side =
             (rect.x as usize + rect.w as usize).saturating_sub(x as usize + w as usize);
