@@ -1,7 +1,6 @@
 use inner_common::*;
 use platform_types::{Button, Input, Speaker, SFX};
 use rendering::{center_line_in_rect, Framebuffer};
-use std::cmp::min;
 
 pub type UIId = u8;
 
@@ -148,11 +147,39 @@ pub fn do_checkbox(
     result
 }
 
+//We can rename this if we ever need a variable length row.
+pub const ROW_WIDTH: u8 = SPRITE_SIZE * 6;
+pub const ROW_WIDTH_IN_CHARS: u8 = ROW_WIDTH / FONT_ADVANCE;
+
+pub type RowLabel = [u8; ROW_WIDTH_IN_CHARS as usize];
+
+pub trait RowDisplay {
+    fn row_label(&self) -> RowLabel;
+}
+
+pub trait ByteStrRowDisplay<'a> {
+    fn byte_str_row_label(&self) -> &'a [u8];
+}
+
+impl<'a, T> RowDisplay for T
+where
+    T: ByteStrRowDisplay<'a>,
+{
+    fn row_label(&self) -> RowLabel {
+        use std::cmp::min;
+        let mut output: RowLabel = Default::default();
+        let label = self.byte_str_row_label();
+        for i in 0..min(ROW_WIDTH_IN_CHARS as usize, label.len()) {
+            output[i] = label[i];
+        }
+        output
+    }
+}
+
 pub struct RowSpec {
-    pub text: String,
+    pub label: RowLabel,
     pub x: u8,
     pub y: u8,
-    pub w: u8,
     pub id: UIId,
 }
 
@@ -164,31 +191,23 @@ pub fn do_pressable_row(
     context: &mut UIContext,
     input: Input,
     speaker: &mut Speaker,
-    spec: &RowSpec,
+    &RowSpec { label, x, y, id }: &RowSpec,
 ) -> bool {
-    let id = spec.id;
-
     let result = button_press(context, input, speaker, id);
 
     if context.active == id && input.gamepad.contains(Button::A) {
-        framebuffer.row_pressed(spec.x, spec.y, spec.w);
+        framebuffer.row_pressed(x, y, ROW_WIDTH);
     } else if context.hot == id {
-        framebuffer.row_hot(spec.x, spec.y, spec.w);
+        framebuffer.row_hot(x, y, ROW_WIDTH);
     } else {
-        framebuffer.row(spec.x, spec.y, spec.w);
+        framebuffer.row(x, y, ROW_WIDTH);
     }
 
-    // TODO make an elipisis character and draw it instead of the last character of text.
-    // Seems like the best way would be to center on the length + 1 and then draw the
-    // first `len` characters then figure out where the elipisis should go and draw that.
-    let full_text = spec.text.as_bytes();
+    {
+        let (x, y) = center_line_in_rect(label.len() as u8, ((x, y), (ROW_WIDTH, 1)));
 
-    let text = &full_text[..min(full_text.len(), (spec.w / FONT_ADVANCE) as usize)];
-
-    let (x, y) = center_line_in_rect(text.len() as u8, ((spec.x, spec.y), (spec.w, 1)));
-
-    //The row is meant to be only one ... row ... high. So don't bother reflowing.
-    framebuffer.print(text, x, y + 3 * TEXT_HEIGHT_OFFSET, WHITE_INDEX);
+        framebuffer.print(&label, x, y + 3 * TEXT_HEIGHT_OFFSET, WHITE_INDEX);
+    }
 
     result
 }

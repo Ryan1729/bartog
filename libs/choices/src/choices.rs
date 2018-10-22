@@ -367,17 +367,13 @@ fn in_game_changes_choose_changes(
 
     let max_heading_y = print_choice_header(framebuffer, text);
 
-    let w = SPRITE_SIZE * 5;
-    let h = SPRITE_SIZE * 3;
-
     {
-        let y = SPRITE_SIZE * 12;
-
+        let w = SPRITE_SIZE * 5;
         let spec = ButtonSpec {
             x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
-            y,
+            y: SPRITE_SIZE * 12,
             w,
-            h,
+            h: SPRITE_SIZE * 3,
             id: 1,
             text: "done".to_owned(),
         };
@@ -397,29 +393,29 @@ fn in_game_changes_choose_changes(
     let min_scroll_y = max_heading_y + SPRITE_SIZE * 2;
     let max_scroll_y = min_scroll_y + SPRITE_SIZE * SCROLL_ROW_COUNT;
 
-    let w = SPRITE_SIZE * 6;
-
     let left_id_range = FIRST_SCROLL_START_ID..FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT;
 
     for id in left_id_range.clone() {
         let i = id - FIRST_SCROLL_START_ID;
 
         let x = SPRITE_SIZE;
-        let y = min_scroll_y + SPRITE_SIZE * i;
+        let y = min_scroll_y + SPRITE_SIZE * i - SPRITE_SIZE / 2;
 
         if let Some(change) =
             in_game::Change::all_values().get((choice_state.left_scroll + i) as usize)
         {
-            let text = change.to_string();
+            let label = change.row_label();
 
             if id == context.hot {
+                let description = change.to_string();
                 choice_state.description.clear();
-                for &b in text.as_bytes() {
+                for &b in description.as_bytes() {
                     choice_state.description.push(b);
                 }
+                bytes_reflow_in_place(&mut choice_state.description, 18);
             }
 
-            let spec = RowSpec { x, y, w, id, text };
+            let spec = RowSpec { x, y, id, label };
 
             if do_pressable_row(framebuffer, context, input, speaker, &spec) {
                 llog!(logger, change.to_string());
@@ -428,9 +424,8 @@ fn in_game_changes_choose_changes(
             let spec = RowSpec {
                 x,
                 y,
-                w,
                 id,
-                text: "".to_owned(),
+                label: Default::default(),
             };
 
             do_pressable_row(framebuffer, context, input, speaker, &spec);
@@ -439,33 +434,34 @@ fn in_game_changes_choose_changes(
 
     let right_id_range = SECOND_SCROLL_START_ID..SECOND_SCROLL_START_ID + SCROLL_ROW_COUNT;
 
-    for id in right_id_range.clone() {
-        let i = id - SECOND_SCROLL_START_ID;
+    {
+        let x = SPRITE_SIZE + ROW_WIDTH + SPRITE_SIZE;
+        for id in right_id_range.clone() {
+            let i = id - SECOND_SCROLL_START_ID;
 
-        let x = SPRITE_SIZE + w + SPRITE_SIZE;
-        let y = min_scroll_y + SPRITE_SIZE * i;
+            let y = min_scroll_y + SPRITE_SIZE * i - SPRITE_SIZE / 2;
 
-        if let Some(change) = choice_state
-            .changes
-            .get((choice_state.right_scroll + i) as usize)
-        {
-            let text = change.to_string();
+            if let Some(change) = choice_state
+                .changes
+                .get((choice_state.right_scroll + i) as usize)
+            {
+                let label = change.row_label();
 
-            let spec = RowSpec { x, y, w, id, text };
+                let spec = RowSpec { x, y, id, label };
 
-            if do_pressable_row(framebuffer, context, input, speaker, &spec) {
-                llog!(logger, change.to_string());
+                if do_pressable_row(framebuffer, context, input, speaker, &spec) {
+                    llog!(logger, change.to_string());
+                }
+            } else {
+                let spec = RowSpec {
+                    x,
+                    y,
+                    id,
+                    label: Default::default(),
+                };
+
+                do_pressable_row(framebuffer, context, input, speaker, &spec);
             }
-        } else {
-            let spec = RowSpec {
-                x,
-                y,
-                w,
-                id,
-                text: "".to_owned(),
-            };
-
-            do_pressable_row(framebuffer, context, input, speaker, &spec);
         }
     }
 

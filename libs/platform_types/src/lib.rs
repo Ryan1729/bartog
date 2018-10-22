@@ -71,6 +71,7 @@ impl Speaker {
 }
 
 // These values are deliberately picked to be the same as the ones in NES' input registers.
+#[allow(non_snake_case)]
 pub mod Button {
     bitflags! {
         #[derive(Default)]

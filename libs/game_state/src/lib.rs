@@ -1,10 +1,12 @@
 #![allow(non_snake_case)]
-#[macro_use]
 extern crate common;
 
 extern crate platform_types;
 
 extern crate rand;
+
+#[cfg(test)]
+extern crate quickcheck;
 
 mod game_state;
 pub use game_state::*;

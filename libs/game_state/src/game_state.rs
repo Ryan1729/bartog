@@ -1,6 +1,7 @@
 use card_flags::{CardFlags, RANK_FLAGS, SUIT_FLAGS};
 use common::{
-    bytes_lines, bytes_reflow, slice_until_first_0, CardAnimation, UIContext, DECK_SIZE, *,
+    bytes_lines, bytes_reflow, slice_until_first_0, ByteStrRowDisplay, CardAnimation, RowDisplay,
+    UIContext, DECK_SIZE, *,
 };
 use platform_types::{log, Logger};
 
@@ -566,9 +567,19 @@ pub fn player_name(playerId: PlayerID) -> String {
     if playerId < MAX_PLAYER_ID {
         format!("cpu {}", playerId)
     } else if playerId == MAX_PLAYER_ID {
-        "you".to_string()
+        "you".to_owned()
     } else {
-        "???".to_string()
+        "???".to_owned()
+    }
+}
+
+pub fn player_1_char_name(playerId: PlayerID) -> String {
+    if playerId < MAX_PLAYER_ID {
+        format!("{}", playerId)
+    } else if playerId == MAX_PLAYER_ID {
+        "u".to_owned()
+    } else {
+        "?".to_owned()
     }
 }
 
@@ -607,6 +618,14 @@ pub mod in_game {
         }
     }
 
+    impl RowDisplay for Change {
+        fn row_label(&self) -> RowLabel {
+            match *self {
+                Change::CurrentPlayer(v) => v.row_label(),
+            }
+        }
+    }
+
     impl Distribution<Change> for Standard {
         #[inline]
         fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Change {
@@ -628,18 +647,25 @@ pub mod in_game {
 
     impl fmt::Display for CurrentPlayer {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(
-                f,
-                "change whose turn it is based on the current player as follows: "
-            )?;
             for &id in all_player_ids().into_iter() {
-                write!(f, "{} -> {}", player_name(id), player_name(self.apply(id)))?;
+                write!(
+                    f,
+                    "{}->{}",
+                    player_1_char_name(id),
+                    player_1_char_name(self.apply(id))
+                )?;
 
                 if id != MAX_PLAYER_ID {
                     write!(f, ", ")?;
                 }
             }
             Ok(())
+        }
+    }
+
+    impl<'a> ByteStrRowDisplay<'a> for CurrentPlayer {
+        fn byte_str_row_label(&self) -> &'a [u8] {
+            b"turn -> turn: "
         }
     }
 
