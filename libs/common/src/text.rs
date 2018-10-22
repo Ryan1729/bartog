@@ -67,7 +67,6 @@ pub fn bytes_reflow(bytes: &[u8], width: usize) -> Vec<u8> {
     output
 }
 
-//TODO benchmark to figure out if this will actually be worth it.
 pub fn bytes_reflow_in_place(bytes: &mut Vec<u8>, width: usize) {
     if width == 0 || bytes.len() == 0 {
         test_log!("width == 0 || bytes.len() == 0");
