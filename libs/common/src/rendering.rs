@@ -783,6 +783,10 @@ impl Framebuffer {
         self.three_slice(ROW_PRESSED_LEFT_EDGE, x, y, w);
     }
 
+    pub fn row_marker(&mut self, x: u8, y: u8, w: u8) {
+        self.three_slice(ROW_MARKER_LEFT_EDGE, x, y, w);
+    }
+
     pub fn checkbox(&mut self, x: u8, y: u8, checked: bool) {
         self.spr(
             if checked {

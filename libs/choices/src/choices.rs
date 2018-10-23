@@ -395,62 +395,32 @@ fn in_game_changes_choose_changes(
 
     let left_id_range = FIRST_SCROLL_START_ID..FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT;
 
-    for id in left_id_range.clone() {
-        let i = id - FIRST_SCROLL_START_ID;
-
-        let x = SPRITE_SIZE;
-        let y = min_scroll_y + SPRITE_SIZE * i - SPRITE_SIZE / 2;
-
-        if let Some(change) =
-            in_game::Change::all_values().get((choice_state.left_scroll + i) as usize)
-        {
-            let label = change.row_label();
-
-            if id == context.hot {
-                let description = change.to_string();
-                choice_state.description.clear();
-                for &b in description.as_bytes() {
-                    choice_state.description.push(b);
-                }
-                bytes_reflow_in_place(&mut choice_state.description, 18);
-            }
-
-            let spec = RowSpec { x, y, id, label };
-
-            if do_pressable_row(framebuffer, context, input, speaker, &spec) {
-                llog!(logger, change.to_string());
-            }
-        } else {
-            let spec = RowSpec {
-                x,
-                y,
-                id,
-                label: Default::default(),
-            };
-
-            do_pressable_row(framebuffer, context, input, speaker, &spec);
-        }
-    }
-
-    let right_id_range = SECOND_SCROLL_START_ID..SECOND_SCROLL_START_ID + SCROLL_ROW_COUNT;
-
     {
-        let x = SPRITE_SIZE + ROW_WIDTH + SPRITE_SIZE;
-        for id in right_id_range.clone() {
-            let i = id - SECOND_SCROLL_START_ID;
+        let all_changes = in_game::Change::all_values();
+        let mut addition = None;
+        for id in left_id_range.clone() {
+            let i = id - FIRST_SCROLL_START_ID;
 
+            let x = SPRITE_SIZE;
             let y = min_scroll_y + SPRITE_SIZE * i - SPRITE_SIZE / 2;
 
-            if let Some(change) = choice_state
-                .changes
-                .get((choice_state.right_scroll + i) as usize)
-            {
+            let index = choice_state.left_scroll as usize + i as usize;
+            if let Some(change) = all_changes.get(index) {
                 let label = change.row_label();
+
+                if id == context.hot {
+                    let description = change.to_string();
+                    choice_state.description.clear();
+                    for &b in description.as_bytes() {
+                        choice_state.description.push(b);
+                    }
+                    bytes_reflow_in_place(&mut choice_state.description, 18);
+                }
 
                 let spec = RowSpec { x, y, id, label };
 
                 if do_pressable_row(framebuffer, context, input, speaker, &spec) {
-                    llog!(logger, change.to_string());
+                    addition = Some(index);
                 }
             } else {
                 let spec = RowSpec {
@@ -462,6 +432,57 @@ fn in_game_changes_choose_changes(
 
                 do_pressable_row(framebuffer, context, input, speaker, &spec);
             }
+        }
+
+        if let Some(index) = addition {
+            if let Some(change) = all_changes.get(index) {
+                let i = min(
+                    choice_state.right_scroll as usize + choice_state.marker_y as usize,
+                    choice_state.changes.len(),
+                );
+                llog!(logger, i);
+                choice_state.changes.insert(i, change.clone());
+            }
+        }
+    }
+
+    let right_id_range = SECOND_SCROLL_START_ID..SECOND_SCROLL_START_ID + SCROLL_ROW_COUNT;
+
+    {
+        let mut removal = None;
+        let x = SPRITE_SIZE + ROW_WIDTH + SPRITE_SIZE;
+        for id in right_id_range.clone() {
+            let i = id - SECOND_SCROLL_START_ID;
+
+            let y = min_scroll_y + SPRITE_SIZE * i - SPRITE_SIZE / 2;
+
+            let index = choice_state.right_scroll as usize + i as usize;
+            if let Some(change) = choice_state.changes.get(index) {
+                let label = change.row_label();
+
+                let spec = RowSpec { x, y, id, label };
+
+                if do_pressable_row(framebuffer, context, input, speaker, &spec) {
+                    removal = Some(index);
+                }
+            } else {
+                let spec = RowSpec {
+                    x,
+                    y,
+                    id,
+                    label: Default::default(),
+                };
+
+                do_pressable_row(framebuffer, context, input, speaker, &spec);
+            }
+        }
+
+        let y = min_scroll_y + SPRITE_SIZE * choice_state.marker_y - SPRITE_SIZE;
+
+        framebuffer.row_marker(x, y, ROW_WIDTH);
+
+        if let Some(index) = removal {
+            choice_state.changes.remove(index);
         }
     }
 
@@ -506,32 +527,43 @@ fn in_game_changes_choose_changes(
         } else {
             if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
                 let left_scroll = &mut choice_state.left_scroll;
-                *left_scroll = handle_scroll_movement(
-                    context,
-                    input,
-                    left_id_range,
-                    ModOffset {
-                        modulus: nu8!(DECK_SIZE),
-                        current: *left_scroll,
-                        ..d!()
-                    },
-                );
+                *left_scroll =
+                    handle_scroll_movement_256(context, input, &left_id_range, *left_scroll);
             } else {
+                if input.pressed_this_frame(Button::Up) {
+                    choice_state.marker_y = choice_state.marker_y.saturating_sub(1);
+                } else if input.pressed_this_frame(Button::Down) {
+                    choice_state.marker_y = min(choice_state.marker_y + 1, SCROLL_ROW_COUNT);
+                }
+
                 let right_scroll = &mut choice_state.right_scroll;
-                *right_scroll = handle_scroll_movement(
-                    context,
-                    input,
-                    right_id_range,
-                    ModOffset {
-                        modulus: nu8!(DECK_SIZE),
-                        current: *right_scroll,
-                        ..d!()
-                    },
-                );
+                *right_scroll =
+                    handle_scroll_movement_256(context, input, &right_id_range, *right_scroll);
             }
         }
     }
+
+    if outside_range(&right_id_range, context.hot)
+        && inside_range(&right_id_range, context.next_hot)
+    {
+        choice_state.marker_y = context.next_hot - right_id_range.start + 1;
+    }
+
     llog!(logger, context);
+}
+
+fn inside_range<Idx>(range: &Range<Idx>, x: Idx) -> bool
+where
+    Idx: PartialOrd<Idx>,
+{
+    x >= range.start && x < range.end
+}
+
+fn outside_range<Idx>(range: &Range<Idx>, x: Idx) -> bool
+where
+    Idx: PartialOrd<Idx>,
+{
+    x < range.start || x >= range.end
 }
 
 pub fn choose_can_play_graph(state: &mut GameState) -> Vec<can_play::Change> {
@@ -562,7 +594,7 @@ fn do_card_sub_choice<C: CardSubChoice>(
     input: Input,
     speaker: &mut Speaker,
     choice_state: &mut C,
-    logger: Logger,
+    _logger: Logger,
 ) -> CancelRuleChoice {
     let mut output = CancelRuleChoice::No;
 
@@ -751,6 +783,39 @@ fn handle_scroll_movement(
                 current: unoffset,
                 ..mod_offset
             });
+        }
+    }
+
+    context.set_next_hot(unoffset + start);
+
+    output
+}
+
+//TODO Regeneralize this
+fn handle_scroll_movement_256(
+    context: &mut UIContext,
+    input: Input,
+    &Range { start, end }: &Range<UIId>,
+    current: u8,
+) -> u8 {
+    let mut output = current;
+
+    let column_count = 1;
+
+    let mut unoffset = context.hot - start;
+    let visible_rows = end - start;
+
+    if input.pressed_this_frame(Button::Up) {
+        if unoffset < column_count {
+            output = output.wrapping_sub(1);
+        } else {
+            unoffset -= column_count;
+        }
+    } else if input.pressed_this_frame(Button::Down) {
+        if unoffset / column_count >= visible_rows - 1 {
+            output = output.wrapping_add(1);
+        } else {
+            unoffset = unoffset.wrapping_add(1);
         }
     }
 

@@ -711,6 +711,7 @@ pub mod in_game {
         pub card: Card,
         pub left_scroll: u8,
         pub right_scroll: u8,
+        pub marker_y: u8,
         pub description: Vec<u8>,
     }
 
