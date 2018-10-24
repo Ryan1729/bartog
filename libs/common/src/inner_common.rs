@@ -211,12 +211,97 @@ pub fn get_short_card_string_and_colour(card: Card) -> (String, u8) {
     (output, colour)
 }
 
+/*
+//TODO replace this overcomplicatd stuff with
+pub struct ModeOffset<T> {
+    pub modulus: NonZeroU8,
+    pub current: T,
+    pub offset: u8,
+}
+
+fn next_mod<T>(m: ModeOffset<T>) -> T
+where T: From<u8> + Add<T> + Rem<T> {
+    //...
+}
+
+fn prev_mod<T>(m: ModeOffset<T>) -> T
+where T: From<u8> + Add<T> + Sub<T> + Rem<T> {
+    //...
+}
+
+*/
 use std::num::NonZeroU8;
 
-pub struct ModOffset {
-    pub modulus: NonZeroU8,
-    pub current: u8,
-    pub offset: u8,
+pub trait ModOffset<T> {
+    #[inline]
+    fn next_mod(self) -> T;
+
+    #[inline]
+    fn previous_mod(self) -> T;
+
+    #[inline]
+    fn modulus(&self) -> NonZeroU8;
+    #[inline]
+    fn current(&self) -> T;
+    #[inline]
+    fn offset(&self) -> u8;
+}
+
+#[macro_export]
+macro_rules! impl_mod_offset {
+    (<$number:ty> for $name:ident) => {
+        pub struct $name {
+            pub modulus: NonZeroU8,
+            pub current: $number,
+            pub offset: u8,
+        }
+
+        impl Default for $name {
+            fn default() -> Self {
+                $name {
+                    modulus: nu8!(1),
+                    current: 0,
+                    offset: 1,
+                }
+            }
+        }
+
+        impl ModOffset<$number> for $name {
+            #[inline]
+            fn next_mod(self) -> $number {
+                let $name {
+                    modulus,
+                    current,
+                    offset,
+                } = self;
+                (current + offset as $number) % modulus.get() as $number
+            }
+
+            #[inline]
+            fn previous_mod(self) -> $number {
+                let $name {
+                    modulus,
+                    current,
+                    offset,
+                } = self;
+                (current + (modulus.get() as $number - offset as $number))
+                    % modulus.get() as $number
+            }
+
+            #[inline]
+            fn modulus(&self) -> NonZeroU8 {
+                self.modulus
+            }
+            #[inline]
+            fn current(&self) -> $number {
+                self.current
+            }
+            #[inline]
+            fn offset(&self) -> u8 {
+                self.offset
+            }
+        }
+    };
 }
 
 #[macro_export]
@@ -227,54 +312,25 @@ macro_rules! nu8 {
     }};
 }
 
-impl Default for ModOffset {
-    fn default() -> Self {
-        ModOffset {
-            modulus: nu8!(1),
-            current: 0,
-            offset: 1,
-        }
-    }
-}
-
-#[inline]
-pub fn next_mod(
-    ModOffset {
-        modulus,
-        current,
-        offset,
-    }: ModOffset,
-) -> u8 {
-    (current + offset) % modulus.get()
-}
-
-#[inline]
-pub fn previous_mod(
-    ModOffset {
-        modulus,
-        current,
-        offset,
-    }: ModOffset,
-) -> u8 {
-    (current + (modulus.get() - offset)) % modulus.get()
-}
+impl_mod_offset!{<u8> for ModOffsetU8}
+impl_mod_offset!{<u16> for ModOffsetU16}
 
 #[inline]
 pub fn nth_next_card(current: Card, offset: u8) -> Card {
-    next_mod(ModOffset {
+    ModOffsetU8 {
         modulus: nu8!(DECK_SIZE),
         current,
         offset,
-    })
+    }.next_mod()
 }
 
 #[inline]
 pub fn nth_previous_card(current: Card, offset: u8) -> Card {
-    previous_mod(ModOffset {
+    ModOffsetU8 {
         modulus: nu8!(DECK_SIZE),
         current,
         offset,
-    })
+    }.previous_mod()
 }
 
 pub type Suit = u8;
