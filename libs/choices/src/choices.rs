@@ -737,7 +737,7 @@ fn do_card_sub_choice<C: CardSubChoice>(
                 context,
                 input,
                 id_range,
-                &ModOffsetU8 {
+                ModOffset {
                     modulus: nu8!(DECK_SIZE),
                     current: *card,
                     ..d!()
@@ -749,42 +749,53 @@ fn do_card_sub_choice<C: CardSubChoice>(
     output
 }
 
-use std::ops::Range;
+use std::num::NonZeroU8;
+use std::ops::{Add, Range, Rem, Sub};
 
 fn handle_scroll_movement<T>(
     context: &mut UIContext,
     input: Input,
     Range { start, end }: Range<UIId>,
-    mod_offset: &ModOffset<T>,
-) -> T {
-    let mut output = mod_offset.current();
+    mod_offset: ModOffset<T>,
+) -> T
+where
+    T: From<u8> + Add<T, Output = T> + Sub<T, Output = T> + Rem<T, Output = T> + Copy,
+{
+    let mut output = mod_offset.current;
 
-    let column_count = mod_offset.offset();
+    let column_count = mod_offset.offset;
 
     let mut unoffset = context.hot - start;
-    let visible_rows = end - start;
+    let visible_rows: NonZeroU8 = {
+        let visible_rows = end - start;
+        if visible_rows == 0 {
+            return output;
+        } else {
+            nu8!(visible_rows)
+        }
+    };
 
-    //TODO add this to ModOffset trait definition and/or macro
-    // invariant_assert_eq!(
-    //     (mod_offset.modulus / column_count) * column_count,
-    //     mod_offset.modulus,
-    // );
+    invariant_assert_eq!(
+        (mod_offset.modulus / column_count) * column_count,
+        mod_offset.modulus,
+    );
 
     if input.pressed_this_frame(Button::Up) {
         if unoffset < column_count {
-            output = mod_offset.previous_mod();
+            output = previous_mod(mod_offset);
         } else {
             unoffset -= column_count;
         }
     } else if input.pressed_this_frame(Button::Down) {
-        if unoffset / column_count >= visible_rows - 1 {
-            output = mod_offset.next_mod();
+        if unoffset / column_count >= visible_rows.get() - 1 {
+            output = next_mod(mod_offset);
         } else {
-            unoffset = ModOffsetU8 {
-                modulus: mod_offset.modulus(),
+            let unoffset_mod: ModOffset<UIId> = ModOffset {
+                modulus: visible_rows,
                 current: unoffset,
-                offset: mod_offset.offset(),
-            }.next_mod();
+                offset: mod_offset.offset,
+            };
+            unoffset = next_mod(unoffset_mod);
         }
     }
 
@@ -995,7 +1006,7 @@ fn do_scrolling_card_checkbox(
                 context,
                 input,
                 first_checkbox_id..first_checkbox_id + SCROLL_ROWS_COUNT,
-                &ModOffsetU8 {
+                ModOffset {
                     modulus: nu8!(DECK_SIZE),
                     current: *scroll_card,
                     offset: SCROLL_COLS_COUNT,
