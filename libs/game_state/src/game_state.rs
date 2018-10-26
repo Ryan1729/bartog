@@ -707,11 +707,11 @@ pub mod in_game {
     #[derive(Clone, Debug, Default)]
     pub struct ChoiceState {
         pub changes: Vec<Change>,
-        pub layer: Layer,
-        pub card: Card,
-        pub left_scroll: u8,
-        pub right_scroll: u8,
+        pub left_scroll: usize,
+        pub right_scroll: usize,
         pub marker_y: u8,
+        pub card: Card,
+        pub layer: Layer,
         pub description: Vec<u8>,
     }
 

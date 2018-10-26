@@ -395,8 +395,10 @@ fn in_game_changes_choose_changes(
 
     let left_id_range = FIRST_SCROLL_START_ID..FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT;
 
+    let all_changes = in_game::Change::all_values();
+    //The + 1 is to leave a gap to mark the loop point, and keep the modulus non-zero.
+    let left_modulus = all_changes.len() + 1;
     {
-        let all_changes = in_game::Change::all_values();
         let mut addition = None;
         for id in left_id_range.clone() {
             let i = id - FIRST_SCROLL_START_ID;
@@ -404,7 +406,7 @@ fn in_game_changes_choose_changes(
             let x = SPRITE_SIZE;
             let y = min_scroll_y + SPRITE_SIZE * i - SPRITE_SIZE / 2;
 
-            let index = choice_state.left_scroll as usize + i as usize;
+            let index = (choice_state.left_scroll as usize + i as usize) % left_modulus as usize;
             if let Some(change) = all_changes.get(index) {
                 let label = change.row_label();
 
@@ -447,7 +449,8 @@ fn in_game_changes_choose_changes(
     }
 
     let right_id_range = SECOND_SCROLL_START_ID..SECOND_SCROLL_START_ID + SCROLL_ROW_COUNT;
-
+    //leave a gap to mark the loop point, and keep the modulus non-zero.
+    let right_modulus = choice_state.changes.len() + 1;
     {
         let mut removal = None;
         let x = SPRITE_SIZE + ROW_WIDTH + SPRITE_SIZE;
@@ -456,7 +459,7 @@ fn in_game_changes_choose_changes(
 
             let y = min_scroll_y + SPRITE_SIZE * i - SPRITE_SIZE / 2;
 
-            let index = choice_state.right_scroll as usize + i as usize;
+            let index = (choice_state.right_scroll as usize + i as usize) % right_modulus;
             if let Some(change) = choice_state.changes.get(index) {
                 let label = change.row_label();
 
@@ -527,8 +530,16 @@ fn in_game_changes_choose_changes(
         } else {
             if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
                 let left_scroll = &mut choice_state.left_scroll;
-                *left_scroll =
-                    handle_scroll_movement_256(context, input, &left_id_range, *left_scroll);
+                *left_scroll = handle_scroll_movement(
+                    context,
+                    input,
+                    left_id_range.clone(),
+                    ModOffset {
+                        modulus: left_modulus,
+                        current: *left_scroll,
+                        ..d!()
+                    },
+                );
             } else {
                 if input.pressed_this_frame(Button::Up) {
                     choice_state.marker_y = choice_state.marker_y.saturating_sub(1);
@@ -537,8 +548,16 @@ fn in_game_changes_choose_changes(
                 }
 
                 let right_scroll = &mut choice_state.right_scroll;
-                *right_scroll =
-                    handle_scroll_movement_256(context, input, &right_id_range, *right_scroll);
+                *right_scroll = handle_scroll_movement(
+                    context,
+                    input,
+                    right_id_range.clone(),
+                    ModOffset {
+                        modulus: right_modulus,
+                        current: *right_scroll,
+                        ..d!()
+                    },
+                );
             }
         }
     }
@@ -738,7 +757,7 @@ fn do_card_sub_choice<C: CardSubChoice>(
                 input,
                 id_range,
                 ModOffset {
-                    modulus: nu8!(DECK_SIZE),
+                    modulus: DECK_SIZE,
                     current: *card,
                     ..d!()
                 },
@@ -749,7 +768,6 @@ fn do_card_sub_choice<C: CardSubChoice>(
     output
 }
 
-use std::num::NonZeroU8;
 use std::ops::{Add, Range, Rem, Sub};
 
 fn handle_scroll_movement<T>(
@@ -759,21 +777,18 @@ fn handle_scroll_movement<T>(
     mod_offset: ModOffset<T>,
 ) -> T
 where
-    T: From<u8> + Add<T, Output = T> + Sub<T, Output = T> + Rem<T, Output = T> + Copy,
+    T: From<u8> + Add<T, Output = T> + Sub<T, Output = T> + Rem<T, Output = T> + Ord + Copy,
 {
     let mut output = mod_offset.current;
 
     let column_count = mod_offset.offset;
 
     let mut unoffset = context.hot - start;
-    let visible_rows: NonZeroU8 = {
-        let visible_rows = end - start;
-        if visible_rows == 0 {
-            return output;
-        } else {
-            nu8!(visible_rows)
-        }
-    };
+    let visible_rows = end - start;
+    if visible_rows == 0 {
+        invariant_violation!("`visible_rows == 0`");
+        return output;
+    }
 
     invariant_assert_eq!(
         (mod_offset.modulus / column_count) * column_count,
@@ -787,7 +802,7 @@ where
             unoffset -= column_count;
         }
     } else if input.pressed_this_frame(Button::Down) {
-        if unoffset / column_count >= visible_rows.get() - 1 {
+        if unoffset / column_count >= visible_rows - 1 {
             output = next_mod(mod_offset);
         } else {
             let unoffset_mod: ModOffset<UIId> = ModOffset {
@@ -796,39 +811,6 @@ where
                 offset: mod_offset.offset,
             };
             unoffset = next_mod(unoffset_mod);
-        }
-    }
-
-    context.set_next_hot(unoffset + start);
-
-    output
-}
-
-//TODO Regeneralize this
-fn handle_scroll_movement_256(
-    context: &mut UIContext,
-    input: Input,
-    &Range { start, end }: &Range<UIId>,
-    current: u8,
-) -> u8 {
-    let mut output = current;
-
-    let column_count = 1;
-
-    let mut unoffset = context.hot - start;
-    let visible_rows = end - start;
-
-    if input.pressed_this_frame(Button::Up) {
-        if unoffset < column_count {
-            output = output.wrapping_sub(1);
-        } else {
-            unoffset -= column_count;
-        }
-    } else if input.pressed_this_frame(Button::Down) {
-        if unoffset / column_count >= visible_rows - 1 {
-            output = output.wrapping_add(1);
-        } else {
-            unoffset = unoffset.wrapping_add(1);
         }
     }
 
@@ -1007,7 +989,7 @@ fn do_scrolling_card_checkbox(
                 input,
                 first_checkbox_id..first_checkbox_id + SCROLL_ROWS_COUNT,
                 ModOffset {
-                    modulus: nu8!(DECK_SIZE),
+                    modulus: DECK_SIZE,
                     current: *scroll_card,
                     offset: SCROLL_COLS_COUNT,
                 },

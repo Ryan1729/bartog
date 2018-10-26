@@ -211,9 +211,8 @@ pub fn get_short_card_string_and_colour(card: Card) -> (String, u8) {
     (output, colour)
 }
 
-use std::num::NonZeroU8;
 pub struct ModOffset<T> {
-    pub modulus: NonZeroU8,
+    pub modulus: T,
     pub current: T,
     pub offset: u8,
 }
@@ -229,9 +228,14 @@ pub fn next_mod<T>(
     }: ModOffset<T>,
 ) -> T
 where
-    T: From<u8> + Add<T, Output = T> + Rem<T, Output = T>,
+    T: From<u8> + Add<T, Output = T> + Rem<T, Output = T> + PartialEq<T>,
 {
-    (current + offset.into()) % modulus.get().into()
+    if modulus == 0u8.into() {
+        invariant_violation!("`modulus == 0` in `next_mod`");
+        0u8.into()
+    } else {
+        (current + offset.into()) % modulus
+    }
 }
 
 #[inline]
@@ -243,9 +247,20 @@ pub fn previous_mod<T>(
     }: ModOffset<T>,
 ) -> T
 where
-    T: From<u8> + Add<T, Output = T> + Sub<T, Output = T> + Rem<T, Output = T>,
+    T: From<u8>
+        + Add<T, Output = T>
+        + Sub<T, Output = T>
+        + Rem<T, Output = T>
+        + PartialEq<T>
+        + PartialOrd
+        + Copy,
 {
-    (current + (T::from(modulus.get()) - offset.into())) % modulus.get().into()
+    if modulus == 0u8.into() || T::from(offset) > modulus {
+        invariant_violation!("`modulus == 0 || offset > modulus` in `previous_mod`");
+        0u8.into()
+    } else {
+        (current + (modulus - offset.into())) % modulus
+    }
 }
 
 #[macro_export]
@@ -262,9 +277,9 @@ where
 {
     fn default() -> Self {
         ModOffset {
-            modulus: nu8!(1),
+            modulus: 1u8.into(),
             current: 0u8.into(),
-            offset: 1,
+            offset: 1u8.into(),
         }
     }
 }
@@ -272,7 +287,7 @@ where
 #[inline]
 pub fn nth_next_card(current: Card, offset: u8) -> Card {
     next_mod(ModOffset {
-        modulus: nu8!(DECK_SIZE),
+        modulus: DECK_SIZE,
         current,
         offset,
     })
@@ -281,7 +296,7 @@ pub fn nth_next_card(current: Card, offset: u8) -> Card {
 #[inline]
 pub fn nth_previous_card(current: Card, offset: u8) -> Card {
     previous_mod(ModOffset {
-        modulus: nu8!(DECK_SIZE),
+        modulus: DECK_SIZE,
         current,
         offset,
     })
