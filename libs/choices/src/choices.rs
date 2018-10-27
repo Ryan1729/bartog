@@ -272,19 +272,32 @@ pub fn do_in_game_changes_choice(
     if let Choice::OfInGameChanges(ref mut choice_state) = state.choice {
         match choice_state.layer {
             in_game::Layer::Card => {
-                let mut card_sub_choice = in_game::ChoiceStateAndRules {
-                    choice_state,
-                    rules: &state.rules,
-                };
+                {
+                    let mut card_sub_choice = in_game::ChoiceStateAndRules {
+                        choice_state,
+                        rules: &state.rules,
+                    };
 
-                cancel = do_card_sub_choice(
-                    framebuffer,
-                    &mut state.context,
-                    input,
-                    speaker,
-                    &mut card_sub_choice,
-                    logger,
-                );
+                    cancel = do_card_sub_choice(
+                        framebuffer,
+                        &mut state.context,
+                        input,
+                        speaker,
+                        &mut card_sub_choice,
+                        logger,
+                    );
+                }
+
+                match choice_state.layer {
+                    in_game::Layer::Changes => {
+                        let card_changes = state.rules.when_played.get_changes(choice_state.card);
+                        choice_state.changes.clear();
+                        for change in card_changes.iter() {
+                            choice_state.changes.push(change.clone());
+                        }
+                    }
+                    in_game::Layer::Done | in_game::Layer::Card => {}
+                }
             }
             in_game::Layer::Changes => {
                 in_game_changes_choose_changes(
@@ -348,6 +361,15 @@ fn print_choice_header(framebuffer: &mut Framebuffer, text: &[u8]) -> u8 {
     max_heading_y
 }
 
+fn set_from_change(s: &mut Vec<u8>, change: &in_game::Change) {
+    let description = change.to_string();
+    s.clear();
+    for &b in description.as_bytes() {
+        s.push(b);
+    }
+    bytes_reflow_in_place(s, 18);
+}
+
 fn in_game_changes_choose_changes(
     framebuffer: &mut Framebuffer,
     context: &mut UIContext,
@@ -388,8 +410,6 @@ fn in_game_changes_choose_changes(
 
     const SECOND_SCROLL_START_ID: UIId = FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT;
 
-    const TEXT_SCROLL_START_ID: UIId = SECOND_SCROLL_START_ID + SCROLL_ROW_COUNT;
-
     let min_scroll_y = max_heading_y + SPRITE_SIZE * 2;
     let max_scroll_y = min_scroll_y + SPRITE_SIZE * SCROLL_ROW_COUNT;
 
@@ -411,12 +431,7 @@ fn in_game_changes_choose_changes(
                 let label = change.row_label();
 
                 if id == context.hot {
-                    let description = change.to_string();
-                    choice_state.description.clear();
-                    for &b in description.as_bytes() {
-                        choice_state.description.push(b);
-                    }
-                    bytes_reflow_in_place(&mut choice_state.description, 18);
+                    set_from_change(&mut choice_state.description, change);
                 }
 
                 let spec = RowSpec { x, y, id, label };
@@ -462,6 +477,10 @@ fn in_game_changes_choose_changes(
             let index = (choice_state.right_scroll as usize + i as usize) % right_modulus;
             if let Some(change) = choice_state.changes.get(index) {
                 let label = change.row_label();
+
+                if id == context.hot {
+                    set_from_change(&mut choice_state.description, change);
+                }
 
                 let spec = RowSpec { x, y, id, label };
 
@@ -517,7 +536,7 @@ fn in_game_changes_choose_changes(
             let next = if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
                 context.hot + SCROLL_ROW_COUNT
             } else {
-                TEXT_SCROLL_START_ID
+                1
             };
             context.set_next_hot(next);
         } else if input.pressed_this_frame(Button::Left) {
