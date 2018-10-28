@@ -145,7 +145,7 @@ pub fn apply_when_played_changes(
 
     let rules = &mut state.rules;
 
-    let card_changes = &mut rules.when_played.0[card as usize];
+    let card_changes = rules.when_played.get_changes_mut(card);
 
     let edits = get_edits(card_changes, &new_card_changes);
 

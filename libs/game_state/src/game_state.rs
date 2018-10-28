@@ -404,6 +404,15 @@ impl Default for CardChanges {
     }
 }
 
+impl CardChanges {
+    pub fn get_changes(&self, card: Card) -> &Vec<in_game::Change> {
+        &self.0[card as usize]
+    }
+    pub fn get_changes_mut(&mut self, card: Card) -> &mut Vec<in_game::Change> {
+        &mut self.0[card as usize]
+    }
+}
+
 impl Default for Rules {
     fn default() -> Self {
         Rules {
@@ -851,11 +860,7 @@ impl GameState {
             card_animations,
             winners,
             top_wild_declared_as: None,
-            choice: Choice::OfInGameChanges(in_game::ChoiceState {
-                //for testing
-                layer: in_game::Layer::Changes,
-                ..d!()
-            }), // Choice::NoChoice,
+            choice: Choice::NoChoice,
             rules,
             status,
             context: UIContext::new(),
