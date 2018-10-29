@@ -650,7 +650,42 @@ pub mod in_game {
 
     impl AllValues for CurrentPlayer {
         fn all_values() -> Vec<Self> {
-            u8::all_values().into_iter().map(CurrentPlayer).collect()
+            macro_rules! pack {
+                ($cpu_0:expr, $cpu_1:expr, $cpu_2:expr, $u:expr) => {
+                    CurrentPlayer($cpu_0 | ($cpu_1 << 2) | ($cpu_2 << 4) | ($u << 6))
+                };
+            }
+            //this is all the fair values, which is all we want to use.
+            #[cfg_attr(rustfmt, rustfmt_skip)]
+            vec![
+                pack!(0, 1, 2, 3),
+                pack!(0, 1, 3, 2),
+                pack!(0, 2, 3, 1),
+                pack!(0, 2, 1, 3),
+                pack!(0, 3, 1, 2),
+                pack!(0, 3, 2, 1),
+
+                pack!(1, 0, 2, 3),
+                pack!(1, 0, 3, 2),
+                pack!(1, 2, 3, 0),
+                pack!(1, 2, 0, 3),
+                pack!(1, 3, 0, 2),
+                pack!(1, 3, 2, 0),
+
+                pack!(2, 1, 0, 3),
+                pack!(2, 1, 3, 0),
+                pack!(2, 0, 3, 1),
+                pack!(2, 0, 1, 3),
+                pack!(2, 3, 1, 0),
+                pack!(2, 3, 0, 1),
+
+                pack!(3, 1, 2, 0),
+                pack!(3, 1, 0, 2),
+                pack!(3, 2, 0, 1),
+                pack!(3, 2, 1, 0),
+                pack!(3, 0, 1, 2),
+                pack!(3, 0, 2, 1),
+            ]
         }
     }
 
@@ -681,7 +716,9 @@ pub mod in_game {
     impl Distribution<CurrentPlayer> for Standard {
         #[inline]
         fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> CurrentPlayer {
-            CurrentPlayer(rng.gen())
+            let all = CurrentPlayer::all_values();
+            let i = rng.gen_range(0, all.len());
+            all[i]
         }
     }
 

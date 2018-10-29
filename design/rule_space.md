@@ -193,3 +193,118 @@ Assuming that the amount of “do nothing” actions is acceptable, the question
 Given we want to be able to represent every possible transformation to the relevant game state, the method described in the previous paragraph is the most compact way to do that. It might worth examining whether we actually want to represent every possible transformation to the state. The vast majority of all possible transformations to the state will almost certainly never be used, and if they were used they would be incomprehensible to human players. The best examples of this are functions which change nearly every, but not every part of the state to a different value. Even though the function always acts the same, if there is more than one card that triggers a similar change, human players will be unable to meaningfully decide between playing one or the other without an excessive amount of effort, which must be repeated for each game state the player has the opportunity to play the cards in. I predict that most players would play the cads without doing the work to know what they do in their entirety. They may quickly check for any obviously bad effects, which has a good likely-hood of backfiring but the more likely scenario is players either playing them immediately to get rid of them, or avoiding playing them until something random/unknown seems better than the alternative. Is this player experience something we want to work to achieve? While in some ways it is simpler to just represent everything, we could make certain things arguably simpler by either disallowing more than a certain amount of state changes or by only allowing state changes to one section of the state at a time. These restrictions could be wisely chosen such that humans would not run into them without specifically trying to test the limits of the system and/or in such a way that the restriction seems reasonable. The original rules include provisions against single rules trying to do too much through how much the players consider to be "one rule". a similar matter of taste may exist around how much the game state can change due to a single card being played. The thing is, because this is a matter of taste/opinon it' hard to define where the line should be drawn ahead of time. The major thing we would save by restricting the representation, assuming we put enough work into restricting the cpu rule generation, is some memory. Since changing the representation to make it wider would be annoying, it may not be worth risking that by restricting the changes without knowing either the perf impact or the edges of the change-space that humans will not want to use.
 
 Something that even representing every possible function from state to state doesn't capture is allowing players to choose things. These are essentially either a function with the player as an extra parameter implemented by asking the player, or a function of the player id, and the game state, implemented by the AI code. The most straightforward way to represent this seems to be to use the state-state function representation mentioned above for those kinds of functions and having a separate representation for the choices part. This way we can add the choice part after the non-choice part is implemented.
+
+____
+
+We're now faced with the question of which current player's turn to next player's turn functions we want to keep in the game. The reason we don't want to keep them all is that they can be unfair, making them the obvious optimum rule to add. This makes the decision of which rule to choose much less interesting. So let's remove some of them. 
+
+The question is, which functions are fair? 
+
+Let `u` be the player setting the rule, and `0`, `1`, and `2` be the other players.
+
+```
+u -> 0
+0 -> 1
+1 -> 2
+2 -> u
+```
+This represents the regular turn order, that is it sets the next player's turn to the same it would have been otherwise.
+It is more or less the identity function. It is fair.
+
+```
+u -> u
+0 -> 0
+1 -> 1
+2 -> 2
+```
+This sets the next turn to the player who played the card. This may not look fair at first, but there is no particular reason to think that the player making the rule will draw the card. So it is in fact fair.
+
+```
+u -> u
+0 -> u
+1 -> u
+2 -> u
+```
+This is a classic example of an unfair function. This is in fact the most unfair function of this type.
+
+```
+u -> 0
+0 -> 1
+1 -> u
+2 -> u
+```
+This is also unfair but to a smaller degree. It would still warp the game if allowed.
+
+```
+u -> 2
+0 -> 2
+1 -> 2
+2 -> 2
+```
+This is also unfair, since while it also gives `2` more turns, it essentially makes the game be between `u` and `2`, if the function happens often enough.
+
+```
+u -> 0
+0 -> 0
+1 -> 0
+2 -> 0
+```
+Is this unfair? It only benefits players other than the player who is making the rule so it would not warp the game if it were allowed. But if we don't consider this not fair then it implies that fairness depends on which player you are. If we accept this definition of fair then we would need to allow players to make certain rules that other players cannot make. That seems unfair in a different way. It also implies a lot of additional complexity.
+
+One reasonable definition of fairness is that there is exactly one input player that results in each possible output player. This implies that a function is fair iff it a permutation of the identity function. This implies that there are exactly 4! = 24 fair functions of this type. That is less than 10% of all possible functions, but if we want to we can add more later. And previous entries in this file suggest that we will not be starved for possible rules.
+
+Another question arises: Are all compositions of fair functions fair? Put another way, are the fair functions closed under composition?
+
+Here's what we called the identity function again.
+```
+u -> 0
+0 -> 1
+1 -> 2
+2 -> u
+```
+Oddly for something that is called the identity function, it is not the result of composing it with itself.
+
+```
+u -> u
+0 -> 0
+1 -> 1
+2 -> 2
+```
+This function *is* its own self-composition. We can call this the compositional identity, and the other one the turn-order identity.
+
+If we successively compose the turn-order identity with itself we do get back to it eventually, and without resulting in any unfair functions.
+
+```
+u -> 0  0 -> 1  1 -> 2  2 -> u  u -> 0
+0 -> 1  1 -> 2  2 -> u  u -> 0  0 -> 1
+1 -> 2  2 -> u  u -> 0  0 -> 1  1 -> 2
+2 -> u  u -> 0  0 -> 1  1 -> 2  2 -> u
+```
+In the above diagram we can look at each column immediately after a `->` to see the effect of the composed function up to that point.
+
+```
+u -> 1
+0 -> 2
+1 -> u
+2 -> 0
+```
+This function sets the turn to the player across the table from the player who played it.
+
+```
+u -> 1  1 -> u
+0 -> 2  2 -> 0
+1 -> u  u -> 1
+2 -> 0  0 -> 2
+```
+Noticing that we get the final column of `u 0 1 2` we can stop the diagram since we know that the next composition would result in the original function.
+
+Let's consider another fair function that is not a vertical rotation of the compositional identity. (Note that the turn-order identity is a rotation of it.) Lets also pick one that is not a vertical rotation of the last function we looked at.
+```
+u -> 2  2 -> u
+0 -> 1  1 -> 0
+1 -> 0  0 -> 1
+2 -> u  u -> 2
+```
+
+Since we have not found any counter examples yet, let's try to prove that they are in fact closed under composition, by contradiction. In order for a composition of a function to not result in a fair function it must change the total number of at least one of the players in the output. But the function being composed, (the one called last) if called with every possible argument, will be passed one of each player, and since it is fair it will return exactly one back. So they are closed under composition!
+
