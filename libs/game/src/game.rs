@@ -244,7 +244,7 @@ fn can_play(state: &GameState, &card: &Card) -> bool {
     }
 }
 
-//Since this uses rng, callling this in response to repeatable user input allows rng manipulation.
+//Since this uses rng, calling this in response to repeatable user input allows rng manipulation.
 fn cpu_would_play(state: &mut GameState, playerId: PlayerID) -> Option<u8> {
     let playable: Vec<(usize, Card)> = {
         let hand = state.get_hand(playerId);
@@ -268,7 +268,9 @@ fn move_to_discard(state: &mut GameState, card: Card) {
     for change in state.rules.when_played.0[card as usize].iter() {
         match change {
             in_game::Change::CurrentPlayer(func) => {
-                state.current_player = func.apply(state.current_player)
+                state.current_player =
+                //apply Previous to undo the autonatic incrementation that will happen later
+                    in_game::RelativePlayer::Previous.apply(func.apply(state.current_player));
             }
         }
     }

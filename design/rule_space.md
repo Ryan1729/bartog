@@ -308,3 +308,104 @@ u -> 2  2 -> u
 
 Since we have not found any counter examples yet, let's try to prove that they are in fact closed under composition, by contradiction. In order for a composition of a function to not result in a fair function it must change the total number of at least one of the players in the output. But the function being composed, (the one called last) if called with every possible argument, will be passed one of each player, and since it is fair it will return exactly one back. So they are closed under composition!
 
+____
+
+For expressing rules we will need the concept of a "relative subset of players". That is a specification of a subset of the players which changes relative to a particular player. This allows us to express that all players other than the player that played a card should draw a card, for example. We would also be able to talk about the player across from the player that played it, the next player in the regular turn order and so forth.
+
+We just finished making turn changing functions that worked as described above. But those are referring to specific players, and that meant we had to filter out most of the possibilities for being unfair. Can we use a representation of turn to turn functions that uses relative player subsets, which wouldn't have that problem? Would it capture all the functions that we have allowed in the previous scheme? Would it allow fair ones we have not been able to represent otherwise? Since we need relative player subsets anyway, it seems worth investigating.
+
+We need some notation to talk about relative player subsets. For these turn functions we will only need 1 element subsets, which we can identify with single elements without loss of information. If we have a notation for single elements we can also use standard set notation for sets.
+
+Given exactly four players arranged in a circle there are exactly four relative players we can talk about: "same" that player themselves, "next" the player who comes next in the turn order, "previous" the player who comes prior to this player in the term order, and "across" the player that is across the table or alternately two players ahead or two players back. We can abbreviate these to "s", "n", "p", and "a" respectively. And we can spell "snap" by placing the letters in order, "pans" by placing them in reverse order, and even if we start such that we end with "same" then we still spell "naps" and "span". on a more prectical note, we can use this abbreviated notation with u, 0, 1, and 2 without notational overlap.
+
+There are at least two different ways we can talk about functions from specific players to relative players. We can always talk about players relative to "u" or we can talk about players relative to the fixed player the function is being applied to.
+
+```
+u -> n
+0 -> a
+1 -> p
+2 -> s
+```
+This is the turn-order identity in always relative to "u" form.
+
+```
+u -> s
+0 -> n
+1 -> a
+2 -> p
+```
+This is the compositional identity in the same form.
+
+
+
+```
+u -> n
+0 -> n
+1 -> n
+2 -> n
+```
+This is the turn-order identity in the argument-relative form.
+
+```
+u -> s
+0 -> s
+1 -> s
+2 -> s
+```
+This is the compositional identity in the same form.
+
+
+The always relative to "u" form is easily translatable to and from the fixed player form, if desired, by simply replacing characters as follows: `u -> s`, `0 -> n`, `1 -> a`, and `2 -> p`. Note that this is essentially the same as applying the relative to "u" compositional identity. The argument relative form takes a bit more effort. However, at least for the simple examples examined so far, argument-relative form seems to be easier to read, and to more closely resemble how such rules are usually specified in English.
+
+As an exercise, lets convert a randomly chosen fair fixed player function to argument relative form.
+
+```
+u -> 2
+0 -> 1
+1 -> u
+2 -> 0
+```
+Here's such a function.
+
+Looking at the rows one by one we can note the result and the argument and fill in the relative player that would produce the desired result. So if `u` should map to `2` then we should fill in `p`. Similarly if `0` should map to `1` we should fill in `n`.
+
+```
+u -> p
+0 -> n
+1 -> a
+2 -> a
+```
+Here's the completed conversion.
+In this form, the function no longer seems as fair. `u` gets to go two turns after they play the card, `0` gets no such advantage, and while when `2` plays it `u` gets skipped, when `1` plays it `u` gets to go immediately.
+
+If fairness is defined as not caring which player in particular played the card, then it appears that really the only fair functions are those that are all the same relative player for every fixed player, which we can, again, identify with the relative players themselves with no loss of information.
+
+Oh...
+
+```
+u -> s
+0 -> s
+1 -> s
+2 -> s  ->  s
+```
+
+```
+u -> n
+0 -> n
+1 -> n
+2 -> n  ->  n
+```
+
+```
+u -> a
+0 -> a
+1 -> a
+2 -> a  ->  a
+```
+
+```
+u -> p
+0 -> p
+1 -> p
+2 -> p  ->  p
+```

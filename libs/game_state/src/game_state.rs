@@ -598,7 +598,7 @@ pub mod in_game {
 
     #[derive(Copy, Clone, PartialEq, Eq)]
     pub enum Change {
-        CurrentPlayer(CurrentPlayer),
+        CurrentPlayer(RelativePlayer),
         //CardLocation(CardLocation),
         //TopWild(TopWild),
     }
@@ -606,7 +606,7 @@ pub mod in_game {
     impl AllValues for Change {
         //TODO write a procedural macro or something to make mainatining this easier.
         fn all_values() -> Vec<Self> {
-            CurrentPlayer::all_values()
+            RelativePlayer::all_values()
                 .into_iter()
                 .map(Change::CurrentPlayer)
                 .collect()
@@ -646,51 +646,50 @@ pub mod in_game {
 
     //This relies on MAX_PLAYER_ID being 3, and will require structural changes if it changes!
     #[derive(Copy, Clone, PartialEq, Eq)]
-    pub struct CurrentPlayer(u8);
+    pub enum RelativePlayer {
+        Same,
+        Next,
+        Across,
+        Previous,
+    }
 
-    impl AllValues for CurrentPlayer {
+    impl AllValues for RelativePlayer {
         fn all_values() -> Vec<Self> {
-            macro_rules! pack {
-                ($cpu_0:expr, $cpu_1:expr, $cpu_2:expr, $u:expr) => {
-                    CurrentPlayer($cpu_0 | ($cpu_1 << 2) | ($cpu_2 << 4) | ($u << 6))
-                };
-            }
-            //this is all the fair values, which is all we want to use.
-            #[cfg_attr(rustfmt, rustfmt_skip)]
             vec![
-                pack!(0, 1, 2, 3),
-                pack!(0, 1, 3, 2),
-                pack!(0, 2, 3, 1),
-                pack!(0, 2, 1, 3),
-                pack!(0, 3, 1, 2),
-                pack!(0, 3, 2, 1),
-
-                pack!(1, 0, 2, 3),
-                pack!(1, 0, 3, 2),
-                pack!(1, 2, 3, 0),
-                pack!(1, 2, 0, 3),
-                pack!(1, 3, 0, 2),
-                pack!(1, 3, 2, 0),
-
-                pack!(2, 1, 0, 3),
-                pack!(2, 1, 3, 0),
-                pack!(2, 0, 3, 1),
-                pack!(2, 0, 1, 3),
-                pack!(2, 3, 1, 0),
-                pack!(2, 3, 0, 1),
-
-                pack!(3, 1, 2, 0),
-                pack!(3, 1, 0, 2),
-                pack!(3, 2, 0, 1),
-                pack!(3, 2, 1, 0),
-                pack!(3, 0, 1, 2),
-                pack!(3, 0, 2, 1),
+                RelativePlayer::Same,
+                RelativePlayer::Next,
+                RelativePlayer::Across,
+                RelativePlayer::Previous,
             ]
         }
     }
 
-    impl fmt::Display for CurrentPlayer {
+    impl RelativePlayer {
+        pub fn apply(&self, playerId: PlayerID) -> PlayerID {
+            match *self {
+                RelativePlayer::Same => playerId,
+                RelativePlayer::Next => (playerId + 1) % (MAX_PLAYER_ID + 1),
+                RelativePlayer::Across => (playerId + 2) % (MAX_PLAYER_ID + 1),
+                RelativePlayer::Previous => (playerId + 3) % (MAX_PLAYER_ID + 1),
+            }
+        }
+    }
+
+    impl fmt::Debug for RelativePlayer {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                RelativePlayer::Same => write!(f, "my turn again"),
+                RelativePlayer::Next => write!(f, "next after me"),
+                RelativePlayer::Across => write!(f, "across from me"),
+                RelativePlayer::Previous => write!(f, "previous to me"),
+            }
+        }
+    }
+
+    impl fmt::Display for RelativePlayer {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "{:?}\n", self)?;
+
             for &id in all_player_ids().into_iter() {
                 write!(
                     f,
@@ -707,33 +706,18 @@ pub mod in_game {
         }
     }
 
-    impl<'a> ByteStrRowDisplay<'a> for CurrentPlayer {
+    impl<'a> ByteStrRowDisplay<'a> for RelativePlayer {
         fn byte_str_row_label(&self) -> &'a [u8] {
             b"turn -> turn: "
         }
     }
 
-    impl Distribution<CurrentPlayer> for Standard {
+    impl Distribution<RelativePlayer> for Standard {
         #[inline]
-        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> CurrentPlayer {
-            let all = CurrentPlayer::all_values();
+        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> RelativePlayer {
+            let all = RelativePlayer::all_values();
             let i = rng.gen_range(0, all.len());
             all[i]
-        }
-    }
-
-    impl CurrentPlayer {
-        pub fn apply(&self, playerId: PlayerID) -> PlayerID {
-            match playerId {
-                0 => self.0 & 0b11,
-                1 => (self.0 & 0b1100) >> 2,
-                2 => (self.0 & 0b11_0000) >> 4,
-                MAX_PLAYER_ID => (self.0 & 0b1100_0000) >> 6,
-                _ => {
-                    // The player is least likely to be annoyed with extra turns for them.
-                    MAX_PLAYER_ID
-                }
-            }
         }
     }
 

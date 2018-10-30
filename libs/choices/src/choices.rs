@@ -821,7 +821,7 @@ where
             unoffset -= column_count;
         }
     } else if input.pressed_this_frame(Button::Down) {
-        if unoffset / column_count >= visible_rows - 1 {
+        if unoffset / column_count >= (visible_rows / column_count) - 1 {
             output = next_mod(mod_offset);
         } else {
             let unoffset_mod: ModOffset<UIId> = ModOffset {
@@ -1006,7 +1006,7 @@ fn do_scrolling_card_checkbox(
             *scroll_card = handle_scroll_movement(
                 context,
                 input,
-                first_checkbox_id..first_checkbox_id + SCROLL_ROWS_COUNT,
+                first_checkbox_id..first_checkbox_id + (SCROLL_ROWS_COUNT * SCROLL_COLS_COUNT),
                 ModOffset {
                     modulus: DECK_SIZE,
                     current: *scroll_card,
