@@ -132,3 +132,6 @@ pub use hand::*;
 
 mod traits;
 pub use traits::*;
+
+mod english;
+pub use english::*;

@@ -3,7 +3,10 @@ use choices::{
     choose_wild_flags, do_choices,
 };
 use common::*;
-use game_state::{in_game, player_name, GameState, LogHeading, Status};
+use game_state::{
+    in_game::{self, player_name, ApplyToState},
+    EventLog, GameState, LogHeading, Rules, Status,
+};
 use platform_types::{Button, Input, Speaker, State, StateParams, SFX};
 use rand::Rng;
 use rule_changes::{
@@ -211,7 +214,7 @@ fn draw_event_log(framebuffer: &mut Framebuffer, state: &GameState) {
     }
 }
 
-fn move_cursor(state: &mut GameState, input: Input, speaker: &mut Speaker) -> bool {
+fn move_cursor(state: &mut in_game::State, input: Input, speaker: &mut Speaker) -> bool {
     if input.pressed_this_frame(Button::Right) {
         if state.hand_index < state.hand.len().saturating_sub(1) {
             state.hand_index = state.hand_index.saturating_add(1);
@@ -227,17 +230,14 @@ fn move_cursor(state: &mut GameState, input: Input, speaker: &mut Speaker) -> bo
     }
 }
 
-fn can_play(state: &GameState, &card: &Card) -> bool {
+fn can_play(state: &in_game::State, rules: &Rules, &card: &Card) -> bool {
     if let Some(&top_of_discard) = state.discard.last() {
         // TODO should a card that is wild allow a non-wild card of the same rank
         // to be played on it?
-        state.is_wild(card) || if state.is_wild(top_of_discard) {
+        rules.is_wild(card) || if rules.is_wild(top_of_discard) {
             state.top_wild_declared_as == Some(get_suit(card))
         } else {
-            state
-                .rules
-                .can_play_graph
-                .is_playable_on(card, top_of_discard)
+            rules.can_play_graph.is_playable_on(card, top_of_discard)
         }
     } else {
         true
@@ -245,39 +245,38 @@ fn can_play(state: &GameState, &card: &Card) -> bool {
 }
 
 //Since this uses rng, calling this in response to repeatable user input allows rng manipulation.
-fn cpu_would_play(state: &mut GameState, playerId: PlayerID) -> Option<u8> {
+fn cpu_would_play<R: Rng>(
+    state: &mut in_game::State,
+    rng: &mut R,
+    rules: &Rules,
+    playerId: PlayerID,
+) -> Option<u8> {
     let playable: Vec<(usize, Card)> = {
         let hand = state.get_hand(playerId);
         hand.iter()
             .cloned()
             .enumerate()
-            .filter(|(_, card)| can_play(state, card))
+            .filter(|(_, card)| can_play(state, rules, card))
             .collect()
     };
 
-    state.rng.choose(&playable).map(|&(i, _)| i as u8)
+    rng.choose(&playable).map(|&(i, _)| i as u8)
 }
 
 fn move_to_discard(state: &mut GameState, card: Card) {
-    if !state.is_wild(card) {
-        state.top_wild_declared_as = None;
+    if !state.rules.is_wild(card) {
+        state.in_game.top_wild_declared_as = None;
     }
 
-    state.discard.push(card);
+    state.in_game.discard.push(card);
 
     for change in state.rules.when_played.0[card as usize].iter() {
-        match change {
-            in_game::Change::CurrentPlayer(func) => {
-                state.current_player =
-                //apply Previous to undo the autonatic incrementation that will happen later
-                    in_game::RelativePlayer::Previous.apply(func.apply(state.current_player));
-            }
-        }
+        change.apply_to_state(&mut state.in_game)
     }
 }
 
 fn log_wild_selection(state: &mut GameState, player: PlayerID) {
-    if let Some(suit) = state.top_wild_declared_as {
+    if let Some(suit) = state.in_game.top_wild_declared_as {
         let player_name = player_name(player);
         let suit_str = get_suit_str(suit);
         let event_str = &[
@@ -295,10 +294,10 @@ fn advance_card_animations(state: &mut GameState) {
     // I should really be able to use `Vec::retain` here,
     // but that passes a `&T` insteead of a `&mut T`.
 
-    let mut i = state.card_animations.len() - 1;
+    let mut i = state.in_game.card_animations.len() - 1;
     loop {
         let (is_complete, last_pos) = {
-            let animation = &mut state.card_animations[i];
+            let animation = &mut state.in_game.card_animations[i];
 
             let last_pos = (animation.card.x, animation.card.y);
 
@@ -308,7 +307,7 @@ fn advance_card_animations(state: &mut GameState) {
         };
 
         if is_complete {
-            let mut animation = state.card_animations.remove(i);
+            let mut animation = state.in_game.card_animations.remove(i);
 
             let card = animation.card.card;
 
@@ -317,28 +316,28 @@ fn advance_card_animations(state: &mut GameState) {
                     move_to_discard(state, card);
                 }
                 Action::SelectWild(playerId) => {
-                    if is_cpu_player(&state, playerId) {
-                        state.top_wild_declared_as = {
-                            let hand = state.get_hand(playerId);
+                    if is_cpu_player(&state.in_game, playerId) {
+                        state.in_game.top_wild_declared_as = {
+                            let hand = state.in_game.get_hand(playerId);
                             hand.most_common_suit()
                         };
                         log_wild_selection(state, playerId);
                         move_to_discard(state, card);
                     } else {
                         if let Some(suit) = choose_suit(state) {
-                            state.top_wild_declared_as = Some(suit);
+                            state.in_game.top_wild_declared_as = Some(suit);
                             log_wild_selection(state, playerId);
                             move_to_discard(state, card);
                         } else {
                             //wait until they choose
                             animation.card.x = last_pos.0;
                             animation.card.y = last_pos.1;
-                            state.card_animations.push(animation);
+                            state.in_game.card_animations.push(animation);
                         }
                     }
                 }
                 Action::MoveToHand(playerId) => {
-                    state.get_hand_mut(playerId).push(card);
+                    state.in_game.get_hand_mut(playerId).push(card);
                 }
             }
         }
@@ -351,9 +350,11 @@ fn advance_card_animations(state: &mut GameState) {
 }
 
 fn get_discard_animation(
-    state: &mut GameState,
+    state: &mut in_game::State,
     player: PlayerID,
     card_index: u8,
+    event_log: &mut EventLog,
+    rules: &Rules,
 ) -> Option<CardAnimation> {
     state
         .remove_positioned_card(player, card_index)
@@ -376,9 +377,9 @@ fn get_discard_animation(
             ]
                 .concat();
 
-            state.event_log.push(event_str);
+            event_log.push(event_str);
 
-            if state.is_wild(card.card) {
+            if rules.is_wild(card.card) {
                 CardAnimation::new(card, DISCARD_X, DISCARD_Y, Action::SelectWild(player))
             } else {
                 CardAnimation::new(card, DISCARD_X, DISCARD_Y, Action::MoveToDiscard)
@@ -386,7 +387,12 @@ fn get_discard_animation(
         })
 }
 
-fn get_draw_animation(state: &mut GameState, player: PlayerID) -> Option<CardAnimation> {
+fn get_draw_animation<R: Rng>(
+    state: &mut in_game::State,
+    player: PlayerID,
+    event_log: &mut EventLog,
+    rng: &mut R,
+) -> Option<CardAnimation> {
     let (spread, len) = {
         let hand = state.get_hand(player);
 
@@ -399,7 +405,7 @@ fn get_draw_animation(state: &mut GameState, player: PlayerID) -> Option<CardAni
             let top_card = state.discard.draw()?;
 
             state.deck.fill(state.discard.drain());
-            state.deck.shuffle(&mut state.rng);
+            state.deck.shuffle(rng);
 
             state.discard.push(top_card);
 
@@ -413,7 +419,7 @@ fn get_draw_animation(state: &mut GameState, player: PlayerID) -> Option<CardAni
 
     let event_str = &[player_name.as_bytes(), b" drew a card."].concat();
 
-    state.event_log.push(event_str);
+    event_log.push(event_str);
 
     Some(CardAnimation::new(
         PositionedCard {
@@ -434,19 +440,24 @@ fn push_if<T>(vec: &mut Vec<T>, op: Option<T>) {
     }
 }
 
-fn is_cpu_player(state: &GameState, playerId: PlayerID) -> bool {
+fn is_cpu_player(state: &in_game::State, playerId: PlayerID) -> bool {
     (playerId as usize) < state.cpu_hands.len()
 }
 
-fn take_turn(state: &mut GameState, input: Input, speaker: &mut Speaker) {
+fn take_turn(game_state: &mut GameState, input: Input, speaker: &mut Speaker) {
+    let state = &mut game_state.in_game;
+    let rules = &game_state.rules;
+    let event_log = &mut game_state.event_log;
+    let rng = &mut game_state.rng;
+
     let player = state.current_player;
     match player {
         p if is_cpu_player(&state, p) => {
-            if let Some(index) = cpu_would_play(state, p) {
-                let animation = get_discard_animation(state, player, index);
+            if let Some(index) = cpu_would_play(state, rng, rules, p) {
+                let animation = get_discard_animation(state, player, index, event_log, rules);
                 push_if(&mut state.card_animations, animation);
             } else {
-                let animation = get_draw_animation(state, player);
+                let animation = get_draw_animation(state, player, event_log, rng);
                 push_if(&mut state.card_animations, animation);
             }
 
@@ -462,12 +473,12 @@ fn take_turn(state: &mut GameState, input: Input, speaker: &mut Speaker) {
                     state
                         .hand
                         .get(index)
-                        .map(|card| can_play(&state, card))
+                        .map(|card| can_play(&state, rules, card))
                         .unwrap_or(false)
                 };
 
                 if can_play_it {
-                    let animation = get_discard_animation(state, player, index);
+                    let animation = get_discard_animation(state, player, index, event_log, rules);
 
                     push_if(&mut state.card_animations, animation);
 
@@ -476,7 +487,7 @@ fn take_turn(state: &mut GameState, input: Input, speaker: &mut Speaker) {
                     //TODO good feedback. Tint the card red or shake it or something?
                 }
             } else if input.pressed_this_frame(Button::B) {
-                let animation = get_draw_animation(state, player);
+                let animation = get_draw_animation(state, player, event_log, rng);
                 push_if(&mut state.card_animations, animation);
 
                 state.current_player = 0;
@@ -484,15 +495,13 @@ fn take_turn(state: &mut GameState, input: Input, speaker: &mut Speaker) {
         }
     }
 
-    let player_ids: Vec<PlayerID> = state.player_ids();
-
-    let winners: Vec<PlayerID> = player_ids
+    let winners: Vec<PlayerID> = in_game::all_player_ids()
         .iter()
         .filter(|&&player| state.get_hand(player).len() == 0)
         .cloned()
         .collect();
 
-    if winners.len() > 0 {
+    if state.no_winners_yet() {
         state.winners = winners;
     }
 }
@@ -514,9 +523,7 @@ fn update_when_played(state: &mut GameState) {
         }
             if changes.len() > 0 =>
         {
-            let player_id = state.player_id();
-
-            apply_when_played_changes(state, card, changes.clone(), player_id);
+            apply_when_played_changes(state, card, changes.clone(), in_game::PLAYER_ID);
 
             state.status = Status::InGame;
         }
@@ -532,9 +539,7 @@ fn update_wild(state: &mut GameState) {
             //wait until they choose
         }
         Some(wild) => {
-            let player_id = state.player_id();
-
-            apply_wild_change(state, wild, player_id);
+            apply_wild_change(state, wild, in_game::PLAYER_ID);
 
             state.status = Status::InGame;
         }
@@ -547,9 +552,7 @@ fn update_can_play_graph(state: &mut GameState) {
             //wait until they choose
         }
         changes => {
-            let player_id = state.player_id();
-
-            apply_can_play_graph_changes(state, changes, player_id);
+            apply_can_play_graph_changes(state, changes, in_game::PLAYER_ID);
 
             state.status = Status::InGame;
         }
@@ -598,33 +601,20 @@ fn update_in_game(state: &mut GameState, input: Input, speaker: &mut Speaker) {
             }
         }
     } else if state.choice.is_idle() {
-        if state.card_animations.len() == 0 {
-            if state.winners.len() == 0 {
+        if state.animations_settled() {
+            if state.in_game.no_winners_yet() {
                 take_turn(state, input, speaker);
             }
         } else {
             advance_card_animations(state);
 
-            move_cursor(state, input, speaker);
+            move_cursor(&mut state.in_game, input, speaker);
         }
     }
 }
 
 #[inline]
-pub fn update_and_render(
-    framebuffer: &mut Framebuffer,
-    state: &mut GameState,
-    input: Input,
-    speaker: &mut Speaker,
-) {
-    state.context.frame_init();
-
-    update(state, input, speaker);
-
-    invariant_assert_eq!(state.missing_cards(), vec![0; 0]);
-
-    framebuffer.clearTo(GREEN);
-
+pub fn render_in_game(framebuffer: &mut Framebuffer, state: &in_game::State) {
     for hand in state.cpu_hands.iter() {
         draw_hand(framebuffer, hand, Face::Down);
     }
@@ -666,8 +656,26 @@ pub fn update_and_render(
             }
         }
     }
+}
 
-    if state.winners.len() > 0 && state.card_animations.len() == 0 {
+#[inline]
+pub fn update_and_render(
+    framebuffer: &mut Framebuffer,
+    state: &mut GameState,
+    input: Input,
+    speaker: &mut Speaker,
+) {
+    state.context.frame_init();
+
+    update(state, input, speaker);
+
+    invariant_assert_eq!(state.in_game.missing_cards(), vec![0; 0]);
+
+    framebuffer.clearTo(GREEN);
+
+    render_in_game(framebuffer, &state.in_game);
+
+    if state.round_is_over() {
         if let Some(()) = choose_play_again(state) {
             reset(state);
         }

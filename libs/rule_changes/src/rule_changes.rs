@@ -1,5 +1,5 @@
 use common::*;
-use game_state::{can_play, in_game, player_name, CardFlags, GameState, Status, RULE_TYPES};
+use game_state::{can_play, in_game, CardFlags, GameState, Status, RULE_TYPES};
 use rand::Rng;
 
 struct CardFlagsDelta {
@@ -35,10 +35,8 @@ pub fn reset(state: &mut GameState) {
     let status = {
         let mut status = Status::InGame;
 
-        let player_id = state.player_id();
-
-        for &id in state.winners.clone().iter() {
-            if id >= player_id {
+        for id in state.winners().clone() {
+            if id >= in_game::PLAYER_ID {
                 status = Status::RuleSelection;
                 continue;
             }
@@ -141,7 +139,7 @@ pub fn apply_when_played_changes(
     //logging
     add_rule_change_log_header(state, player);
 
-    let pronoun = state.get_pronoun(player);
+    let pronoun = in_game::get_pronoun(player);
 
     let rules = &mut state.rules;
 
@@ -194,7 +192,7 @@ pub fn apply_wild_change(state: &mut GameState, new_wild: CardFlags, player: Pla
         removals,
     } = CardFlagsDelta::new(state.rules.wild, new_wild);
 
-    let pronoun = state.get_pronoun(player);
+    let pronoun = in_game::get_pronoun(player);
 
     match (additions.len() > 0, removals.len() > 0) {
         (false, false) => {}
@@ -289,7 +287,7 @@ pub fn apply_can_play_graph_changes(
                 removals,
             } = CardFlagsDelta::new(previous_edges, new_edges);
 
-            let pronoun = state.get_pronoun(player);
+            let pronoun = in_game::get_pronoun(player);
             let card_string = get_card_string(new_card);
 
             match (additions.len() > 0, removals.len() > 0) {
@@ -350,7 +348,7 @@ pub fn apply_can_play_graph_changes(
 fn add_rule_change_log_header(state: &mut GameState, player: PlayerID) {
     state.event_log.push_hr();
 
-    let player_name = player_name(player);
+    let player_name = in_game::player_name(player);
 
     let text = &[player_name.as_bytes(), b" changed the rules as follows:"].concat();
 

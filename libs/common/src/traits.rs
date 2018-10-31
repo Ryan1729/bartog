@@ -90,3 +90,14 @@ impl AllValues for u8 {
         output
     }
 }
+
+use std::num::NonZeroU8;
+impl AllValues for NonZeroU8 {
+    fn all_values() -> Vec<Self> {
+        let mut output = Vec::with_capacity(255);
+        for i in 1u8..=255u8 {
+            output.push(NonZeroU8::new(i).unwrap());
+        }
+        output
+    }
+}

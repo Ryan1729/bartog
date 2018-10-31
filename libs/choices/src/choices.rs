@@ -39,7 +39,7 @@ pub fn do_unit_choice(
 
     {
         let winner_text = reflow(
-            &state.get_winner_text(),
+            &state.in_game.get_winner_text(),
             NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as usize,
         );
 

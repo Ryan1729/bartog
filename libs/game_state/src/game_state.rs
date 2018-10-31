@@ -1,193 +1,12 @@
-use card_flags::{CardFlags, RANK_FLAGS, SUIT_FLAGS};
-use common::{
-    bytes_lines, bytes_reflow, slice_until_first_0, ByteStrRowDisplay, CardAnimation, RowDisplay,
-    UIContext, DECK_SIZE, *,
-};
+use can_play;
+use card_flags::{CardFlags, RANK_FLAGS};
+use common::{bytes_lines, bytes_reflow, slice_until_first_0, UIContext, DECK_SIZE, *};
+use in_game;
 use platform_types::{log, Logger};
 
 use std::collections::VecDeque;
-use std::fmt;
 
-use rand::distributions::{Distribution, Standard};
-use rand::{Rng, SeedableRng, XorShiftRng};
-
-macro_rules! implement {
-    (BorrowMut<$borrowed:ty> for $implementing:ty: $that:ident, $ref_expr:expr) => {
-        use std::borrow::Borrow;
-        impl Borrow<$borrowed> for $implementing {
-            fn borrow(&self) -> &$borrowed {
-                let $that = self;
-                &$ref_expr
-            }
-        }
-
-        use std::borrow::BorrowMut;
-        impl BorrowMut<$borrowed> for $implementing {
-            fn borrow_mut(&mut self) -> &mut $borrowed {
-                let $that = self;
-                &mut $ref_expr
-            }
-        }
-    };
-    (<$a:lifetime> BorrowMut<$borrowed:ty> for $implementing:ty: $that:ident, $ref_expr:expr) => {
-        use std::borrow::Borrow;
-        impl<$a> Borrow<$borrowed> for $implementing {
-            fn borrow(&self) -> &$borrowed {
-                let $that = self;
-                &$ref_expr
-            }
-        }
-
-        use std::borrow::BorrowMut;
-        impl<$a> BorrowMut<$borrowed> for $implementing {
-            fn borrow_mut(&mut self) -> &mut $borrowed {
-                let $that = self;
-                &mut $ref_expr
-            }
-        }
-    };
-}
-
-impl GameState {
-    pub fn remove_positioned_card(
-        &mut self,
-        playerId: PlayerID,
-        card_index: u8,
-    ) -> Option<PositionedCard> {
-        let hand = self.get_hand_mut(playerId);
-        hand.remove_if_present(card_index)
-    }
-
-    pub fn get_hand(&self, playerId: PlayerID) -> &Hand {
-        let index = playerId as usize;
-        let len = self.cpu_hands.len();
-        if index < len {
-            &self.cpu_hands[index]
-        } else if index == len {
-            &self.hand
-        } else {
-            invariant_violation!({ &self.discard }, "Could not find hand for {:?}", playerId)
-        }
-    }
-
-    pub fn get_hand_mut(&mut self, playerId: PlayerID) -> &mut Hand {
-        let index = playerId as usize;
-        let len = self.cpu_hands.len();
-        if index < len {
-            &mut self.cpu_hands[index]
-        } else if index == len {
-            &mut self.hand
-        } else {
-            invariant_violation!(
-                { &mut self.discard },
-                "Could not find hand for {:?}",
-                playerId
-            )
-        }
-    }
-
-    pub fn player_ids(&self) -> Vec<PlayerID> {
-        // While we don't expect to change the maximum number of players,
-        // we might allow a smaller minimum. So this seems like it should
-        // stay here.
-        (0..=self.cpu_hands.len())
-            .map(|id| id as PlayerID)
-            .collect()
-    }
-
-    pub fn get_pronoun(&self, playerId: PlayerID) -> String {
-        let len = self.cpu_hands.len() as PlayerID;
-
-        if playerId == len {
-            "you".to_string()
-        } else {
-            "they".to_string()
-        }
-    }
-
-    pub fn get_winner_text(&self) -> String {
-        let winner_names: Vec<_> = self
-            .winners
-            .iter()
-            .map(|&player| player_name(player))
-            .collect();
-
-        let mut winner_text = get_sentence_list(&winner_names);
-
-        let suffix = if self.winners.len() == 1 && winner_text != "you" {
-            " wins."
-        } else if self.winners.len() > 3 {
-            " all win."
-        } else {
-            " win."
-        };
-
-        winner_text.push_str(suffix);
-
-        winner_text
-    }
-}
-
-pub fn get_sentence_list<T: AsRef<str>>(elements: &[T]) -> String {
-    let mut text = String::new();
-
-    let len = elements.len();
-    if len >= 2 {
-        for i in 0..len {
-            text.push_str(elements[i].as_ref());
-
-            if i == len - 2 {
-                text.push_str(", and ");
-            } else if i < len - 2 {
-                text.push_str(", ");
-            }
-        }
-    } else if len == 1 {
-        text.push_str(elements[0].as_ref());
-    }
-
-    text
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use quickcheck::*;
-
-    #[ignore]
-    #[test]
-    fn test_get_sentence_list() {
-        quickcheck(get_sentence_list_produces_expected_results as fn(Vec<String>) -> TestResult)
-    }
-    fn get_sentence_list_produces_expected_results(elements: Vec<String>) -> TestResult {
-        if elements
-            .iter()
-            .any(|s| s.is_empty() || s.contains("and") || s.contains(","))
-        {
-            return TestResult::discard();
-        }
-
-        let result = get_sentence_list(&elements);
-
-        let len = elements.len();
-        let passes = if len == 0 {
-            result.is_empty()
-        } else if len == 1 {
-            result == elements[0]
-        } else if len == 2 {
-            assert_eq!(result, format!("{}, and {}", elements[0], elements[1]));
-            result == format!("{}, and {}", elements[0], elements[1])
-        } else {
-            result.matches(",").count() == len - 1 && result.matches(", and").count() == 1
-        };
-
-        if !passes {
-            test_println!("Failed with: {}", result);
-        }
-
-        TestResult::from_bool(passes)
-    }
-}
+use rand::{SeedableRng, XorShiftRng};
 
 use std::cmp::min;
 
@@ -379,6 +198,12 @@ pub struct Rules {
     pub when_played: CardChanges,
 }
 
+impl Rules {
+    pub fn is_wild(&self, card: Card) -> bool {
+        self.wild.has_card(card)
+    }
+}
+
 pub struct CardChanges(pub [Vec<in_game::Change>; DECK_SIZE as usize]);
 
 impl Default for CardChanges {
@@ -435,362 +260,8 @@ impl Empty for Rules {
     }
 }
 
-pub mod can_play {
-    use super::*;
-
-    #[derive(Clone)]
-    pub struct Graph {
-        pub nodes: [CardFlags; DECK_SIZE as usize],
-    }
-
-    impl Graph {
-        pub fn is_playable_on(&self, card: Card, top_of_discard: Card) -> bool {
-            self.nodes[card as usize].has_card(top_of_discard)
-        }
-
-        pub fn get_edges(&self, card: Card) -> CardFlags {
-            self.nodes[card as usize]
-        }
-
-        pub fn set_edges(&mut self, card: Card, edges: CardFlags) {
-            self.nodes[card as usize] = edges;
-        }
-    }
-
-    impl Default for Graph {
-        fn default() -> Self {
-            //Reminder:
-            // the cards go from 0-51, in ascending rank order,
-            // and in ♣ ♦ ♥ ♠ suit order (alphabetical)
-            // A♣, 2♣, ... K♣, A♦, ..., A♥, ..., A♠, ..., K♠.
-            let mut nodes = [CardFlags::default(); DECK_SIZE as usize];
-
-            for suit in 0..SUIT_COUNT as usize {
-                for rank in 0..RANK_COUNT as usize {
-                    let i = rank + suit * RANK_COUNT as usize;
-
-                    nodes[i] = CardFlags::new(SUIT_FLAGS[suit] | RANK_FLAGS[rank]);
-                }
-            }
-
-            Graph { nodes }
-        }
-    }
-
-    #[derive(Clone, Copy, PartialEq, Eq)]
-    pub struct Change(u64);
-
-    impl Change {
-        pub fn new(edges: CardFlags, card: Card) -> Self {
-            Change(((card as u64) << DECK_SIZE) | edges.get_bits())
-        }
-
-        pub fn edges(&self) -> CardFlags {
-            CardFlags::new(self.0)
-        }
-
-        pub fn card(&self) -> Card {
-            (self.0 >> DECK_SIZE as u64) as u8 & 0b0011_1111
-        }
-    }
-
-    const RESET_ALL: Change = Change(-1i64 as u64);
-
-    impl fmt::Debug for Change {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            if *self == RESET_ALL {
-                write!(f, "reset to default")?;
-                return Ok(());
-            }
-
-            write!(
-                f,
-                "Card: {}, Edges: {:?}",
-                get_card_string(self.card()),
-                self.edges()
-            )
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    pub enum Layer {
-        Card,
-        Edges,
-        Done,
-    }
-
-    impl Default for Layer {
-        fn default() -> Self {
-            Layer::Card
-        }
-    }
-
-    #[derive(Clone, Debug, Default)]
-    pub struct ChoiceState {
-        pub changes: Vec<Change>,
-        pub card: Card,
-        pub edges: CardFlags,
-        pub layer: Layer,
-        pub scroll_card: Card,
-    }
-
-    implement!(BorrowMut<Card> for ChoiceState: s, s.card);
-
-    impl CardSubChoice for ChoiceState {
-        fn should_show_done_button(&self) -> bool {
-            let changes_len = self.changes.len();
-            changes_len > 0
-        }
-        fn mark_done(&mut self) {
-            self.layer = Layer::Done;
-        }
-        fn next_layer(&mut self) {
-            self.layer = Layer::Edges;
-        }
-        fn get_status_lines(&self, _card: Card) -> StatusLines {
-            let changes_len = self.changes.len();
-            [
-                bytes_to_status_line(format!("{}", changes_len).as_bytes()),
-                bytes_to_status_line(if changes_len == 1 {
-                    b"change. "
-                } else {
-                    b"changes."
-                }),
-            ]
-        }
-    }
-}
-
-pub const MAX_PLAYER_ID: PlayerID = 3;
-pub const PLAYER_ID_COUNT: usize = (MAX_PLAYER_ID + 1) as _;
-
-pub fn all_player_ids() -> [PlayerID; PLAYER_ID_COUNT] {
-    let mut output = [0; PLAYER_ID_COUNT];
-    for i in 0..=MAX_PLAYER_ID {
-        output[i as usize] = i;
-    }
-    output
-}
-
-pub fn player_name(playerId: PlayerID) -> String {
-    if playerId < MAX_PLAYER_ID {
-        format!("cpu {}", playerId)
-    } else if playerId == MAX_PLAYER_ID {
-        "you".to_owned()
-    } else {
-        "???".to_owned()
-    }
-}
-
-pub fn player_1_char_name(playerId: PlayerID) -> String {
-    if playerId < MAX_PLAYER_ID {
-        format!("{}", playerId)
-    } else if playerId == MAX_PLAYER_ID {
-        "u".to_owned()
-    } else {
-        "?".to_owned()
-    }
-}
-
-pub mod in_game {
-    use super::*;
-    use std::fmt;
-
-    #[derive(Copy, Clone, PartialEq, Eq)]
-    pub enum Change {
-        CurrentPlayer(RelativePlayer),
-        //CardLocation(CardLocation),
-        //TopWild(TopWild),
-    }
-
-    impl AllValues for Change {
-        //TODO write a procedural macro or something to make mainatining this easier.
-        fn all_values() -> Vec<Self> {
-            RelativePlayer::all_values()
-                .into_iter()
-                .map(Change::CurrentPlayer)
-                .collect()
-        }
-    }
-
-    impl fmt::Debug for Change {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(f, "{}", self)
-        }
-    }
-
-    impl fmt::Display for Change {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            match *self {
-                Change::CurrentPlayer(v) => write!(f, "{}", v.to_string()),
-            }
-        }
-    }
-
-    impl RowDisplay for Change {
-        fn row_label(&self) -> RowLabel {
-            match *self {
-                Change::CurrentPlayer(v) => v.row_label(),
-            }
-        }
-    }
-
-    impl Distribution<Change> for Standard {
-        #[inline]
-        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Change {
-            match rng.gen_range(0, 1) {
-                _ => Change::CurrentPlayer(rng.gen()),
-            }
-        }
-    }
-
-    //This relies on MAX_PLAYER_ID being 3, and will require structural changes if it changes!
-    #[derive(Copy, Clone, PartialEq, Eq)]
-    pub enum RelativePlayer {
-        Same,
-        Next,
-        Across,
-        Previous,
-    }
-
-    impl AllValues for RelativePlayer {
-        fn all_values() -> Vec<Self> {
-            vec![
-                RelativePlayer::Same,
-                RelativePlayer::Next,
-                RelativePlayer::Across,
-                RelativePlayer::Previous,
-            ]
-        }
-    }
-
-    impl RelativePlayer {
-        pub fn apply(&self, playerId: PlayerID) -> PlayerID {
-            match *self {
-                RelativePlayer::Same => playerId,
-                RelativePlayer::Next => (playerId + 1) % (MAX_PLAYER_ID + 1),
-                RelativePlayer::Across => (playerId + 2) % (MAX_PLAYER_ID + 1),
-                RelativePlayer::Previous => (playerId + 3) % (MAX_PLAYER_ID + 1),
-            }
-        }
-    }
-
-    impl fmt::Debug for RelativePlayer {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            match self {
-                RelativePlayer::Same => write!(f, "my turn again"),
-                RelativePlayer::Next => write!(f, "next after me"),
-                RelativePlayer::Across => write!(f, "across from me"),
-                RelativePlayer::Previous => write!(f, "previous to me"),
-            }
-        }
-    }
-
-    impl fmt::Display for RelativePlayer {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(f, "{:?}\n", self)?;
-
-            for &id in all_player_ids().into_iter() {
-                write!(
-                    f,
-                    "{}->{}",
-                    player_1_char_name(id),
-                    player_1_char_name(self.apply(id))
-                )?;
-
-                if id != MAX_PLAYER_ID {
-                    write!(f, ", ")?;
-                }
-            }
-            Ok(())
-        }
-    }
-
-    impl<'a> ByteStrRowDisplay<'a> for RelativePlayer {
-        fn byte_str_row_label(&self) -> &'a [u8] {
-            b"turn -> turn: "
-        }
-    }
-
-    impl Distribution<RelativePlayer> for Standard {
-        #[inline]
-        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> RelativePlayer {
-            let all = RelativePlayer::all_values();
-            let i = rng.gen_range(0, all.len());
-            all[i]
-        }
-    }
-
-    #[derive(Clone, Debug)]
-    pub enum Layer {
-        Card,
-        Changes,
-        Done,
-    }
-
-    impl Default for Layer {
-        fn default() -> Self {
-            Layer::Card
-        }
-    }
-
-    #[derive(Clone, Debug, Default)]
-    pub struct ChoiceState {
-        pub changes: Vec<Change>,
-        pub left_scroll: usize,
-        pub right_scroll: usize,
-        pub marker_y: u8,
-        pub card: Card,
-        pub layer: Layer,
-        pub description: Vec<u8>,
-    }
-
-    pub struct ChoiceStateAndRules<'a> {
-        pub choice_state: &'a mut ChoiceState,
-        pub rules: &'a Rules,
-    }
-
-    implement!(<'a> BorrowMut<Card> for ChoiceStateAndRules<'a>: s, s.choice_state.card);
-
-    impl<'a> Reset for ChoiceStateAndRules<'a> {
-        fn reset(&mut self) {
-            self.choice_state.reset();
-        }
-    }
-
-    impl<'a> CardSubChoice for ChoiceStateAndRules<'a> {
-        fn should_show_done_button(&self) -> bool {
-            true //TODO check if there has been any change to the changes
-        }
-        fn mark_done(&mut self) {
-            self.choice_state.layer = Layer::Done;
-        }
-        fn next_layer(&mut self) {
-            self.choice_state.layer = Layer::Changes;
-        }
-        fn get_status_lines(&self, card: Card) -> StatusLines {
-            let len = self.rules.when_played.0[card as usize].len();
-            [
-                bytes_to_status_line(format!("{}", len).as_bytes()),
-                bytes_to_status_line(if len == 1 { b"change. " } else { b"changes." }),
-            ]
-        }
-    }
-
-}
-
 pub struct GameState {
-    // start in-game state
-    pub deck: Hand,
-    pub discard: Hand,
-    pub cpu_hands: [Hand; 3],
-    pub hand: Hand,
-    pub current_player: PlayerID,
-    pub winners: Vec<PlayerID>,
-    pub top_wild_declared_as: Option<Suit>,
-    pub card_animations: Vec<CardAnimation>,
-    // end in-game state
-    pub hand_index: u8,
+    pub in_game: in_game::State,
     pub choice: Choice,
     pub rules: Rules,
     pub status: Status,
@@ -800,20 +271,6 @@ pub struct GameState {
     pub log_height: u8,
     pub log_heading: LogHeading,
     pub logger: Logger,
-}
-
-macro_rules! dealt_hand {
-    ($deck:expr, $spread:expr) => {{
-        let mut hand = Hand::new($spread);
-
-        hand.draw_from($deck);
-        hand.draw_from($deck);
-        hand.draw_from($deck);
-        hand.draw_from($deck);
-        hand.draw_from($deck);
-
-        hand
-    }};
 }
 
 impl GameState {
@@ -838,49 +295,8 @@ impl GameState {
 
         let mut rng = XorShiftRng::from_seed(seed);
 
-        let mut deck = Hand::new_shuffled_deck(&mut rng);
-
-        let discard = Hand::new(Spread::stack(DISCARD_X, DISCARD_Y));
-
-        let hand = dealt_hand!(
-            &mut deck,
-            Spread::LTR(TOP_AND_BOTTOM_HAND_EDGES, PLAYER_HAND_HEIGHT)
-        );
-
-        let cpu_hands = [
-            dealt_hand!(
-                &mut deck,
-                Spread::TTB(LEFT_AND_RIGHT_HAND_EDGES, LEFT_CPU_HAND_X)
-            ),
-            dealt_hand!(
-                &mut deck,
-                Spread::LTR(TOP_AND_BOTTOM_HAND_EDGES, MIDDLE_CPU_HAND_HEIGHT,)
-            ),
-            dealt_hand!(
-                &mut deck,
-                Spread::TTB(LEFT_AND_RIGHT_HAND_EDGES, RIGHT_CPU_HAND_X)
-            ),
-        ];
-
-        let current_player = cpu_hands.len() as u8; //rng.gen_range(0, cpu_hands.len() as u8 + 1);
-
-        invariant_assert!(current_player <= cpu_hands.len() as u8);
-
-        let card_animations = Vec::with_capacity(DECK_SIZE as _);
-
-        //We expect this to be replaced with a new vector when ever it it changed.
-        let winners = Vec::with_capacity(0);
-
         GameState {
-            deck,
-            discard,
-            cpu_hands,
-            hand,
-            hand_index: 0,
-            current_player,
-            card_animations,
-            winners,
-            top_wild_declared_as: None,
+            in_game: in_game::State::new(&mut rng),
             choice: Choice::NoChoice,
             rules,
             status,
@@ -893,30 +309,16 @@ impl GameState {
         }
     }
 
-    pub fn player_id(&self) -> PlayerID {
-        self.cpu_hands.len() as PlayerID
+    pub fn winners(&self) -> &Vec<PlayerID> {
+        &self.in_game.winners
     }
 
-    pub fn missing_cards(&self) -> Vec<Card> {
-        use std::collections::BTreeSet;
+    pub fn animations_settled(&self) -> bool {
+        self.in_game.animations_settled()
+    }
 
-        let example_deck: BTreeSet<Card> = fresh_deck().into_iter().collect();
-
-        let mut observed_deck = BTreeSet::new();
-
-        let card_iter = self
-            .deck
-            .iter()
-            .chain(self.discard.iter())
-            .chain(self.cpu_hands.iter().flat_map(|h| h.iter()))
-            .chain(self.hand.iter())
-            .chain(self.card_animations.iter().map(|a| &a.card.card));
-
-        for c in card_iter {
-            observed_deck.insert(c.clone());
-        }
-
-        example_deck.difference(&observed_deck).cloned().collect()
+    pub fn round_is_over(&self) -> bool {
+        self.in_game.round_is_over()
     }
 
     pub fn log(&self, s: &str) {
@@ -928,6 +330,6 @@ impl GameState {
     }
 
     pub fn is_wild(&self, card: Card) -> bool {
-        self.rules.wild.has_card(card)
+        self.rules.is_wild(card)
     }
 }
