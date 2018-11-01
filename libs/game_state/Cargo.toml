@@ -5,6 +5,7 @@ authors = ["Ryan1729 <Ryan1729@gmail.com>"]
 
 [dependencies]
 rand = "0.5"
+lazy_static = "1.1.0"
 
 [dev-dependencies]
 quickcheck = "0.6"

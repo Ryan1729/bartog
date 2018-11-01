@@ -415,9 +415,8 @@ fn in_game_changes_choose_changes(
 
     let left_id_range = FIRST_SCROLL_START_ID..FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT;
 
-    let all_changes = in_game::Change::all_values();
     //The + 1 is to leave a gap to mark the loop point, and keep the modulus non-zero.
-    let left_modulus = all_changes.len() + 1;
+    let left_modulus = in_game::ALL_CHANGES.len() + 1;
     {
         let mut addition = None;
         for id in left_id_range.clone() {
@@ -427,7 +426,7 @@ fn in_game_changes_choose_changes(
             let y = min_scroll_y + SPRITE_SIZE * i - SPRITE_SIZE / 2;
 
             let index = (choice_state.left_scroll as usize + i as usize) % left_modulus as usize;
-            if let Some(change) = all_changes.get(index) {
+            if let Some(change) = in_game::ALL_CHANGES.get(index) {
                 let label = change.row_label();
 
                 if id == context.hot {
@@ -452,7 +451,7 @@ fn in_game_changes_choose_changes(
         }
 
         if let Some(index) = addition {
-            if let Some(change) = all_changes.get(index) {
+            if let Some(change) = in_game::ALL_CHANGES.get(index) {
                 let i = min(
                     choice_state.right_scroll as usize + choice_state.marker_y as usize,
                     choice_state.changes.len(),

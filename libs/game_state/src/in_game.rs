@@ -1,9 +1,9 @@
 use common::{ByteStrRowDisplay, RowDisplay, *};
 use game_state::Rules;
 
+use lazy_static::lazy_static;
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
-
 use std::fmt;
 
 pub struct State {
@@ -251,6 +251,15 @@ impl AllValues for Change {
     }
 }
 
+lazy_static! {
+    pub static ref ALL_CHANGES: Vec<Change> = Change::all_values();
+}
+
+implement!(
+    Distribution<Change> for Standard
+    by picking from &ALL_CHANGES
+);
+
 impl fmt::Debug for Change {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self)
@@ -270,15 +279,6 @@ impl RowDisplay for Change {
         change_match!{*self, {
             v => v.row_label()
         }}
-    }
-}
-
-impl Distribution<Change> for Standard {
-    #[inline]
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Change {
-        match rng.gen_range(0, 1) {
-            _ => Change::CurrentPlayer(rng.gen()),
-        }
     }
 }
 
@@ -342,6 +342,14 @@ impl fmt::Debug for RelativePlayer {
 
 impl fmt::Display for RelativePlayer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if f.alternate() {
+            return match self {
+                RelativePlayer::Same => write!(f, "s"),
+                RelativePlayer::Next => write!(f, "n"),
+                RelativePlayer::Across => write!(f, "a"),
+                RelativePlayer::Previous => write!(f, "p"),
+            };
+        }
         write!(f, "{:?}\n", self)?;
 
         for &id in all_player_ids().into_iter() {
@@ -375,15 +383,6 @@ implement!(
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct RelativePlayerSet(u8);
 
-impl AllValues for RelativePlayerSet {
-    fn all_values() -> Vec<Self> {
-        u8::all_values()
-            .into_iter()
-            .map(RelativePlayerSet)
-            .collect()
-    }
-}
-
 const SAME_FLAG: u8 = 1;
 const NEXT_FLAG: u8 = 2;
 const ACROSS_FLAG: u8 = 4;
@@ -393,11 +392,69 @@ impl RelativePlayerSet {
     #[inline]
     pub fn contains(&self, player: RelativePlayer) -> bool {
         match player {
-            RelativePlayer::Same => (*self).0 & SAME_FLAG != 0,
-            RelativePlayer::Next => (*self).0 & NEXT_FLAG != 0,
-            RelativePlayer::Across => (*self).0 & ACROSS_FLAG != 0,
-            RelativePlayer::Previous => (*self).0 & PREVIOUS_FLAG != 0,
+            RelativePlayer::Same => self.0 & SAME_FLAG != 0,
+            RelativePlayer::Next => self.0 & NEXT_FLAG != 0,
+            RelativePlayer::Across => self.0 & ACROSS_FLAG != 0,
+            RelativePlayer::Previous => self.0 & PREVIOUS_FLAG != 0,
         }
+    }
+
+    #[inline]
+    pub fn insert(self, player: RelativePlayer) -> Self {
+        RelativePlayerSet(match player {
+            RelativePlayer::Same => self.0 | SAME_FLAG,
+            RelativePlayer::Next => self.0 | NEXT_FLAG,
+            RelativePlayer::Across => self.0 | ACROSS_FLAG,
+            RelativePlayer::Previous => self.0 | PREVIOUS_FLAG,
+        })
+    }
+
+    #[inline]
+    pub fn remove(self, player: RelativePlayer) -> Self {
+        RelativePlayerSet(match player {
+            RelativePlayer::Same => self.0 & !SAME_FLAG,
+            RelativePlayer::Next => self.0 & !NEXT_FLAG,
+            RelativePlayer::Across => self.0 & !ACROSS_FLAG,
+            RelativePlayer::Previous => self.0 & !PREVIOUS_FLAG,
+        })
+    }
+}
+
+impl AllValues for RelativePlayerSet {
+    fn all_values() -> Vec<Self> {
+        RelativePlayerSet::sets_from_range(0..1 << 4)
+    }
+}
+
+use std::ops::Range;
+
+impl RelativePlayerSet {
+    fn all_non_empty_values() -> Vec<Self> {
+        RelativePlayerSet::sets_from_range(1..1 << 4)
+    }
+
+    fn sets_from_range(range: Range<u8>) -> Vec<Self> {
+        range.into_iter().map(RelativePlayerSet).collect()
+    }
+}
+
+impl Iterator for RelativePlayerSet {
+    type Item = RelativePlayer;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        for player in RelativePlayer::all_values() {
+            if self.contains(player) {
+                self.remove(player);
+                return Some(player);
+            }
+        }
+        None
+    }
+}
+
+impl RelativePlayerSet {
+    fn absolute_players(&self, player: PlayerID) -> Vec<PlayerID> {
+        self.clone().map(|p| p.apply(player)).collect()
     }
 }
 
@@ -421,6 +478,17 @@ impl fmt::Debug for RelativePlayerSet {
 
 impl fmt::Display for RelativePlayerSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if f.alternate() {
+            write!(f, "{{")?;
+            for player in RelativePlayer::all_values() {
+                if self.contains(player) {
+                    write!(f, "{:#}", player)?;
+                }
+            }
+            write!(f, "}}")?;
+
+            return Ok(());
+        }
         match (
             self.contains(RelativePlayer::Previous),
             self.contains(RelativePlayer::Across),
@@ -486,17 +554,20 @@ pub struct CardMovement {
 impl AllValues for CardMovement {
     fn all_values() -> Vec<CardMovement> {
         //TODO We will probably want to cache this. Possibly by putting it into a static constant.
-        let sets = RelativePlayerSet::all_values();
+        let sets = RelativePlayerSet::all_non_empty_values();
         let hands = RelativeHand::all_values();
         let selections = CardSelection::all_values();
 
         let mut output =
             Vec::with_capacity(sets.len() * hands.len() * hands.len() * selections.len());
 
-        for affected in sets {
-            for &source in hands.iter() {
-                for &target in hands.iter() {
-                    for &selection in selections.iter() {
+        for selection in selections {
+            for &affected in sets.iter() {
+                for &source in hands.iter() {
+                    for &target in hands.iter() {
+                        if source == target {
+                            continue;
+                        }
                         output.push(CardMovement {
                             affected,
                             source,
@@ -522,6 +593,11 @@ impl fmt::Display for CardMovement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
+            "{:#} {:#} {:#} {:#} ",
+            self.affected, self.selection, self.source, self.target
+        )?;
+        write!(
+            f,
             "{} move {} from {} to {}",
             self.affected, self.selection, self.source, self.target
         )
@@ -540,9 +616,49 @@ impl Distribution<CardMovement> for Standard {
     }
 }
 
+enum RefsMut<'a, T> {
+    Pair(&'a mut T, &'a mut T),
+    Same(&'a mut T),
+}
+
+fn get_refs_mut<'a, T>(
+    state: &'a mut State,
+    h1: RelativeHand,
+    h2: RelativeHand,
+) -> RefsMut<'a, Hand> {
+    RefsMut::Pair(&mut state.discard, &mut state.deck)
+    // match (h1, h2) {
+    //     (RelativeHand::Deck, RelativeHand::Deck) => RefsMut::Same(&mut state.deck),
+    //     (RelativeHand::Discard, RelativeHand::Discard) => RefsMut::Same(&mut state.discard),
+    //     (RelativeHand::Deck, RelativeHand::Discard) => {
+    //         RefsMut::Pair(&mut state.deck, &mut state.discard)
+    //     }
+    //     (RelativeHand::Discard, RelativeHand::Deck) => {
+    //         RefsMut::Pair(&mut state.discard, &mut state.deck)
+    //     }
+    //     (RelativeHand::Discard, RelativeHand::Deck) => {
+    //         RefsMut::Pair(&mut state.discard, &mut state.deck)
+    //     }
+    // }
+}
+
 impl ApplyToState for CardMovement {
     fn apply_to_state(&self, state: &mut State) {
-        unimplemented!()
+        let players = self.affected.absolute_players(state.current_player);
+
+        for player in players {
+            let refs: RefsMut<Hand> = get_refs_mut::<Hand>(state, self.source, self.target);
+            match refs {
+                RefsMut::Same(_) => {
+                    return;
+                }
+                RefsMut::Pair(s, t) => {
+                    // if let Some(card) = s.remove_selction(self.selection) {
+                    //     t.push(card);
+                    // }
+                }
+            }
+        }
     }
 }
 
@@ -555,6 +671,13 @@ pub enum RelativeHand {
 
 impl fmt::Display for RelativeHand {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if f.alternate() {
+            return match *self {
+                RelativeHand::Player(p) => write!(f, "{:#}", p),
+                RelativeHand::Deck => write!(f, "deck"),
+                RelativeHand::Discard => write!(f, "discard"),
+            };
+        }
         match *self {
             RelativeHand::Player(p) => write!(f, "{}", p),
             RelativeHand::Deck => write!(f, "the deck"),
@@ -577,55 +700,6 @@ implement!(
         Distribution<RelativeHand> for Standard
         by picking from RelativeHand::all_values()
     );
-
-use std::num::NonZeroU8;
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub enum CardSelection {
-    NthModuloCount(NonZeroU8),
-    // NthIfPresent(u8),
-    // ChosenBy(PlayerID),
-}
-
-impl fmt::Display for CardSelection {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            CardSelection::NthModuloCount(n) => {
-                ordinal_display(n.get(), f)?;
-                write!(f, " card, looping if needed")
-            }
-        }
-    }
-}
-
-impl AllValues for CardSelection {
-    fn all_values() -> Vec<CardSelection> {
-        NonZeroU8::all_values()
-            .into_iter()
-            .map(CardSelection::NthModuloCount)
-            .collect()
-    }
-}
-
-implement!(
-        Distribution<CardSelection> for Standard
-        by picking from CardSelection::all_values()
-    );
-
-fn ordinal_display(n: u8, f: &mut fmt::Formatter) -> fmt::Result {
-    let s = n.to_string();
-
-    let suffix = if s.ends_with("1") && !s.ends_with("11") {
-        "st"
-    } else if s.ends_with("2") && !s.ends_with("12") {
-        "nd"
-    } else if s.ends_with("3") && !s.ends_with("13") {
-        "rd"
-    } else {
-        "th"
-    };
-
-    write!(f, "{}{}", s, suffix)
-}
 
 #[derive(Clone, Debug)]
 pub enum Layer {
