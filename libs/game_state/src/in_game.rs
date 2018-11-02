@@ -616,30 +616,37 @@ impl Distribution<CardMovement> for Standard {
     }
 }
 
+fn get_ref_mut<'a>(state: &'a mut State, hand: RelativeHand, player: PlayerID) -> &'a mut Hand {
+    match hand {
+        RelativeHand::Deck => &mut state.deck,
+        RelativeHand::Discard => &mut state.discard,
+        RelativeHand::Player(p) => match p.apply(player) {
+            id if id >= MAX_PLAYER_ID => &mut state.hand,
+            id => &mut state.cpu_hands[id as usize],
+        },
+    }
+}
+
 enum RefsMut<'a, T> {
     Pair(&'a mut T, &'a mut T),
     Same(&'a mut T),
 }
 
-fn get_refs_mut<'a, T>(
+fn get_refs_mut<'a>(
     state: &'a mut State,
     h1: RelativeHand,
     h2: RelativeHand,
+    player: PlayerID,
 ) -> RefsMut<'a, Hand> {
-    RefsMut::Pair(&mut state.discard, &mut state.deck)
-    // match (h1, h2) {
-    //     (RelativeHand::Deck, RelativeHand::Deck) => RefsMut::Same(&mut state.deck),
-    //     (RelativeHand::Discard, RelativeHand::Discard) => RefsMut::Same(&mut state.discard),
-    //     (RelativeHand::Deck, RelativeHand::Discard) => {
-    //         RefsMut::Pair(&mut state.deck, &mut state.discard)
-    //     }
-    //     (RelativeHand::Discard, RelativeHand::Deck) => {
-    //         RefsMut::Pair(&mut state.discard, &mut state.deck)
-    //     }
-    //     (RelativeHand::Discard, RelativeHand::Deck) => {
-    //         RefsMut::Pair(&mut state.discard, &mut state.deck)
-    //     }
-    // }
+    if h1 == h2 {
+        RefsMut::Same(get_ref_mut(state, h1, player))
+    } else {
+        let source: &mut Hand = unsafe { &mut *(get_ref_mut(state, h1, player) as *mut Hand) };
+
+        let target = get_ref_mut(state, h2, player);
+
+        RefsMut::Pair(source, target)
+    }
 }
 
 impl ApplyToState for CardMovement {
@@ -647,15 +654,15 @@ impl ApplyToState for CardMovement {
         let players = self.affected.absolute_players(state.current_player);
 
         for player in players {
-            let refs: RefsMut<Hand> = get_refs_mut::<Hand>(state, self.source, self.target);
+            let refs: RefsMut<Hand> = get_refs_mut(state, self.source, self.target, player);
             match refs {
                 RefsMut::Same(_) => {
                     return;
                 }
                 RefsMut::Pair(s, t) => {
-                    // if let Some(card) = s.remove_selction(self.selection) {
-                    //     t.push(card);
-                    // }
+                    if let Some(card) = s.remove_selected(self.selection) {
+                        t.push(card);
+                    }
                 }
             }
         }

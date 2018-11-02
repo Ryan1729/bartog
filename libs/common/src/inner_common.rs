@@ -263,14 +263,6 @@ where
     }
 }
 
-#[macro_export]
-macro_rules! nu8 {
-    ($byte:expr) => {{
-        use std::num::NonZeroU8;
-        NonZeroU8::new($byte).unwrap()
-    }};
-}
-
 impl<T> Default for ModOffset<T>
 where
     T: From<u8>,

@@ -1,6 +1,11 @@
+use english::ordinal_display;
 use inner_common::*;
-use std::cmp::{max, min};
+use traits::AllValues;
 
+use std::cmp::{max, min};
+use std::fmt;
+
+use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 
 #[derive(Clone, Copy)]
@@ -180,4 +185,62 @@ impl Hand {
         let suits = self.most_common_suits();
         suits[0]
     }
+
+    pub fn remove_selected(&mut self, selection: CardSelection) -> Option<Card> {
+        let len = self.cards.len();
+        if len == 0 {
+            return None;
+        }
+        match selection {
+            CardSelection::NthModuloCount(n) => {
+                let i = (n.get() - 1) as usize % len;
+
+                Some(self.cards.remove(i))
+            }
+        }
+    }
 }
+
+use std::num::NonZeroU8;
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum CardSelection {
+    NthModuloCount(NonZeroU8),
+    // NthIfPresent(u8),
+    // ChosenBy(PlayerID),
+}
+
+impl fmt::Display for CardSelection {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if f.alternate() {
+            match *self {
+                CardSelection::NthModuloCount(n) => {
+                    ordinal_display(n.get(), f)?;
+                    write!(f, "(%)")?
+                }
+            }
+
+            return Ok(());
+        }
+        match *self {
+            CardSelection::NthModuloCount(n) => {
+                ordinal_display(n.get(), f)?;
+                write!(f, " card, looping if needed")
+            }
+        }
+    }
+}
+
+impl AllValues for CardSelection {
+    fn all_values() -> Vec<CardSelection> {
+        (1..=DECK_SIZE)
+            .into_iter()
+            .map(|n| nu8!(n))
+            .map(CardSelection::NthModuloCount)
+            .collect()
+    }
+}
+
+implement!(
+        Distribution<CardSelection> for Standard
+        by picking from CardSelection::all_values()
+    );
