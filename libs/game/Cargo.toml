@@ -20,3 +20,7 @@ path = "../platform_types"
 
 [dependencies.rule_changes]
 path = "../rule_changes"
+
+[features]
+default = []
+invariant-checking = []

@@ -13,3 +13,7 @@ path = "../common"
 
 [dependencies.platform_types]
 path = "../platform_types"
+
+[features]
+default = []
+invariant-checking = []
