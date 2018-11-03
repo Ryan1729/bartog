@@ -65,6 +65,7 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
+ "features 0.1.0",
  "platform_types 0.1.0",
  "rand 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -92,6 +93,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "features"
+version = "0.1.0"
+dependencies = [
+ "platform_types 0.1.0",
+]
+
+[[package]]
 name = "fuchsia-zircon"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -111,6 +119,7 @@ version = "0.1.0"
 dependencies = [
  "choices 0.1.0",
  "common 0.1.0",
+ "features 0.1.0",
  "game_state 0.1.0",
  "platform_types 0.1.0",
  "rand 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",

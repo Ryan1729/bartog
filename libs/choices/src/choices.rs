@@ -3,7 +3,7 @@ use game_state::{
     can_play, get_status_text, in_game, CardFlags, CardFlagsChoiceState, Choice, Chosen, GameState,
     Status, RULE_TYPES,
 };
-use platform_types::{log, Button, Input, Logger, Speaker};
+use platform_types::{Button, Input, Speaker};
 use std::cmp::min;
 
 //This is needed because we want to use it in scopes where other parts of the state are borrowwed.
@@ -265,7 +265,6 @@ pub fn do_in_game_changes_choice(
     input: Input,
     speaker: &mut Speaker,
 ) {
-    let logger = state.get_logger();
     let mut chosen = None;
     let mut cancel = CancelRuleChoice::No;
 
@@ -284,7 +283,6 @@ pub fn do_in_game_changes_choice(
                         input,
                         speaker,
                         &mut card_sub_choice,
-                        logger,
                     );
                 }
 
@@ -306,7 +304,6 @@ pub fn do_in_game_changes_choice(
                     input,
                     speaker,
                     choice_state,
-                    logger,
                 );
 
                 match choice_state.layer {
@@ -376,7 +373,6 @@ fn in_game_changes_choose_changes(
     input: Input,
     speaker: &mut Speaker,
     choice_state: &mut in_game::ChoiceState,
-    logger: Logger,
 ) {
     framebuffer.full_window();
 
@@ -456,7 +452,7 @@ fn in_game_changes_choose_changes(
                     choice_state.right_scroll as usize + choice_state.marker_y as usize,
                     choice_state.changes.len(),
                 );
-                llog!(logger, i);
+                log!((i, i));
                 choice_state.changes.insert(i, change.clone());
             }
         }
@@ -586,7 +582,7 @@ fn in_game_changes_choose_changes(
         choice_state.marker_y = context.next_hot - right_id_range.start + 1;
     }
 
-    llog!(logger, context);
+    log!(context);
 }
 
 fn inside_range<Idx>(range: &Range<Idx>, x: Idx) -> bool
@@ -631,7 +627,6 @@ fn do_card_sub_choice<C: CardSubChoice>(
     input: Input,
     speaker: &mut Speaker,
     choice_state: &mut C,
-    _logger: Logger,
 ) -> CancelRuleChoice {
     let mut output = CancelRuleChoice::No;
 
@@ -786,6 +781,7 @@ fn do_card_sub_choice<C: CardSubChoice>(
     output
 }
 
+use std::fmt;
 use std::ops::{Add, Range, Rem, Sub};
 
 fn handle_scroll_movement<T>(
@@ -795,7 +791,13 @@ fn handle_scroll_movement<T>(
     mod_offset: ModOffset<T>,
 ) -> T
 where
-    T: From<u8> + Add<T, Output = T> + Sub<T, Output = T> + Rem<T, Output = T> + Ord + Copy,
+    T: fmt::Debug
+        + From<u8>
+        + Add<T, Output = T>
+        + Sub<T, Output = T>
+        + Rem<T, Output = T>
+        + Ord
+        + Copy,
 {
     let mut output = mod_offset.current;
 
@@ -804,14 +806,16 @@ where
     let mut unoffset = context.hot - start;
     let visible_rows = end - start;
     if visible_rows == 0 {
-        invariant_violation!("`visible_rows == 0`");
-        return output;
+        invariant_violation!(
+            {
+                return output;
+            },
+            "`visible_rows == 0`"
+        );
     }
 
-    invariant_assert_eq!(
-        (mod_offset.modulus / column_count) * column_count,
-        mod_offset.modulus,
-    );
+    invariant_assert!(column_count != 0);
+    invariant_assert_eq!(mod_offset.modulus % column_count.into(), 0u8.into());
 
     if input.pressed_this_frame(Button::Up) {
         if unoffset < column_count {
@@ -847,7 +851,6 @@ fn can_play_graph_choose_edges(
     input: Input,
     speaker: &mut Speaker,
     choice_state: &mut can_play::ChoiceState,
-    _logger: Logger,
 ) {
     framebuffer.full_window();
 
@@ -1023,7 +1026,6 @@ pub fn do_can_play_graph_choice(
     input: Input,
     speaker: &mut Speaker,
 ) {
-    let logger = state.get_logger();
     let mut chosen = None;
     let mut cancel = CancelRuleChoice::No;
 
@@ -1036,7 +1038,6 @@ pub fn do_can_play_graph_choice(
                     input,
                     speaker,
                     choice_state,
-                    logger,
                 );
 
                 match choice_state.layer {
@@ -1065,7 +1066,6 @@ pub fn do_can_play_graph_choice(
                 input,
                 speaker,
                 choice_state,
-                logger,
             ),
             can_play::Layer::Done => {
                 framebuffer.center_half_window();

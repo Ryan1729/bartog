@@ -219,6 +219,8 @@ pub struct ModOffset<T> {
 
 use std::ops::{Add, Rem, Sub};
 
+use features::invariant_violation;
+
 #[inline]
 pub fn next_mod<T>(
     ModOffset {
@@ -231,8 +233,7 @@ where
     T: From<u8> + Add<T, Output = T> + Rem<T, Output = T> + PartialEq<T>,
 {
     if modulus == 0u8.into() {
-        invariant_violation!("`modulus == 0` in `next_mod`");
-        0u8.into()
+        invariant_violation!({ 0u8.into() }, "`modulus == 0` in `next_mod`");
     } else {
         (current + offset.into()) % modulus
     }
@@ -256,8 +257,10 @@ where
         + Copy,
 {
     if modulus == 0u8.into() || T::from(offset) > modulus {
-        invariant_violation!("`modulus == 0 || offset > modulus` in `previous_mod`");
-        0u8.into()
+        invariant_violation!(
+            { 0u8.into() },
+            "`modulus == 0 || offset > modulus` in `previous_mod`"
+        );
     } else {
         (current + (modulus - offset.into())) % modulus
     }

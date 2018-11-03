@@ -354,6 +354,11 @@ fn logger(s: &str) {
     console!(log, s);
 }
 
+#[inline]
+fn error_logger(s: &str) {
+    console!(error, s);
+}
+
 use std::mem;
 use stdweb::web::Date;
 
@@ -468,5 +473,5 @@ pub fn get_state_params() -> StateParams {
 
         mem::transmute::<[f64; 2], [u8; 16]>([time, 1.0 / time])
     };
-    (seed, Some(logger))
+    (seed, Some(logger), Some(error_logger))
 }

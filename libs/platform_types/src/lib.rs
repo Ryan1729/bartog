@@ -90,13 +90,7 @@ pub mod Button {
 
 pub type Logger = Option<fn(&str) -> ()>;
 
-pub fn log(logger: Logger, s: &str) {
-    if let Some(l) = logger {
-        l(s);
-    }
-}
-
-pub type StateParams = ([u8; 16], Logger);
+pub type StateParams = ([u8; 16], Logger, Logger);
 
 pub trait State {
     fn frame(&mut self, handle_sound: fn(SFX));

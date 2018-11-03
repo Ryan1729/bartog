@@ -39,13 +39,18 @@ respectively.
 
 ### Extra build options
 
-Extra invariant checking can be activated with by building with the following command
+These extra features can be adding then to the cargo `features` flag. For instance to activate `invariant-checking` and `logging` you can run:
+```
+       $ cargo web start --target=wasm32-unknown-unknown --release --features="invariant-checking logging"
+```
 
-```
-       $ cargo web start --target=wasm32-unknown-unknown --release --features="invariant-checking"
-```
+##### invariant-checking
 
 With this enabled violations of certain invariants will result in a panic. These checks are disabled in default mode since (presumably) a player would prefer the game doing something weird to outright crashing.
+
+##### logging
+
+Enables additional generic logging. With this feature disabled, the logs will be compiled out, leaving no appreciable run-time overhead.
 ___
 
 licensed under Apache or MIT, at your option.

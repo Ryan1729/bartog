@@ -15,6 +15,9 @@ path = "../game_state"
 [dependencies.common]
 path = "../common"
 
+[dependencies.features]
+path = "../features"
+
 [dependencies.platform_types]
 path = "../platform_types"
 
@@ -23,4 +26,5 @@ path = "../rule_changes"
 
 [features]
 default = []
-invariant-checking = []
+invariant-checking = ["features/invariant-checking"]
+logging = ["features/logging"]

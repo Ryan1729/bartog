@@ -2,7 +2,7 @@ use choices::{
     choose_can_play_graph, choose_in_game_changes, choose_play_again, choose_rule, choose_suit,
     choose_wild_flags, do_choices,
 };
-use common::*;
+use common::{GLOBAL_LOGGER, *};
 use game_state::{
     in_game::{self, player_name, ApplyToState},
     EventLog, GameState, LogHeading, Rules, Status,
@@ -21,11 +21,16 @@ pub struct BartogState {
 }
 
 impl BartogState {
-    pub fn new((seed, logger): StateParams) -> Self {
+    pub fn new((seed, logger, error_logger): StateParams) -> Self {
         let framebuffer = Framebuffer::new();
 
+        unsafe {
+            GLOBAL_LOGGER = logger;
+            GLOBAL_ERROR_LOGGER = error_logger;
+        }
+
         BartogState {
-            game_state: GameState::new(seed, logger),
+            game_state: GameState::new(seed),
             framebuffer,
             input: Input::new(),
             speaker: Speaker::new(),

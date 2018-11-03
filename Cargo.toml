@@ -13,7 +13,8 @@ path = "libs/game"
 
 [features]
 default = []
-invariant-checking = []
+invariant-checking = ["game/invariant-checking"]
+logging = ["game/logging"]
 
 [profile.dev]
 opt-level = 2

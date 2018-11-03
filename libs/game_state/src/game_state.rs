@@ -2,7 +2,6 @@ use can_play;
 use card_flags::{CardFlags, RANK_FLAGS};
 use common::{bytes_lines, bytes_reflow, slice_until_first_0, UIContext, DECK_SIZE, *};
 use in_game;
-use platform_types::{log, Logger};
 
 use std::collections::VecDeque;
 
@@ -270,23 +269,23 @@ pub struct GameState {
     pub event_log: EventLog,
     pub log_height: u8,
     pub log_heading: LogHeading,
-    pub logger: Logger,
 }
 
 impl GameState {
-    pub fn new(seed: [u8; 16], logger: Logger) -> GameState {
+    pub fn new(seed: [u8; 16]) -> GameState {
         let event_log = EventLog::new();
-        GameState::new_with_previous(seed, d!(), d!(), logger, event_log)
+        GameState::new_with_previous(seed, d!(), d!(), event_log)
     }
 
     pub fn new_with_previous(
         seed: [u8; 16],
         status: Status,
         rules: Rules,
-        logger: Logger,
         mut event_log: EventLog,
     ) -> GameState {
-        log(logger, &format!("{:?}", seed));
+        // We always want to log the seed, if there is a logger available, so use the function,
+        // not the macro.
+        log(&format!("{:?}", seed));
 
         event_log.push_hr();
         //TODO keep track of round count and change to "started round N"
@@ -305,7 +304,6 @@ impl GameState {
             event_log,
             log_height: 0,
             log_heading: LogHeading::Up,
-            logger,
         }
     }
 
@@ -319,14 +317,6 @@ impl GameState {
 
     pub fn round_is_over(&self) -> bool {
         self.in_game.round_is_over()
-    }
-
-    pub fn log(&self, s: &str) {
-        log(self.logger, s);
-    }
-
-    pub fn get_logger(&self) -> Logger {
-        self.logger.clone()
     }
 
     pub fn is_wild(&self, card: Card) -> bool {
