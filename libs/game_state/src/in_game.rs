@@ -411,12 +411,14 @@ impl RelativePlayerSet {
 
     #[inline]
     pub fn remove(self, player: RelativePlayer) -> Self {
-        RelativePlayerSet(match player {
+        let bits = match player {
             RelativePlayer::Same => self.0 & !SAME_FLAG,
             RelativePlayer::Next => self.0 & !NEXT_FLAG,
             RelativePlayer::Across => self.0 & !ACROSS_FLAG,
             RelativePlayer::Previous => self.0 & !PREVIOUS_FLAG,
-        })
+        };
+        log!(bits);
+        RelativePlayerSet(bits)
     }
 }
 
@@ -444,7 +446,7 @@ impl Iterator for RelativePlayerSet {
     fn next(&mut self) -> Option<Self::Item> {
         for player in RelativePlayer::all_values() {
             if self.contains(player) {
-                self.remove(player);
+                *self = self.remove(player);
                 return Some(player);
             }
         }
@@ -651,15 +653,19 @@ fn get_refs_mut<'a>(
 
 impl ApplyToState for CardMovement {
     fn apply_to_state(&self, state: &mut State) {
+        log!("apply_to_state");
         let players = self.affected.absolute_players(state.current_player);
 
         for player in players {
+            log!(player);
             let refs: RefsMut<Hand> = get_refs_mut(state, self.source, self.target, player);
             match refs {
                 RefsMut::Same(_) => {
                     return;
                 }
                 RefsMut::Pair(s, t) => {
+                    log!(s);
+                    log!(t);
                     if let Some(card) = s.remove_selected(self.selection) {
                         t.push(card);
                     }

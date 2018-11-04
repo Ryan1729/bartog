@@ -8,7 +8,7 @@ use std::fmt;
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Spread {
     LTR((u8, u8), u8),
     TTB((u8, u8), u8),
@@ -45,6 +45,7 @@ pub fn get_card_position(spread: Spread, len: u8, index: u8) -> (u8, u8) {
     }
 }
 
+#[derive(Debug)]
 pub struct Hand {
     cards: Vec<Card>,
     pub spread: Spread,
