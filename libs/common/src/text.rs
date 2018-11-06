@@ -1,5 +1,12 @@
 use inner_common::RANK_SUIT_PAIR_LAYOUT_CHAR;
 
+#[macro_export]
+macro_rules! bytes_concat {
+    ($($byte_strings:expr),*$(,)*) => {{
+        &[$($byte_strings),*].concat()
+    }}
+}
+
 pub fn bytes_lines<'a>(bytes: &'a [u8]) -> impl Iterator<Item = &'a [u8]> {
     bytes.split(|&b| b == b'\n')
 }

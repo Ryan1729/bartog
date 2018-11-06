@@ -1,5 +1,5 @@
 use common::{ByteStrRowDisplay, RowDisplay, *};
-use game_state::Rules;
+use game_state::{EventLog, Rules};
 
 use lazy_static::lazy_static;
 use rand::distributions::{Distribution, Standard};
@@ -218,7 +218,7 @@ pub fn get_pronoun(playerId: PlayerID) -> String {
 }
 
 pub trait ApplyToState {
-    fn apply_to_state(&self, &mut State);
+    fn apply_to_state(&self, &mut State, &mut EventLog);
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -283,9 +283,9 @@ impl RowDisplay for Change {
 }
 
 impl ApplyToState for Change {
-    fn apply_to_state(&self, state: &mut State) {
+    fn apply_to_state(&self, state: &mut State, event_log: &mut EventLog) {
         change_match!{*self, {
-            v => v.apply_to_state(state)
+            v => v.apply_to_state(state, event_log)
         }}
     }
 }
@@ -322,10 +322,20 @@ impl RelativePlayer {
 }
 
 impl ApplyToState for RelativePlayer {
-    fn apply_to_state(&self, state: &mut State) {
+    fn apply_to_state(&self, state: &mut State, event_log: &mut EventLog) {
+        let new_player = self.apply(state.current_player);
+        let new_player_str = new_player.to_string();
+
+        event_push!(
+            event_log,
+            b"It becomes ",
+            new_player_str.as_bytes(),
+            b"'s turn"
+        );
+
         state.current_player =
                     //apply Previous to undo the autonatic incrementation that will happen later
-                        RelativePlayer::Previous.apply(self.apply(state.current_player));
+                        RelativePlayer::Previous.apply(new_player);
     }
 }
 
@@ -629,11 +639,13 @@ fn get_ref_mut<'a>(state: &'a mut State, hand: RelativeHand, player: PlayerID) -
     }
 }
 
+#[allow(dead_code)]
 enum RefsMut<'a, T> {
     Pair(&'a mut T, &'a mut T),
     Same(&'a mut T),
 }
 
+#[allow(dead_code)]
 fn get_refs_mut<'a>(
     state: &'a mut State,
     h1: RelativeHand,
@@ -652,24 +664,28 @@ fn get_refs_mut<'a>(
 }
 
 impl ApplyToState for CardMovement {
-    fn apply_to_state(&self, state: &mut State) {
+    fn apply_to_state(&self, state: &mut State, event_log: &mut EventLog) {
+        if self.source == self.target {
+            let source_str = self.source.to_string();
+            event_push!(
+                event_log,
+                b"cards moved from ",
+                source_str.as_bytes(),
+                b" ... back to",
+                source_str.as_bytes(),
+                b".",
+            );
+        }
+
         log!("apply_to_state");
         let players = self.affected.absolute_players(state.current_player);
 
         for player in players {
             log!(player);
-            let refs: RefsMut<Hand> = get_refs_mut(state, self.source, self.target, player);
-            match refs {
-                RefsMut::Same(_) => {
-                    return;
-                }
-                RefsMut::Pair(s, t) => {
-                    log!(s);
-                    log!(t);
-                    if let Some(card) = s.remove_selected(self.selection) {
-                        t.push(card);
-                    }
-                }
+            let source: &mut Hand = get_ref_mut(state, self.source, player);
+
+            if let Some(card) = source.remove_selected(self.selection) {
+                unimplemented!()
             }
         }
     }

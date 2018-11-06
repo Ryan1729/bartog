@@ -1,5 +1,5 @@
 use common::*;
-use game_state::{can_play, in_game, CardFlags, GameState, Status, RULE_TYPES};
+use game_state::{can_play, event_push, in_game, CardFlags, GameState, Status, RULE_TYPES};
 use rand::Rng;
 
 struct CardFlagsDelta {
@@ -146,16 +146,13 @@ pub fn apply_when_played_changes(
 
     let edits = get_edits(card_changes, &new_card_changes);
 
-    {
-        let text = &[
-            pronoun.as_bytes(),
-            b" changed what happens when the ",
-            get_card_string(card).as_bytes(),
-            b" is played:",
-        ]
-            .concat();
-        state.event_log.push(text);
-    }
+    event_push!(
+        state.event_log,
+        pronoun.as_bytes(),
+        b" changed what happens when the ",
+        get_card_string(card).as_bytes(),
+        b" is played:",
+    );
 
     for edit in edits.into_iter() {
         let (prefix, c_string) = match edit {
@@ -164,9 +161,7 @@ pub fn apply_when_played_changes(
             Edit::Remove(c) => (b" - ", (c).to_string()),
         };
 
-        let text: &[u8] = &[prefix, c_string.as_bytes()].concat();
-
-        state.event_log.push(text);
+        event_push!(state.event_log, prefix, c_string.as_bytes());
     }
 
     /////////
@@ -197,30 +192,29 @@ pub fn apply_wild_change(state: &mut GameState, new_wild: CardFlags, player: Pla
         (false, false) => {}
         (true, false) => {
             let additions_string = get_card_list(&additions);
-            let text = &[
+            event_push!(
+                state.event_log,
                 pronoun.as_bytes(),
                 b" made the following cards wild: ",
                 additions_string.as_bytes(),
                 b".",
-            ]
-                .concat();
-            state.event_log.push(text);
+            );
         }
         (false, true) => {
             let removals_string = get_card_list(&removals);
-            let text = &[
+            event_push!(
+                state.event_log,
                 pronoun.as_bytes(),
                 b" made these cards not wild: ",
                 removals_string.as_bytes(),
                 b".",
-            ]
-                .concat();
-            state.event_log.push(text);
+            );
         }
         (true, true) => {
             let additions_string = get_card_list(&additions);
             let removals_string = get_card_list(&removals);
-            let text = &[
+            event_push!(
+                state.event_log,
                 pronoun.as_bytes(),
                 b" made the following cards wild: ",
                 additions_string.as_bytes(),
@@ -229,9 +223,7 @@ pub fn apply_wild_change(state: &mut GameState, new_wild: CardFlags, player: Pla
                 b" also made these cards not wild: ",
                 removals_string.as_bytes(),
                 b".",
-            ]
-                .concat();
-            state.event_log.push(text);
+            );
         }
     };
 
@@ -293,34 +285,33 @@ pub fn apply_can_play_graph_changes(
                 (false, false) => {}
                 (true, false) => {
                     let additions_string = get_suit_rank_pair_list(&additions);
-                    let text = &[
+                    event_push!(
+                        state.event_log,
                         pronoun.as_bytes(),
                         b" allowed the ",
                         card_string.as_bytes(),
                         b" to be played on the following cards: ",
                         additions_string.as_bytes(),
                         b".",
-                    ]
-                        .concat();
-                    state.event_log.push(text);
+                    );
                 }
                 (false, true) => {
                     let removals_string = get_suit_rank_pair_list(&removals);
-                    let text = &[
+                    event_push!(
+                        state.event_log,
                         pronoun.as_bytes(),
                         b" prevented the ",
                         card_string.as_bytes(),
                         b" from being played on the following cards: ",
                         removals_string.as_bytes(),
                         b".",
-                    ]
-                        .concat();
-                    state.event_log.push(text);
+                    );
                 }
                 (true, true) => {
                     let additions_string = get_suit_rank_pair_list(&additions);
                     let removals_string = get_suit_rank_pair_list(&removals);
-                    let text = &[
+                    event_push!(
+                        state.event_log,
                         pronoun.as_bytes(),
                         b" allowed the ",
                         card_string.as_bytes(),
@@ -331,9 +322,7 @@ pub fn apply_can_play_graph_changes(
                         b" also prevented it from being played on the following cards: ",
                         removals_string.as_bytes(),
                         b".",
-                    ]
-                        .concat();
-                    state.event_log.push(text);
+                    );
                 }
             };
 
@@ -349,7 +338,9 @@ fn add_rule_change_log_header(state: &mut GameState, player: PlayerID) {
 
     let player_name = in_game::player_name(player);
 
-    let text = &[player_name.as_bytes(), b" changed the rules as follows:"].concat();
-
-    state.event_log.push(text);
+    event_push!(
+        state.event_log,
+        player_name.as_bytes(),
+        b" changed the rules as follows:"
+    );
 }

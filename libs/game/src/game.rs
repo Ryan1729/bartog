@@ -4,6 +4,7 @@ use choices::{
 };
 use common::{GLOBAL_LOGGER, *};
 use game_state::{
+    event_push,
     in_game::{self, player_name, ApplyToState},
     EventLog, GameState, LogHeading, Rules, Status,
 };
@@ -276,9 +277,10 @@ fn move_to_discard(state: &mut GameState, card: Card) {
     state.in_game.discard.push(card);
 
     for change in state.rules.when_played.0[0].iter() {
+        //for testing
         // for change in state.rules.when_played.0[card as usize].iter() {
-        log!(change);
-        change.apply_to_state(&mut state.in_game)
+        log!(change); //TODO add card animation instead of instantly changing things
+        change.apply_to_state(&mut state.in_game, &mut state.event_log)
     }
 }
 
@@ -286,14 +288,13 @@ fn log_wild_selection(state: &mut GameState, player: PlayerID) {
     if let Some(suit) = state.in_game.top_wild_declared_as {
         let player_name = player_name(player);
         let suit_str = get_suit_str(suit);
-        let event_str = &[
+        event_push!(
+            state.event_log,
             player_name.as_bytes(),
             b" selected ",
             suit_str.as_bytes(),
             b".",
-        ]
-            .concat();
-        state.event_log.push(event_str)
+        );
     }
 }
 
@@ -372,7 +373,8 @@ fn get_discard_animation(
 
             let rank = get_rank(card.card);
 
-            let event_str = &[
+            event_push!(
+                event_log,
                 player_name.as_bytes(),
                 if rank == Ranks::ACE || rank == Ranks::EIGHT {
                     b" played an "
@@ -381,10 +383,7 @@ fn get_discard_animation(
                 },
                 card_string.as_bytes(),
                 b".",
-            ]
-                .concat();
-
-            event_log.push(event_str);
+            );
 
             if rules.is_wild(card.card) {
                 CardAnimation::new(card, DISCARD_X, DISCARD_Y, Action::SelectWild(player))
@@ -424,9 +423,7 @@ fn get_draw_animation<R: Rng>(
 
     let player_name = player_name(player);
 
-    let event_str = &[player_name.as_bytes(), b" drew a card."].concat();
-
-    event_log.push(event_str);
+    event_push!(event_log, player_name.as_bytes(), b" drew a card.");
 
     Some(CardAnimation::new(
         PositionedCard {

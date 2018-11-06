@@ -376,12 +376,11 @@ fn in_game_changes_choose_changes(
 ) {
     framebuffer.full_window();
 
-    let text = &[
+    let text = bytes_concat!(
         b"choose what will happen when ",
         get_card_string(choice_state.card).as_bytes(),
         b" is played.",
-    ]
-        .concat();
+    );
 
     let max_heading_y = print_choice_header(framebuffer, text);
 
@@ -854,12 +853,11 @@ fn can_play_graph_choose_edges(
 ) {
     framebuffer.full_window();
 
-    let text = &[
+    let text = bytes_concat!(
         b"choose the cards the ",
         get_card_string(choice_state.card).as_bytes(),
         b" can be played on.",
-    ]
-        .concat();
+    );
 
     let max_heading_y = print_choice_header(framebuffer, text);
 

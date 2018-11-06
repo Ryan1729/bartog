@@ -93,6 +93,13 @@ impl EventLog {
     }
 }
 
+#[macro_export]
+macro_rules! event_push {
+    ($event_log:expr, $($byte_strings:tt)*) => {{
+        $event_log.push(bytes_concat!($($byte_strings)*));
+    }}
+}
+
 impl Empty for EventLog {
     fn empty() -> Self {
         EventLog {

@@ -10,6 +10,7 @@ extern crate lazy_static;
 #[cfg(test)]
 extern crate quickcheck;
 
+#[macro_use]
 mod game_state;
 pub use game_state::*;
 
