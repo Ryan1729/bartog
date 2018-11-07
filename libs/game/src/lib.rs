@@ -1,6 +1,8 @@
 #![allow(non_snake_case)]
 extern crate common;
 
+extern crate animations;
+
 extern crate platform_types;
 
 extern crate rule_changes;

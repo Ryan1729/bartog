@@ -101,8 +101,8 @@ pub use rendering::*;
 mod inner_common;
 pub use inner_common::*;
 
-mod animation;
-pub use animation::*;
+mod card_animation;
+pub use card_animation::*;
 
 mod text;
 pub use text::*;

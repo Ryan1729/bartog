@@ -1,5 +1,5 @@
 use common::{ByteStrRowDisplay, RowDisplay, *};
-use game_state::{EventLog, Rules};
+use game_state::Rules;
 
 use lazy_static::lazy_static;
 use rand::distributions::{Distribution, Standard};
@@ -173,52 +173,36 @@ impl State {
     pub fn round_is_over(&self) -> bool {
         !self.no_winners_yet() && self.animations_settled()
     }
-}
 
-pub const MAX_PLAYER_ID: PlayerID = 3;
-pub const PLAYER_ID_COUNT: usize = (MAX_PLAYER_ID + 1) as _;
-pub const PLAYER_ID: PlayerID = MAX_PLAYER_ID;
-
-pub fn all_player_ids() -> [PlayerID; PLAYER_ID_COUNT] {
-    let mut output = [0; PLAYER_ID_COUNT];
-    for i in 0..=MAX_PLAYER_ID {
-        output[i as usize] = i;
+    pub fn get_new_card_position(&self, hand: RelativeHand, player: PlayerID) -> (u8, u8) {
+        match hand {
+            RelativeHand::Deck => (DECK_X, DECK_Y),
+            RelativeHand::Discard => (DISCARD_X, DISCARD_Y),
+            RelativeHand::Player(p) => self.get_player_new_card_position(p.apply(player)),
+        }
     }
-    output
-}
 
-pub fn player_name(playerId: PlayerID) -> String {
-    invariant_assert_eq!(MAX_PLAYER_ID, 3);
-    if playerId < MAX_PLAYER_ID {
-        format!("cpu {}", playerId)
-    } else if playerId == MAX_PLAYER_ID {
-        "you".to_owned()
-    } else {
-        "???".to_owned()
+    pub fn get_player_new_card_position(&self, player: PlayerID) -> (u8, u8) {
+        let hand = self.get_hand(player);
+        let len = hand.len();
+
+        get_card_position(hand.spread, len + 1, len)
     }
-}
 
-pub fn player_1_char_name(playerId: PlayerID) -> String {
-    invariant_assert_eq!(MAX_PLAYER_ID, 3);
-    if playerId < MAX_PLAYER_ID {
-        format!("{}", playerId)
-    } else if playerId == MAX_PLAYER_ID {
-        "u".to_owned()
-    } else {
-        "?".to_owned()
+    pub fn get_relative_hand_mut<'a>(
+        &'a mut self,
+        hand: RelativeHand,
+        player: PlayerID,
+    ) -> &'a mut Hand {
+        match hand {
+            RelativeHand::Deck => &mut self.deck,
+            RelativeHand::Discard => &mut self.discard,
+            RelativeHand::Player(p) => match p.apply(player) {
+                id if is_player(id) => &mut self.hand,
+                id => &mut self.cpu_hands[id as usize],
+            },
+        }
     }
-}
-
-pub fn get_pronoun(playerId: PlayerID) -> String {
-    if playerId == MAX_PLAYER_ID {
-        "you".to_string()
-    } else {
-        "they".to_string()
-    }
-}
-
-pub trait ApplyToState {
-    fn apply_to_state(&self, &mut State, &mut EventLog);
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -228,6 +212,7 @@ pub enum Change {
     //TopWild(TopWild),
 }
 
+#[macro_export]
 macro_rules! change_match {
         {$change:expr, {$name:ident => $code:expr}} => {
             match $change {
@@ -282,14 +267,6 @@ impl RowDisplay for Change {
     }
 }
 
-impl ApplyToState for Change {
-    fn apply_to_state(&self, state: &mut State, event_log: &mut EventLog) {
-        change_match!{*self, {
-            v => v.apply_to_state(state, event_log)
-        }}
-    }
-}
-
 //This relies on MAX_PLAYER_ID being 3, and will require structural changes if it changes!
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum RelativePlayer {
@@ -318,24 +295,6 @@ impl RelativePlayer {
             RelativePlayer::Across => (playerId + 2) % (MAX_PLAYER_ID + 1),
             RelativePlayer::Previous => (playerId + 3) % (MAX_PLAYER_ID + 1),
         }
-    }
-}
-
-impl ApplyToState for RelativePlayer {
-    fn apply_to_state(&self, state: &mut State, event_log: &mut EventLog) {
-        let new_player = self.apply(state.current_player);
-        let new_player_str = new_player.to_string();
-
-        event_push!(
-            event_log,
-            b"It becomes ",
-            new_player_str.as_bytes(),
-            b"'s turn"
-        );
-
-        state.current_player =
-                    //apply Previous to undo the autonatic incrementation that will happen later
-                        RelativePlayer::Previous.apply(new_player);
     }
 }
 
@@ -465,7 +424,7 @@ impl Iterator for RelativePlayerSet {
 }
 
 impl RelativePlayerSet {
-    fn absolute_players(&self, player: PlayerID) -> Vec<PlayerID> {
+    pub fn absolute_players(&self, player: PlayerID) -> Vec<PlayerID> {
         self.clone().map(|p| p.apply(player)).collect()
     }
 }
@@ -557,10 +516,10 @@ implement!(
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct CardMovement {
-    affected: RelativePlayerSet,
-    source: RelativeHand,
-    target: RelativeHand,
-    selection: CardSelection,
+    pub affected: RelativePlayerSet,
+    pub source: RelativeHand,
+    pub target: RelativeHand,
+    pub selection: CardSelection,
 }
 
 impl AllValues for CardMovement {
@@ -628,17 +587,6 @@ impl Distribution<CardMovement> for Standard {
     }
 }
 
-fn get_ref_mut<'a>(state: &'a mut State, hand: RelativeHand, player: PlayerID) -> &'a mut Hand {
-    match hand {
-        RelativeHand::Deck => &mut state.deck,
-        RelativeHand::Discard => &mut state.discard,
-        RelativeHand::Player(p) => match p.apply(player) {
-            id if id >= MAX_PLAYER_ID => &mut state.hand,
-            id => &mut state.cpu_hands[id as usize],
-        },
-    }
-}
-
 #[allow(dead_code)]
 enum RefsMut<'a, T> {
     Pair(&'a mut T, &'a mut T),
@@ -653,41 +601,14 @@ fn get_refs_mut<'a>(
     player: PlayerID,
 ) -> RefsMut<'a, Hand> {
     if h1 == h2 {
-        RefsMut::Same(get_ref_mut(state, h1, player))
+        RefsMut::Same(state.get_relative_hand_mut(h1, player))
     } else {
-        let source: &mut Hand = unsafe { &mut *(get_ref_mut(state, h1, player) as *mut Hand) };
+        let source: &mut Hand =
+            unsafe { &mut *(state.get_relative_hand_mut(h1, player) as *mut Hand) };
 
-        let target = get_ref_mut(state, h2, player);
+        let target = state.get_relative_hand_mut(h2, player);
 
         RefsMut::Pair(source, target)
-    }
-}
-
-impl ApplyToState for CardMovement {
-    fn apply_to_state(&self, state: &mut State, event_log: &mut EventLog) {
-        if self.source == self.target {
-            let source_str = self.source.to_string();
-            event_push!(
-                event_log,
-                b"cards moved from ",
-                source_str.as_bytes(),
-                b" ... back to",
-                source_str.as_bytes(),
-                b".",
-            );
-        }
-
-        log!("apply_to_state");
-        let players = self.affected.absolute_players(state.current_player);
-
-        for player in players {
-            log!(player);
-            let source: &mut Hand = get_ref_mut(state, self.source, player);
-
-            if let Some(card) = source.remove_selected(self.selection) {
-                unimplemented!()
-            }
-        }
     }
 }
 

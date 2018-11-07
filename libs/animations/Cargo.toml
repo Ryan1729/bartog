@@ -1,15 +1,19 @@
 [package]
-name = "choices"
+name = "animations"
 version = "0.1.0"
 authors = ["Ryan1729 <Ryan1729@gmail.com>"]
 
 [dependencies]
+rand = "0.5"
 
 [dependencies.game_state]
 path = "../game_state"
 
 [dependencies.common]
 path = "../common"
+
+[dependencies.choices]
+path = "../choices"
 
 [dependencies.platform_types]
 path = "../platform_types"

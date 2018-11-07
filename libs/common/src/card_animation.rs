@@ -2,7 +2,9 @@ use inner_common::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Action {
+    PlayToDiscard,
     MoveToDiscard,
+    MoveToDeck,
     MoveToHand(PlayerID),
     SelectWild(PlayerID),
 }
@@ -188,20 +190,20 @@ mod tests {
             if g.gen() {
                 Action::MoveToHand(g.gen_range(0, 10))
             } else {
-                Action::MoveToDiscard
+                Action::PlayToDiscard
             }
         }
 
         fn shrink(&self) -> Box<Iterator<Item = Action>> {
             match *self {
-                Action::MoveToDiscard => empty_shrinker(),
+                Action::PlayToDiscard => empty_shrinker(),
                 Action::MoveToHand(n) => {
-                    let chain = single_shrinker(Action::MoveToDiscard)
+                    let chain = single_shrinker(Action::PlayToDiscard)
                         .chain(n.shrink().map(Action::MoveToHand));
                     Box::new(chain)
                 }
                 Action::SelectWild(n) => {
-                    let chain = single_shrinker(Action::MoveToDiscard)
+                    let chain = single_shrinker(Action::PlayToDiscard)
                         .chain(n.shrink().map(Action::SelectWild));
                     Box::new(chain)
                 }

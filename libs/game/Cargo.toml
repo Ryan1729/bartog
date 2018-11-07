@@ -9,6 +9,9 @@ rand = "0.5"
 [dependencies.choices]
 path = "../choices"
 
+[dependencies.animations]
+path = "../animations"
+
 [dependencies.game_state]
 path = "../game_state"
 

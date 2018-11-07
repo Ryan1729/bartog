@@ -409,6 +409,59 @@ pub struct PositionedCard {
 
 pub type PlayerID = u8;
 
+pub const MAX_PLAYER_ID: PlayerID = 3;
+pub const PLAYER_ID_COUNT: usize = (MAX_PLAYER_ID + 1) as _;
+pub const PLAYER_ID: PlayerID = MAX_PLAYER_ID;
+
+pub fn all_player_ids() -> [PlayerID; PLAYER_ID_COUNT] {
+    let mut output = [0; PLAYER_ID_COUNT];
+    for i in 0..=MAX_PLAYER_ID {
+        output[i as usize] = i;
+    }
+    output
+}
+
+#[inline]
+pub fn is_cpu_player(playerId: PlayerID) -> bool {
+    playerId < PLAYER_ID
+}
+
+// Having invalid ids treated as player ids curruntly works fine most places, and it's nice if
+// `is_cpu_player` and `is_player` cover all the cases. we can make `is_strictly_player` or
+// something if we need to.
+#[inline]
+pub fn is_player(playerId: PlayerID) -> bool {
+    playerId >= PLAYER_ID
+}
+
+pub fn player_name(playerId: PlayerID) -> String {
+    if is_cpu_player(playerId) {
+        format!("cpu {}", playerId)
+    } else if playerId == MAX_PLAYER_ID {
+        "you".to_owned()
+    } else {
+        "???".to_owned()
+    }
+}
+
+pub fn player_1_char_name(playerId: PlayerID) -> String {
+    if is_cpu_player(playerId) {
+        format!("{}", playerId)
+    } else if playerId == MAX_PLAYER_ID {
+        "u".to_owned()
+    } else {
+        "?".to_owned()
+    }
+}
+
+pub fn get_pronoun(playerId: PlayerID) -> String {
+    if playerId == MAX_PLAYER_ID {
+        "you".to_string()
+    } else {
+        "they".to_string()
+    }
+}
+
 pub const PLAYER_HAND_HEIGHT: u8 = (SCREEN_HEIGHT - (card::HEIGHT * 5 / 9) as usize) as u8;
 pub const MIDDLE_CPU_HAND_HEIGHT: u8 = card::Y_EMPTY_SPACE;
 pub const LEFT_CPU_HAND_X: u8 = card::X_EMPTY_SPACE;
