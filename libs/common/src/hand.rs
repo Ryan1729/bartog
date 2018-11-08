@@ -187,16 +187,16 @@ impl Hand {
         suits[0]
     }
 
-    pub fn remove_selected(&mut self, selection: CardSelection) -> Option<Card> {
+    pub fn remove_selected(&mut self, selection: CardSelection) -> Option<PositionedCard> {
         let len = self.cards.len();
         if len == 0 {
             return None;
         }
         match selection {
             CardSelection::NthModuloCount(n) => {
-                let i = (n.get() - 1) as usize % len;
+                let i = (n.get() - 1) % len as u8;
 
-                Some(self.cards.remove(i))
+                self.remove_if_present(i)
             }
         }
     }

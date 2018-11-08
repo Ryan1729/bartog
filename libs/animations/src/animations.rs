@@ -22,8 +22,8 @@ impl ApplyToState for Change {
 
 impl ApplyToState for CardMovement {
     fn apply_to_state(&self, state: &mut in_game::State, event_log: &mut EventLog) {
+        let source_str = self.source.to_string();
         if self.source == self.target {
-            let source_str = self.source.to_string();
             event_push!(
                 event_log,
                 b"cards moved from ",
@@ -37,13 +37,24 @@ impl ApplyToState for CardMovement {
         let players = self.affected.absolute_players(state.current_player);
 
         for player in players {
-            log!(player);
             let card = {
                 let source: &mut Hand = state.get_relative_hand_mut(self.source, player);
                 source.remove_selected(self.selection)
             };
 
             if let Some(card) = card {
+                event_push!(
+                    event_log,
+                    player_name(player).as_bytes(),
+                    b" moves ",
+                    self.selection.to_string().as_bytes(),
+                    b" from ",
+                    source_str.as_bytes(),
+                    b" to ",
+                    self.target.to_string().as_bytes(),
+                    b".",
+                );
+
                 let (x, y) = state.get_new_card_position(self.target, player);
 
                 state.card_animations.push(CardAnimation::new(
@@ -52,7 +63,21 @@ impl ApplyToState for CardMovement {
                     y,
                     get_move_action(self.target, player),
                 ));
-            };
+            } else {
+                event_push!(
+                    event_log,
+                    player_name(player).as_bytes(),
+                    b" tries to move ",
+                    self.selection.to_string().as_bytes(),
+                    b" from ",
+                    source_str.as_bytes(),
+                    b" to ",
+                    self.target.to_string().as_bytes(),
+                    b" but ",
+                    source_str.as_bytes(),
+                    b" didn't have enough cards.",
+                );
+            }
         }
     }
 }
