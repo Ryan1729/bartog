@@ -22,8 +22,8 @@ impl ApplyToState for Change {
 
 impl ApplyToState for CardMovement {
     fn apply_to_state(&self, state: &mut in_game::State, event_log: &mut EventLog) {
-        let source_str = self.source.to_string();
         if self.source == self.target {
+            let source_str = self.source.to_string();
             event_push!(
                 event_log,
                 b"cards moved from ",
@@ -37,6 +37,7 @@ impl ApplyToState for CardMovement {
         let players = self.affected.absolute_players(state.current_player);
 
         for player in players {
+            let source_str = self.source.apply(player).to_string();
             let card = {
                 let source: &mut Hand = state.get_relative_hand_mut(self.source, player);
                 source.remove_selected(self.selection)
@@ -118,7 +119,7 @@ fn play_to_discard(state: &mut GameState, card: Card) {
     for change in state.rules.when_played.0[0].iter() {
         //for testing
         // for change in state.rules.when_played.0[card as usize].iter() {
-        log!(change); //TODO add card animation instead of instantly changing things
+        log!(change);
         change.apply_to_state(&mut state.in_game, &mut state.event_log)
     }
 }
@@ -162,18 +163,18 @@ pub fn advance(state: &mut GameState) {
                 Action::PlayToDiscard => {
                     play_to_discard(state, card);
                 }
-                Action::SelectWild(playerId) => {
-                    if is_cpu_player(playerId) {
+                Action::SelectWild(player_id) => {
+                    if is_cpu_player(player_id) {
                         state.in_game.top_wild_declared_as = {
-                            let hand = state.in_game.get_hand(playerId);
+                            let hand = state.in_game.get_hand(player_id);
                             hand.most_common_suit()
                         };
-                        log_wild_selection(state, playerId);
+                        log_wild_selection(state, player_id);
                         play_to_discard(state, card);
                     } else {
                         if let Some(suit) = choose_suit(state) {
                             state.in_game.top_wild_declared_as = Some(suit);
-                            log_wild_selection(state, playerId);
+                            log_wild_selection(state, player_id);
                             play_to_discard(state, card);
                         } else {
                             //wait until they choose
@@ -189,8 +190,8 @@ pub fn advance(state: &mut GameState) {
                 Action::MoveToDiscard => {
                     state.in_game.discard.push(card);
                 }
-                Action::MoveToHand(playerId) => {
-                    state.in_game.get_hand_mut(playerId).push(card);
+                Action::MoveToHand(player_id) => {
+                    state.in_game.get_hand_mut(player_id).push(card);
                 }
             }
         }

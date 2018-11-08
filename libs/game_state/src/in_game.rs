@@ -253,9 +253,15 @@ impl fmt::Debug for Change {
 
 impl fmt::Display for Change {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        change_match!{*self, {
-            v => write!(f, "{}", v.to_string())
-        }}
+        if f.alternate() {
+            change_match!{*self, {
+                v => write!(f, "{:#}", v)
+            }}
+        } else {
+            change_match!{*self, {
+                v => write!(f, "{}", v)
+            }}
+        }
     }
 }
 
@@ -567,9 +573,10 @@ impl fmt::Display for CardMovement {
             "{:#} {:#} {:#} {:#} ",
             self.affected, self.selection, self.source, self.target
         )?;
+
         write!(
             f,
-            "{} move {} from {} to {}",
+            "{} moves {} from {} to {}",
             self.affected, self.selection, self.source, self.target
         )
     }
@@ -629,7 +636,12 @@ impl fmt::Display for RelativeHand {
             };
         }
         match *self {
-            RelativeHand::Player(p) => write!(f, "{}", p),
+            RelativeHand::Player(p) => match p {
+                RelativePlayer::Same => write!(f, "their hand"),
+                RelativePlayer::Next => write!(f, "the next player's hand"),
+                RelativePlayer::Across => write!(f, "the hande of the player across from them"),
+                RelativePlayer::Previous => write!(f, "the previous player's hand"),
+            },
             RelativeHand::Deck => write!(f, "the deck"),
             RelativeHand::Discard => write!(f, "the discard pile"),
         }
@@ -650,6 +662,40 @@ implement!(
         Distribution<RelativeHand> for Standard
         by picking from RelativeHand::all_values()
     );
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum AbsoluteHand {
+    Player(PlayerID),
+    Deck,
+    Discard,
+}
+
+impl RelativeHand {
+    pub fn apply(self, player: PlayerID) -> AbsoluteHand {
+        match self {
+            RelativeHand::Player(p) => AbsoluteHand::Player(p.apply(player)),
+            RelativeHand::Deck => AbsoluteHand::Deck,
+            RelativeHand::Discard => AbsoluteHand::Discard,
+        }
+    }
+}
+
+impl fmt::Display for AbsoluteHand {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if f.alternate() {
+            return match *self {
+                AbsoluteHand::Player(p) => write!(f, "{}", player_1_char_name(p)),
+                AbsoluteHand::Deck => write!(f, "deck"),
+                AbsoluteHand::Discard => write!(f, "discard"),
+            };
+        }
+        match *self {
+            AbsoluteHand::Player(p) => write!(f, "{}", player_name(p)),
+            AbsoluteHand::Deck => write!(f, "the deck"),
+            AbsoluteHand::Discard => write!(f, "the discard pile"),
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 pub enum Layer {
