@@ -205,11 +205,11 @@ pub fn advance(state: &mut GameState) {
 
 pub fn add_discard_animation(
     state: &mut in_game::State,
-    player: PlayerID,
     card_index: u8,
     event_log: &mut EventLog,
     rules: &Rules,
 ) {
+    let player = state.current_player;
     if let Some(card) = state.remove_positioned_card(player, card_index) {
         let player_name = player_name(player);
 
@@ -241,10 +241,10 @@ pub fn add_discard_animation(
 
 pub fn add_draw_animation<R: Rng>(
     state: &mut in_game::State,
-    player: PlayerID,
     event_log: &mut EventLog,
     rng: &mut R,
 ) {
+    let player = state.current_player;
     if let Some(animation) = get_draw_animation(state, player, event_log, rng) {
         state.card_animations.push(animation);
     }

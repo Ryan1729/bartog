@@ -267,22 +267,34 @@ fn cpu_would_play<R: Rng>(
     rng.choose(&playable).map(|&(i, _)| i as u8)
 }
 
+fn incremented_current_player(state: &in_game::State) -> PlayerID {
+    if state.current_player >= MAX_PLAYER_ID {
+        0
+    } else {
+        state.current_player + 1
+    }
+}
+
 fn take_turn(game_state: &mut GameState, input: Input, speaker: &mut Speaker) {
     let state = &mut game_state.in_game;
+
     let rules = &game_state.rules;
     let event_log = &mut game_state.event_log;
     let rng = &mut game_state.rng;
 
-    let player = state.current_player;
-    match player {
+    //Doing this here and assigning to `current_player` later means that to start on a given
+    //player we need to set `current_player` to the previous player, but it means that
+    //`current_player` is set to the same player only during the actual player's turn and for the
+    //entire turn, rather than just until we get to the increment.
+    let next_player = incremented_current_player(state);
+    match next_player {
         p if is_cpu_player(p) => {
+            state.current_player = next_player;
             if let Some(index) = cpu_would_play(state, rng, rules, p) {
-                animations::add_discard_animation(state, player, index, event_log, rules);
+                animations::add_discard_animation(state, index, event_log, rules);
             } else {
-                animations::add_draw_animation(state, player, event_log, rng);
+                animations::add_draw_animation(state, event_log, rng);
             }
-
-            state.current_player += 1;
         }
         PLAYER_ID => {
             if move_cursor(state, input, speaker) {
@@ -299,16 +311,14 @@ fn take_turn(game_state: &mut GameState, input: Input, speaker: &mut Speaker) {
                 };
 
                 if can_play_it {
-                    animations::add_discard_animation(state, player, index, event_log, rules);
-
-                    state.current_player = 0;
+                    state.current_player = next_player;
+                    animations::add_discard_animation(state, index, event_log, rules);
                 } else {
                     //TODO good feedback. Tint the card red or shake it or something?
                 }
             } else if input.pressed_this_frame(Button::B) {
-                animations::add_draw_animation(state, player, event_log, rng);
-
-                state.current_player = 0;
+                state.current_player = next_player;
+                animations::add_draw_animation(state, event_log, rng);
             }
         }
         id => {
