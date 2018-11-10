@@ -56,6 +56,19 @@ impl ApplyToState for CardMovement {
                     b".",
                 );
 
+                let game_player_hand = RelativeHand::get_game_player_hand(state.current_player);
+                if self.target == RelativeHand::Discard
+                    || self.source == game_player_hand
+                    || self.target == game_player_hand
+                {
+                    event_push!(
+                        event_log,
+                        b"The card was the ",
+                        get_card_string(card.card).as_bytes(),
+                        b".",
+                    );
+                }
+
                 let (x, y) = state.get_new_card_position(self.target, player);
 
                 state.card_animations.push(CardAnimation::new(
@@ -116,10 +129,7 @@ fn play_to_discard(state: &mut GameState, card: Card) {
 
     state.in_game.discard.push(card);
 
-    for change in state.rules.when_played.0[0].iter() {
-        //for testing
-        // for change in state.rules.when_played.0[card as usize].iter() {
-        log!(change);
+    for change in state.rules.when_played.0[card as usize].iter() {
         change.apply_to_state(&mut state.in_game, &mut state.event_log)
     }
 }

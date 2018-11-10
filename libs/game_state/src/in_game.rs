@@ -283,6 +283,17 @@ pub enum RelativePlayer {
     Previous,
 }
 
+impl RelativePlayer {
+    pub fn get_game_player(current_player: PlayerID) -> RelativePlayer {
+        match current_player {
+            0 => RelativePlayer::Previous,
+            1 => RelativePlayer::Across,
+            2 => RelativePlayer::Next,
+            _ => RelativePlayer::Same,
+        }
+    }
+}
+
 impl AllValues for RelativePlayer {
     fn all_values() -> Vec<Self> {
         vec![
@@ -393,7 +404,6 @@ impl RelativePlayerSet {
             RelativePlayer::Across => self.0 & !ACROSS_FLAG,
             RelativePlayer::Previous => self.0 & !PREVIOUS_FLAG,
         };
-        log!(bits);
         RelativePlayerSet(bits)
     }
 }
@@ -625,6 +635,12 @@ pub enum RelativeHand {
     Player(RelativePlayer),
     Deck,
     Discard,
+}
+
+impl RelativeHand {
+    pub fn get_game_player_hand(current_player: PlayerID) -> RelativeHand {
+        RelativeHand::Player(RelativePlayer::get_game_player(current_player))
+    }
 }
 
 impl fmt::Display for RelativeHand {

@@ -451,7 +451,6 @@ fn in_game_changes_choose_changes(
                     choice_state.right_scroll as usize + choice_state.marker_y as usize,
                     choice_state.changes.len(),
                 );
-                log!((i, i));
                 choice_state.changes.insert(i, change.clone());
             }
         }
