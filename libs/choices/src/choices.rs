@@ -619,6 +619,73 @@ enum CancelRuleChoice {
     Yes,
 }
 
+//TODO make can_play and when played act on sets of cards. (4s, spades, etc.)
+// fn do_card_flags_sub_choice<C: CardFlagsSubChoice>(
+//     framebuffer: &mut Framebuffer,
+//     context: &mut UIContext,
+//     input: Input,
+//     speaker: &mut Speaker,
+//     choice_state: &mut C,
+//     text: &[u8]
+// ) -> CancelRuleChoice {
+//     framebuffer.full_window();
+//
+//     let max_heading_y = print_choice_header(framebuffer, text);
+//
+//     let w = SPRITE_SIZE * 5;
+//     let h = SPRITE_SIZE * 3;
+//
+//     {
+//         let y = SPRITE_SIZE * 4;
+//
+//         let spec = ButtonSpec {
+//             x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
+//             y,
+//             w,
+//             h,
+//             id: 1,
+//             text: "ok".to_owned(),
+//         };
+//
+//         if do_button(framebuffer, context, input, speaker, &spec) {
+//             choice_state
+//                 .changes
+//                 .push(can_play::Change::new(choice_state.edges, choice_state.card));
+//             choice_state.layer = d!();
+//         }
+//     }
+//
+//     {
+//         let y = SPRITE_SIZE * 7;
+//
+//         let spec = ButtonSpec {
+//             x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
+//             y,
+//             w,
+//             h,
+//             id: 2,
+//             text: "cancel".to_owned(),
+//         };
+//
+//         if do_button(framebuffer, context, input, speaker, &spec) {
+//             choice_state.layer = d!();
+//         }
+//     }
+//
+//     const FIRST_CHECKBOX_ID: UIId = 3;
+//
+//     do_scrolling_card_checkbox(
+//         framebuffer,
+//         context,
+//         input,
+//         speaker,
+//         &mut choice_state.scroll_card,
+//         &mut choice_state.edges,
+//         FIRST_CHECKBOX_ID,
+//         max_heading_y,
+//     );
+// }
+
 fn do_card_sub_choice<C: CardSubChoice>(
     framebuffer: &mut Framebuffer,
     context: &mut UIContext,
