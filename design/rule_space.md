@@ -409,3 +409,25 @@ u -> p
 1 -> p
 2 -> p  ->  p
 ```
+
+____
+
+We want to store which cards are treated the same as which card. We don't want excessive pointer chasing, (would 52 lookups every frame, in densely packed memory, actually be a problem?) and we don't want to have loops. That is, we need to either resolve or disallow making a card the same as another card which is the same as the first card. 
+
+##### Ways to resolve this: 
+* Define a card that is the same as the first card as always the lowest card in the chain.
+    ** This has the issue of eliminating some extra effects placed on cards, in an unintuitive way. Also, adding a gradient like this to cards makes some cards more desirable. This may or may not be a problem.
+* Loop through the chain merging together the effects and stopping when we get to the original card.
+    ** Under this scheme there could be loops which have two distinct parts. For example given 2 same as  3, 3 same as 2, 4 same as 3, if someone plays 2 it seems like they should get the effects of all 2, 3 and 4, but under this scheme it would be only 2 and 3.
+    
+    Seems like we want some kind of custom data structure then?
+
+##### Things we want to be able to do:
+* get the ordered list of actions for a given card
+    ** We want to allow choosing which order rules go in as part of combining the cards. As a first version, making the lowest card first is okay. But we mention it here so this data structure supports it.
+* regenerate the list from the new list of actions and the old instance of this data structure.
+    ** This has implications for how we implement choosing rule ordering. If we can't sensibly decide how to propagate the old choices about ordering, then we'll need to ask. Probably the correct thing to do would be to popup a modal for each card and which asks whether the order is correct and allows changing the order if not. There would need to be "Yes", "No", "Yes to all" and "No to all" choices. This sounds annoying for both the user and the implementor. It will also matter almost never, depending on how the player makes rules. It also means that the computer players will make confusing rules. It might be okay to just use lowest card first, or maybe earliest rule first or some other tie-breaker to avoid the popup, at least until we find out whether this ever comes up in practice.
+* check whether a card can be played on another card.
+    * now the checkbox which selects whether a card can be played on itself starts to matter.
+
+I'm becoming less sure it is a good idea to work on this next. Or ever. It seems like identifying cards as a single card is much more complicated than it is entertaining.
