@@ -1,7 +1,7 @@
 use common::*;
 use game_state::{
-    can_play, get_status_text, in_game, CardFlags, CardFlagsChoiceState, Choice, Chosen, GameState,
-    Status, RULE_TYPES,
+    can_play, get_status_text, in_game, CardFlagsChoiceState, Choice, Chosen, GameState, Status,
+    RULE_TYPES,
 };
 use platform_types::{Button, Input, Speaker};
 use std::cmp::min;
@@ -620,71 +620,92 @@ enum CancelRuleChoice {
 }
 
 //TODO make can_play and when played act on sets of cards. (4s, spades, etc.)
-// fn do_card_flags_sub_choice<C: CardFlagsSubChoice>(
-//     framebuffer: &mut Framebuffer,
-//     context: &mut UIContext,
-//     input: Input,
-//     speaker: &mut Speaker,
-//     choice_state: &mut C,
-//     text: &[u8]
-// ) -> CancelRuleChoice {
-//     framebuffer.full_window();
-//
-//     let max_heading_y = print_choice_header(framebuffer, text);
-//
-//     let w = SPRITE_SIZE * 5;
-//     let h = SPRITE_SIZE * 3;
-//
-//     {
-//         let y = SPRITE_SIZE * 4;
-//
-//         let spec = ButtonSpec {
-//             x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
-//             y,
-//             w,
-//             h,
-//             id: 1,
-//             text: "ok".to_owned(),
-//         };
-//
-//         if do_button(framebuffer, context, input, speaker, &spec) {
-//             choice_state
-//                 .changes
-//                 .push(can_play::Change::new(choice_state.edges, choice_state.card));
-//             choice_state.layer = d!();
-//         }
-//     }
-//
-//     {
-//         let y = SPRITE_SIZE * 7;
-//
-//         let spec = ButtonSpec {
-//             x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
-//             y,
-//             w,
-//             h,
-//             id: 2,
-//             text: "cancel".to_owned(),
-//         };
-//
-//         if do_button(framebuffer, context, input, speaker, &spec) {
-//             choice_state.layer = d!();
-//         }
-//     }
-//
-//     const FIRST_CHECKBOX_ID: UIId = 3;
-//
-//     do_scrolling_card_checkbox(
-//         framebuffer,
-//         context,
-//         input,
-//         speaker,
-//         &mut choice_state.scroll_card,
-//         &mut choice_state.edges,
-//         FIRST_CHECKBOX_ID,
-//         max_heading_y,
-//     );
-// }
+fn do_card_flags_sub_choice<C: CardFlagsSubChoice>(
+    framebuffer: &mut Framebuffer,
+    context: &mut UIContext,
+    input: Input,
+    speaker: &mut Speaker,
+    choice_state: &mut C,
+    text: &[u8],
+) -> CancelRuleChoice {
+    let mut output = CancelRuleChoice::No;
+
+    framebuffer.full_window();
+
+    let max_heading_y = print_choice_header(framebuffer, text);
+
+    let w = SPRITE_SIZE * 5;
+    let h = SPRITE_SIZE * 3;
+    let x = SCREEN_WIDTH as u8 - (w + SPRITE_SIZE);
+
+    {
+        let y = SPRITE_SIZE * 4;
+
+        let spec = ButtonSpec {
+            x,
+            y,
+            w,
+            h,
+            id: 1,
+            text: "reset".to_owned(),
+        };
+
+        if do_button(framebuffer, context, input, speaker, &spec) {
+            choice_state.reset();
+        }
+    }
+
+    {
+        let y = SPRITE_SIZE * 7;
+
+        let spec = ButtonSpec {
+            x,
+            y,
+            w,
+            h,
+            id: 2,
+            text: "ok".to_owned(),
+        };
+
+        if do_button(framebuffer, context, input, speaker, &spec) {
+            choice_state.mark_done();
+        }
+    }
+
+    {
+        let y = SPRITE_SIZE * 10;
+
+        let spec = ButtonSpec {
+            x,
+            y,
+            w,
+            h,
+            id: 3,
+            text: "cancel".to_owned(),
+        };
+
+        if do_button(framebuffer, context, input, speaker, &spec) {
+            output = CancelRuleChoice::Yes;
+        }
+    }
+
+    const FIRST_CHECKBOX_ID: UIId = 3;
+
+    let (scroll_card, flags) = choice_state.borrow_pair_mut();
+
+    do_scrolling_card_checkbox(
+        framebuffer,
+        context,
+        input,
+        speaker,
+        scroll_card,
+        flags,
+        FIRST_CHECKBOX_ID,
+        max_heading_y,
+    );
+
+    output
+}
 
 fn do_card_sub_choice<C: CardSubChoice>(
     framebuffer: &mut Framebuffer,

@@ -1,4 +1,4 @@
-use common::*;
+use inner_common::*;
 
 use std::fmt;
 

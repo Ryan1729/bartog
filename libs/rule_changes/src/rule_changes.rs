@@ -1,5 +1,5 @@
 use common::*;
-use game_state::{can_play, event_push, in_game, CardFlags, GameState, Status, RULE_TYPES};
+use game_state::{can_play, event_push, in_game, GameState, Status, RULE_TYPES};
 use rand::Rng;
 
 struct CardFlagsDelta {

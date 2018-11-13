@@ -49,16 +49,6 @@ where
     }
 }
 
-use inner_common::Card;
-use std::borrow::BorrowMut;
-/// A trait that is used to avoid having multiple copies of the card selection menu procedure.
-pub trait CardSubChoice: BorrowMut<Card> + Reset {
-    fn should_show_done_button(&self) -> bool;
-    fn mark_done(&mut self);
-    fn next_layer(&mut self);
-    fn get_status_lines(&self, card: Card) -> StatusLines;
-}
-
 pub type StatusLine = [u8; 8];
 pub type StatusLines = [StatusLine; 2];
 
@@ -100,4 +90,30 @@ impl AllValues for NonZeroU8 {
         }
         output
     }
+}
+
+use inner_common::Card;
+use std::borrow::BorrowMut;
+/// A trait that is used to avoid having multiple copies of the card selection menu procedure.
+pub trait CardSubChoice: BorrowMut<Card> + Reset {
+    fn should_show_done_button(&self) -> bool;
+    fn mark_done(&mut self);
+    fn next_layer(&mut self);
+    fn get_status_lines(&self, card: Card) -> StatusLines;
+}
+
+use card_flags::CardFlags;
+/// A trait that is used to avoid having multiple copies of the card flags/set menu procedure.
+pub trait CardFlagsSubChoice: BorrowPairMut<Card, CardFlags> + Reset {
+    fn mark_done(&mut self);
+}
+
+pub trait BorrowPair<Borrowed1: ?Sized, Borrowed2: ?Sized> {
+    fn borrow_pair(&self) -> (&Borrowed1, &Borrowed2);
+}
+
+pub trait BorrowPairMut<Borrowed1: ?Sized, Borrowed2: ?Sized>:
+    BorrowPair<Borrowed1, Borrowed2>
+{
+    fn borrow_pair_mut(&mut self) -> (&mut Borrowed1, &mut Borrowed2);
 }

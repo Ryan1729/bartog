@@ -118,3 +118,6 @@ pub use traits::*;
 
 mod english;
 pub use english::*;
+
+mod card_flags;
+pub use card_flags::*;

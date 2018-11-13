@@ -1,6 +1,7 @@
 use can_play;
-use card_flags::{CardFlags, RANK_FLAGS};
-use common::{bytes_lines, bytes_reflow, slice_until_first_0, UIContext, DECK_SIZE, *};
+use common::{
+    bytes_lines, bytes_reflow, slice_until_first_0, CardFlags, UIContext, DECK_SIZE, RANK_FLAGS, *,
+};
 use in_game;
 
 use std::collections::VecDeque;

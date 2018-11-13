@@ -1,4 +1,3 @@
-use card_flags::{CardFlags, RANK_FLAGS, SUIT_FLAGS};
 use common::*;
 use std::fmt;
 
