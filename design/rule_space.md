@@ -431,3 +431,13 @@ We want to store which cards are treated the same as which card. We don't want e
     * now the checkbox which selects whether a card can be played on itself starts to matter.
 
 I'm becoming less sure it is a good idea to work on this next. Or ever. It seems like identifying cards as a single card is much more complicated than it is entertaining.
+
+____
+
+one issue that is somewhat a matter of taste is how many changes constitute "one rule". Right now we need to decide how many changes to what happens when a card is played we will allow in one rule. We would like this not to feel like an arbitrary numerical limit. We also want to give players to say "when any card is played...". What seems like a good solution is allowing a player to choose a set of cards to change the list of effects on. One question that comes up immediately about this is how edit previously established rules works. One way would be if a player selects a previous set that exactly matches the previous one then they can rearrange and/or delete those rules.
+
+This has two issues:
+* How do we merge lists of effects, especially regarding order? This has some of the same issues as card identification.
+* the player can't say "that rule that applied to all spades? Now it applies to the spade face cards instead". 
+
+The first of these issues is more pressing. 
