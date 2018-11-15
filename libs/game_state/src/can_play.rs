@@ -92,7 +92,9 @@ impl Default for Layer {
 pub struct ChoiceState {
     pub changes: Vec<Change>,
     pub card: Card,
+    pub reset_edges: CardFlags,
     pub edges: CardFlags,
+    pub edges_card: Card,
     pub layer: Layer,
     pub scroll_card: Card,
 }
@@ -107,6 +109,9 @@ impl CardSubChoice for ChoiceState {
     fn mark_done(&mut self) {
         self.layer = Layer::Done;
     }
+    fn reset(&mut self) {
+        *self = d!();
+    }
     fn next_layer(&mut self) {
         self.layer = Layer::Edges;
     }
@@ -120,5 +125,16 @@ impl CardSubChoice for ChoiceState {
                 b"changes."
             }),
         ]
+    }
+}
+
+implement!(BorrowPairMut<Card, CardFlags> for ChoiceState: s, (s.edges_card, s.edges));
+
+impl CardFlagsSubChoice for ChoiceState {
+    fn mark_done(&mut self) {
+        self.layer = Layer::Done;
+    }
+    fn reset(&mut self) {
+        self.edges = self.reset_edges;
     }
 }

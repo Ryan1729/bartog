@@ -321,8 +321,8 @@ fn take_turn(game_state: &mut GameState, input: Input, speaker: &mut Speaker) {
                 animations::add_draw_animation(state, event_log, rng);
             }
         }
-        id => {
-            invariant_violation!("`current_player` was set to invalid player ID {}!", id);
+        _id => {
+            invariant_violation!("`current_player` was set to invalid player ID {}!", _id);
         }
     }
 

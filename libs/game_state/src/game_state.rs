@@ -112,8 +112,42 @@ impl Empty for EventLog {
 
 #[derive(Clone, Debug)]
 pub struct CardFlagsChoiceState {
+    original_flags: CardFlags,
     pub flags: CardFlags,
     pub card: Card,
+    pub done: bool,
+}
+
+impl CardFlagsChoiceState {
+    pub fn new(original_flags: CardFlags) -> Self {
+        CardFlagsChoiceState {
+            original_flags,
+            flags: original_flags,
+            card: d!(),
+            done: d!(),
+        }
+    }
+}
+
+impl CardFlagsChoiceState {
+    pub fn get_chosen(&self) -> Option<CardFlags> {
+        if self.done {
+            Some(self.flags)
+        } else {
+            None
+        }
+    }
+}
+
+implement!(BorrowPairMut<Card, CardFlags> for CardFlagsChoiceState: s, (s.card, s.flags));
+
+impl CardFlagsSubChoice for CardFlagsChoiceState {
+    fn mark_done(&mut self) {
+        self.done = true;
+    }
+    fn reset(&mut self) {
+        self.flags = self.original_flags;
+    }
 }
 
 #[derive(Clone, Debug)]

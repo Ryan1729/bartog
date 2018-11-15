@@ -689,7 +689,7 @@ fn do_card_flags_sub_choice<C: CardFlagsSubChoice>(
         }
     }
 
-    const FIRST_CHECKBOX_ID: UIId = 3;
+    const FIRST_CHECKBOX_ID: UIId = 4;
 
     let (scroll_card, flags) = choice_state.borrow_pair_mut();
 
@@ -931,77 +931,6 @@ fn heading_y(i: i8) -> u8 {
     (SPRITE_SIZE as i8 * 2 + FONT_SIZE as i8 * i) as u8
 }
 
-fn can_play_graph_choose_edges(
-    framebuffer: &mut Framebuffer,
-    context: &mut UIContext,
-    input: Input,
-    speaker: &mut Speaker,
-    choice_state: &mut can_play::ChoiceState,
-) {
-    framebuffer.full_window();
-
-    let text = bytes_concat!(
-        b"choose the cards the ",
-        get_card_string(choice_state.card).as_bytes(),
-        b" can be played on.",
-    );
-
-    let max_heading_y = print_choice_header(framebuffer, text);
-
-    let w = SPRITE_SIZE * 5;
-    let h = SPRITE_SIZE * 3;
-
-    {
-        let y = SPRITE_SIZE * 4;
-
-        let spec = ButtonSpec {
-            x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
-            y,
-            w,
-            h,
-            id: 1,
-            text: "ok".to_owned(),
-        };
-
-        if do_button(framebuffer, context, input, speaker, &spec) {
-            choice_state
-                .changes
-                .push(can_play::Change::new(choice_state.edges, choice_state.card));
-            choice_state.layer = d!();
-        }
-    }
-
-    {
-        let y = SPRITE_SIZE * 7;
-
-        let spec = ButtonSpec {
-            x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
-            y,
-            w,
-            h,
-            id: 2,
-            text: "cancel".to_owned(),
-        };
-
-        if do_button(framebuffer, context, input, speaker, &spec) {
-            choice_state.layer = d!();
-        }
-    }
-
-    const FIRST_CHECKBOX_ID: UIId = 3;
-
-    do_scrolling_card_checkbox(
-        framebuffer,
-        context,
-        input,
-        speaker,
-        &mut choice_state.scroll_card,
-        &mut choice_state.edges,
-        FIRST_CHECKBOX_ID,
-        max_heading_y,
-    );
-}
-
 fn do_scrolling_card_checkbox(
     framebuffer: &mut Framebuffer,
     context: &mut UIContext,
@@ -1068,7 +997,7 @@ fn do_scrolling_card_checkbox(
         }
     } else {
         if input.pressed_this_frame(Button::Left) {
-            if context.hot & 1 == 1 {
+            if context.hot & 1 == first_checkbox_id & 1 {
                 if context.hot > first_checkbox_id + 3 * SCROLL_COLS_COUNT {
                     context.set_next_hot(first_checkbox_id - 1);
                 } else {
@@ -1079,7 +1008,7 @@ fn do_scrolling_card_checkbox(
                 context.set_next_hot(next);
             }
         } else if input.pressed_this_frame(Button::Right) {
-            if context.hot & 1 == 1 {
+            if context.hot & 1 == first_checkbox_id & 1 {
                 let next = context.hot + 1;
                 context.set_next_hot(next);
             } else {
@@ -1101,6 +1030,7 @@ fn do_scrolling_card_checkbox(
                 },
             );
         }
+        log!(context);
     }
 }
 
@@ -1136,6 +1066,7 @@ pub fn do_can_play_graph_choice(
                             .find(|c| c.card() == choice_state.card)
                             .map(|c| c.edges())
                             .unwrap_or_else(|| can_play_graph.get_edges(choice_state.card));
+                        choice_state.reset_edges = choice_state.edges;
                     }
                     can_play::Layer::Done => {
                         chosen = Some(Choice::Already(Chosen::CanPlayGraph(
@@ -1145,13 +1076,22 @@ pub fn do_can_play_graph_choice(
                     can_play::Layer::Card => {}
                 }
             }
-            can_play::Layer::Edges => can_play_graph_choose_edges(
-                framebuffer,
-                &mut state.context,
-                input,
-                speaker,
-                choice_state,
-            ),
+            can_play::Layer::Edges => {
+                let text = bytes_concat!(
+                    b"choose the cards the ",
+                    get_card_string(choice_state.card).as_bytes(),
+                    b" can be played on.",
+                );
+
+                cancel = do_card_flags_sub_choice(
+                    framebuffer,
+                    &mut state.context,
+                    input,
+                    speaker,
+                    choice_state,
+                    text,
+                );
+            }
             can_play::Layer::Done => {
                 framebuffer.center_half_window();
             }
@@ -1196,75 +1136,22 @@ pub fn do_card_flags_choice(
     speaker: &mut Speaker,
 ) {
     let mut chosen = None;
+    #[allow(unused_assignments)] //this is used only if "invariant-checking" is off
     let mut cancel = CancelRuleChoice::No;
 
     if let Choice::OfCardFlags(ref mut card_flags_state) = state.choice {
-        let context = &mut state.context;
-
-        framebuffer.full_window();
-        {
-            let text = b"select which cards are wild";
-
-            let (x, _) = center_line_in_rect(
-                text.len() as u8,
-                (
-                    (SPRITE_SIZE, SPRITE_SIZE),
-                    (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
-                ),
-            );
-
-            framebuffer.print(text, x, SPRITE_SIZE * 2, WHITE_INDEX);
-        }
-
-        let w = SPRITE_SIZE * 5;
-        let h = SPRITE_SIZE * 3;
-
-        {
-            let y = SPRITE_SIZE * 4;
-
-            let spec = ButtonSpec {
-                x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
-                y,
-                w,
-                h,
-                id: 1,
-                text: "ok".to_owned(),
-            };
-
-            if do_button(framebuffer, context, input, speaker, &spec) {
-                chosen = Some(card_flags_state.flags);
-            }
-        }
-
-        {
-            let y = SPRITE_SIZE * 7;
-
-            let spec = ButtonSpec {
-                x: SCREEN_WIDTH as u8 - (w + SPRITE_SIZE),
-                y,
-                w,
-                h,
-                id: 2,
-                text: "cancel".to_owned(),
-            };
-
-            if do_button(framebuffer, context, input, speaker, &spec) {
-                cancel = CancelRuleChoice::Yes;
-            }
-        }
-
-        const FIRST_CHECKBOX_ID: UIId = 3;
-
-        do_scrolling_card_checkbox(
+        cancel = do_card_flags_sub_choice(
             framebuffer,
-            context,
+            &mut state.context,
             input,
             speaker,
-            &mut card_flags_state.card,
-            &mut card_flags_state.flags,
-            FIRST_CHECKBOX_ID,
-            SPRITE_SIZE * 3,
+            card_flags_state,
+            b"select which cards are wild",
         );
+
+        if let Some(c) = card_flags_state.get_chosen() {
+            chosen = Some(c);
+        }
     } else {
         invariant_violation!(
             { state.choice = Choice::NoChoice },
@@ -1284,10 +1171,7 @@ pub fn do_card_flags_choice(
 pub fn choose_wild_flags(state: &mut GameState) -> Option<CardFlags> {
     match state.choice {
         Choice::NoChoice => {
-            state.choice = Choice::OfCardFlags(CardFlagsChoiceState {
-                flags: state.rules.wild,
-                card: d!(),
-            });
+            state.choice = Choice::OfCardFlags(CardFlagsChoiceState::new(state.rules.wild));
             None
         }
         Choice::Already(Chosen::CardFlags(flags)) => {

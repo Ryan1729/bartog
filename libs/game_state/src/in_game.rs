@@ -745,18 +745,15 @@ pub struct ChoiceStateAndRules<'a> {
 
 implement!(<'a> BorrowMut<Card> for ChoiceStateAndRules<'a>: s, s.choice_state.card);
 
-impl<'a> Reset for ChoiceStateAndRules<'a> {
-    fn reset(&mut self) {
-        self.choice_state.reset();
-    }
-}
-
 impl<'a> CardSubChoice for ChoiceStateAndRules<'a> {
     fn should_show_done_button(&self) -> bool {
         true //TODO check if there has been any change to the changes
     }
     fn mark_done(&mut self) {
         self.choice_state.layer = Layer::Done;
+    }
+    fn reset(&mut self) {
+        *self.choice_state = d!();
     }
     fn next_layer(&mut self) {
         self.choice_state.layer = Layer::Changes;
