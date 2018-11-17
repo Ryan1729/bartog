@@ -441,3 +441,7 @@ This has two issues:
 * the player can't say "that rule that applied to all spades? Now it applies to the spade face cards instead". 
 
 The first of these issues is more pressing. 
+
+The most intuitive fixed ordering is oldest first. The simplest way to implement this is to use a generation index. That is, store an incrementing number on the rules and whenever a card set has rules added to it set the number on the card’s rules struct. 
+
+We will probably want to allow changing the order of the rules but we can do that by swapping the generation indices around. Just changing the order doesn’t seem worth an entire separate rule, so when rules are created or edited we should allow changing the order of that rule relative to overlapping rules. Merely swapping may cause some unintuitive orderings of three or more mutually overlapping sets. We’ll see if that happens often enough for us to care. We might want to have cpu players choose mostly non-overlapping rule sets for other reasons anyway.

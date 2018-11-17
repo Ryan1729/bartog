@@ -68,3 +68,14 @@ pub fn im_same(r1: Rect, r2: Rect) -> u8 {
     im_sum(r1) + im_sum2(r2)
 }
 ```
+
+___
+
+We're changing the card changes to be stored per card set instead of per card. We need the resulting data structure to be able to do the following:
+* Produce an iterator of changes for a given card.
+* Present a way to edit the current changes for a card set. Current code is receiving a mutable vector reference which it replaces with another vector instead of mutating.
+
+Given we need to work per card *set* this implies a sparse data structure, probably a `HashMap`. But then that makes iterating over the changes for a card more complicated. And checking whether there are any changes for a card is by far the more common operation!
+
+
+In order to make repeatedly retrieving card changes faster and, in this case, more straight forward, we'll maintain a list of which card sets are associated with each card, in order. The order will be determined by generation indexes stored with each list of changes in the `HashMap`
