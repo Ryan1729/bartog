@@ -350,11 +350,13 @@ fn update(state: &mut GameState, input: Input, speaker: &mut Speaker) {
 fn update_when_played(state: &mut GameState) {
     match choose_in_game_changes(state) {
         in_game::ChoiceState {
-            card, ref changes, ..
+            card_set,
+            ref changes,
+            ..
         }
             if changes.len() > 0 =>
         {
-            apply_when_played_changes(state, card, changes.clone(), PLAYER_ID);
+            apply_when_played_changes(state, card_set, changes.clone(), PLAYER_ID);
 
             state.status = Status::InGame;
         }

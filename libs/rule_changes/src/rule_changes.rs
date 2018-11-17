@@ -70,7 +70,7 @@ fn add_cpu_rule(state: &mut GameState, player: PlayerID) {
 }
 
 fn add_cpu_when_played_change(state: &mut GameState, player: PlayerID) {
-    let card = gen_card(&mut state.rng);
+    let card_flags: CardFlags = state.rng.gen();
     //TODO choose changes that usually contain the previous changes
     let count = state.rng.gen_range(1, 3);
     let mut new_card_changes: Vec<in_game::Change> = Vec::with_capacity(count);
@@ -78,7 +78,7 @@ fn add_cpu_when_played_change(state: &mut GameState, player: PlayerID) {
         new_card_changes.push(state.rng.gen());
     }
 
-    apply_when_played_changes(state, card, new_card_changes, player);
+    apply_when_played_changes(state, card_flags, new_card_changes, player);
 }
 
 #[allow(dead_code)]
@@ -131,8 +131,8 @@ fn get_edits<T: Eq + Copy>(old_changes: &[T], new_changes: &[T]) -> Vec<Edit<T>>
 
 pub fn apply_when_played_changes(
     state: &mut GameState,
-    card: Card,
-    new_card_changes: Vec<in_game::Change>,
+    card_flags: CardFlags,
+    new_changes: Vec<in_game::Change>,
     player: PlayerID,
 ) {
     //logging
@@ -142,15 +142,15 @@ pub fn apply_when_played_changes(
 
     let rules = &mut state.rules;
 
-    let card_changes = rules.when_played.get_changes_mut(card);
+    let changes = rules.when_played.get_card_flags_changes_mut(card_flags);
 
-    let edits = get_edits(card_changes, &new_card_changes);
+    let edits = get_edits(changes, &new_changes);
 
     event_push!(
         state.event_log,
         pronoun.as_bytes(),
         b" changed what happens when the ",
-        get_card_string(card).as_bytes(),
+        "TODO card_flags.to_string()".as_bytes(),
         b" is played:",
     );
 
@@ -166,7 +166,7 @@ pub fn apply_when_played_changes(
 
     /////////
 
-    *card_changes = new_card_changes;
+    *changes = new_changes;
 }
 
 fn add_cpu_wild_change(state: &mut GameState, player: PlayerID) {

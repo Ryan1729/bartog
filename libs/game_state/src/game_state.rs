@@ -1,7 +1,5 @@
 use can_play;
-use common::{
-    bytes_lines, bytes_reflow, slice_until_first_0, CardFlags, UIContext, DECK_SIZE, RANK_FLAGS, *,
-};
+use common::{bytes_lines, bytes_reflow, slice_until_first_0, CardFlags, UIContext, RANK_FLAGS, *};
 use in_game;
 
 use std::collections::VecDeque;
@@ -236,7 +234,7 @@ pub fn get_status_text(status: Status) -> &'static str {
 pub struct Rules {
     pub can_play_graph: can_play::Graph,
     pub wild: CardFlags,
-    pub when_played: CardChanges,
+    pub when_played: CardChangeTable,
 }
 
 impl Rules {
@@ -245,37 +243,72 @@ impl Rules {
     }
 }
 
-pub struct CardChanges(pub [Vec<in_game::Change>; DECK_SIZE as usize]);
+use std::num::NonZeroU32;
+
+pub struct CardChanges {
+    changes: Vec<in_game::Change>,
+    generation: Option<NonZeroU32>,
+}
 
 impl Default for CardChanges {
     fn default() -> Self {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
-        CardChanges(
-            [
-                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
-                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
-                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
-                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
-                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
-                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
-                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
-                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
-                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
-                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
-                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
-                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
-                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
-            ]
-        )
+        CardChanges {
+            changes: d!(),
+            generation: d!(),
+        }
     }
 }
 
-impl CardChanges {
-    pub fn get_changes(&self, card: Card) -> &Vec<in_game::Change> {
-        &self.0[card as usize]
+use std::collections::HashMap;
+
+pub struct CardChangeTable {
+    map: HashMap<CardFlags, CardChanges>,
+    index: HashMap<Card, Vec<CardFlags>>,
+    next_generation: NonZeroU32,
+}
+
+impl Default for CardChangeTable {
+    fn default() -> Self {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        CardChangeTable{
+            map: HashMap::new(),
+            index: HashMap::with_capacity(DECK_SIZE as usize),
+            next_generation: NonZeroU32::new(1).unwrap(),
+        }
     }
-    pub fn get_changes_mut(&mut self, card: Card) -> &mut Vec<in_game::Change> {
-        &mut self.0[card as usize]
+}
+
+impl CardChangeTable {
+    pub fn get_card_changes<'a>(&'a self, card: Card) -> CardChangeIter<'a> {
+        CardChangeIter {
+            map: &self.map,
+            flags: self.index.get(&card),
+            current_flags: None,
+            flag_index: 0,
+            change_index: 0,
+        }
+    }
+    pub fn get_card_flags_changes_mut(
+        &mut self,
+        card_flags: CardFlags,
+    ) -> &mut Vec<in_game::Change> {
+        unimplemented!()
+    }
+}
+
+pub struct CardChangeIter<'a> {
+    pub map: &'a HashMap<CardFlags, CardChanges>,
+    pub flags: Option<&'a Vec<CardFlags>>,
+    pub current_flags: Option<CardFlags>,
+    pub flag_index: usize,
+    pub change_index: usize,
+}
+
+impl<'a> Iterator for CardChangeIter<'a> {
+    type Item = in_game::Change;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        unimplemented!()
     }
 }
 

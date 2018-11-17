@@ -129,7 +129,7 @@ fn play_to_discard(state: &mut GameState, card: Card) {
 
     state.in_game.discard.push(card);
 
-    for change in state.rules.when_played.0[card as usize].iter() {
+    for change in state.rules.when_played.get_card_changes(card) {
         change.apply_to_state(&mut state.in_game, &mut state.event_log)
     }
 }

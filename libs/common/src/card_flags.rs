@@ -5,7 +5,7 @@ use std::fmt;
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CardFlags(u64);
 
 const ONE_PAST_CARD_FLAGS_MAX: u64 = 1 << DECK_SIZE as u64;

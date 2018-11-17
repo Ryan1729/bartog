@@ -734,6 +734,7 @@ pub struct ChoiceState {
     pub right_scroll: usize,
     pub marker_y: u8,
     pub card: Card,
+    pub card_set: CardFlags,
     pub layer: Layer,
     pub description: Vec<u8>,
 }
@@ -759,7 +760,7 @@ impl<'a> CardSubChoice for ChoiceStateAndRules<'a> {
         self.choice_state.layer = Layer::Changes;
     }
     fn get_status_lines(&self, card: Card) -> StatusLines {
-        let len = self.rules.when_played.0[card as usize].len();
+        let len = self.rules.when_played.get_card_changes(card).count();
         [
             bytes_to_status_line(format!("{}", len).as_bytes()),
             bytes_to_status_line(if len == 1 { b"change. " } else { b"changes." }),

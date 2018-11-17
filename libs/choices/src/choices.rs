@@ -288,9 +288,10 @@ pub fn do_in_game_changes_choice(
 
                 match choice_state.layer {
                     in_game::Layer::Changes => {
-                        let card_changes = state.rules.when_played.get_changes(choice_state.card);
+                        let card_changes =
+                            state.rules.when_played.get_card_changes(choice_state.card);
                         choice_state.changes.clear();
-                        for change in card_changes.iter() {
+                        for change in card_changes {
                             choice_state.changes.push(change.clone());
                         }
                     }
