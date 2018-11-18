@@ -101,6 +101,12 @@ impl Default for CardFlags {
     }
 }
 
+impl fmt::Display for CardFlags {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        unimplemented!()
+    }
+}
+
 impl fmt::Debug for CardFlags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let v = self.0;

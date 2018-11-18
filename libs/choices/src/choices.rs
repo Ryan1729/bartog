@@ -272,24 +272,27 @@ pub fn do_in_game_changes_choice(
         match choice_state.layer {
             in_game::Layer::Card => {
                 {
-                    let mut card_sub_choice = in_game::ChoiceStateAndRules {
+                    let mut sub_choice = in_game::ChoiceStateAndRules {
                         choice_state,
                         rules: &state.rules,
                     };
 
-                    cancel = do_card_sub_choice(
+                    cancel = do_card_flags_sub_choice(
                         framebuffer,
                         &mut state.context,
                         input,
                         speaker,
-                        &mut card_sub_choice,
+                        &mut sub_choice,
+                        b"choose a set of cards.",
                     );
                 }
 
                 match choice_state.layer {
                     in_game::Layer::Changes => {
-                        let card_changes =
-                            state.rules.when_played.get_card_changes(choice_state.card);
+                        let card_changes = state
+                            .rules
+                            .when_played
+                            .get_card_flags_changes_mut(choice_state.card_set);
                         choice_state.changes.clear();
                         for change in card_changes {
                             choice_state.changes.push(change.clone());
@@ -379,7 +382,7 @@ fn in_game_changes_choose_changes(
 
     let text = bytes_concat!(
         b"choose what will happen when ",
-        get_card_string(choice_state.card).as_bytes(),
+        choice_state.card_flags.to_string().as_bytes(),
         b" is played.",
     );
 
@@ -688,6 +691,16 @@ fn do_card_flags_sub_choice<C: CardFlagsSubChoice>(
         if do_button(framebuffer, context, input, speaker, &spec) {
             output = CancelRuleChoice::Yes;
         }
+    }
+
+    {
+        let x = SPRITE_SIZE * 11;
+        let y = SPRITE_SIZE * 13;
+
+        let lines = choice_state.get_status_lines();
+
+        framebuffer.print_line(&lines[0], x, y, WHITE_INDEX);
+        framebuffer.print_line(&lines[1], x, y + FONT_SIZE, WHITE_INDEX);
     }
 
     const FIRST_CHECKBOX_ID: UIId = 4;

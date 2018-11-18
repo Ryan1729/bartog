@@ -92,6 +92,9 @@ use card_flags::CardFlags;
 pub trait CardFlagsSubChoice: BorrowPairMut<Card, CardFlags> {
     fn mark_done(&mut self);
     fn reset(&mut self);
+    fn get_status_lines(&self) -> StatusLines {
+        d!()
+    }
 }
 
 pub trait BorrowPair<Borrowed1: ?Sized, Borrowed2: ?Sized> {

@@ -288,6 +288,9 @@ impl CardChangeTable {
             change_index: 0,
         }
     }
+    pub fn get_card_flags_changes(&self, card_flags: CardFlags) -> &Vec<in_game::Change> {
+        unimplemented!()
+    }
     pub fn get_card_flags_changes_mut(
         &mut self,
         card_flags: CardFlags,

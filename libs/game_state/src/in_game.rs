@@ -729,11 +729,12 @@ impl Default for Layer {
 
 #[derive(Clone, Debug, Default)]
 pub struct ChoiceState {
+    reset_changes: Vec<Change>,
     pub changes: Vec<Change>,
     pub left_scroll: usize,
     pub right_scroll: usize,
     pub marker_y: u8,
-    pub card: Card,
+    pub scroll_card: Card,
     pub card_set: CardFlags,
     pub layer: Layer,
     pub description: Vec<u8>,
@@ -744,23 +745,27 @@ pub struct ChoiceStateAndRules<'a> {
     pub rules: &'a Rules,
 }
 
-implement!(<'a> BorrowMut<Card> for ChoiceStateAndRules<'a>: s, s.choice_state.card);
+implement!(
+    <'a> BorrowPairMut<Card, CardFlags> for ChoiceStateAndRules<'a>:
+     s, (s.choice_state.scroll_card, s.choice_state.card_set)
+ );
 
-impl<'a> CardSubChoice for ChoiceStateAndRules<'a> {
-    fn should_show_done_button(&self) -> bool {
-        true //TODO check if there has been any change to the changes
-    }
+impl<'a> CardFlagsSubChoice for ChoiceStateAndRules<'a> {
     fn mark_done(&mut self) {
-        self.choice_state.layer = Layer::Done;
-    }
-    fn reset(&mut self) {
-        *self.choice_state = d!();
-    }
-    fn next_layer(&mut self) {
         self.choice_state.layer = Layer::Changes;
     }
-    fn get_status_lines(&self, card: Card) -> StatusLines {
-        let len = self.rules.when_played.get_card_changes(card).count();
+    fn reset(&mut self) {
+        self.choice_state.changes.clear();
+        for c in self.choice_state.reset_changes.iter() {
+            self.choice_state.changes.push(c.clone())
+        }
+    }
+    fn get_status_lines(&self) -> StatusLines {
+        let len = self
+            .rules
+            .when_played
+            .get_card_flags_changes(self.choice_state.card_set)
+            .len();
         [
             bytes_to_status_line(format!("{}", len).as_bytes()),
             bytes_to_status_line(if len == 1 { b"change. " } else { b"changes." }),

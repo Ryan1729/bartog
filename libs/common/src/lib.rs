@@ -90,6 +90,23 @@ macro_rules! implement {
             }
         }
     };
+    (<$a:lifetime> BorrowPairMut<$borrowed1:ty, $borrowed2:ty> for $implementing:ty: $that:ident, ($ref1_expr:expr, $ref2_expr:expr)) => {
+        use common::BorrowPair;
+        impl<$a> BorrowPair<$borrowed1, $borrowed2> for $implementing {
+            fn borrow_pair(&self) -> (&$borrowed1, &$borrowed2) {
+                let $that = self;
+                (&$ref1_expr, &$ref2_expr)
+            }
+        }
+
+        use common::BorrowPairMut;
+        impl<$a> BorrowPairMut<$borrowed1, $borrowed2> for $implementing {
+            fn borrow_pair_mut(&mut self) -> (&mut $borrowed1, &mut $borrowed2) {
+                let $that = self;
+                (&mut $ref1_expr, &mut $ref2_expr)
+            }
+        }
+    };
     (Distribution<$type:ty> for Standard by picking from $all:expr) => {
         impl Distribution<$type> for Standard {
             #[inline]
