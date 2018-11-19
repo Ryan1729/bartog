@@ -292,7 +292,7 @@ pub fn do_in_game_changes_choice(
                         let card_changes = state
                             .rules
                             .when_played
-                            .get_card_flags_changes_mut(choice_state.card_set);
+                            .get_card_flags_changes(choice_state.card_set);
                         choice_state.changes.clear();
                         for change in card_changes {
                             choice_state.changes.push(change.clone());
@@ -382,7 +382,7 @@ fn in_game_changes_choose_changes(
 
     let text = bytes_concat!(
         b"choose what will happen when ",
-        choice_state.card_flags.to_string().as_bytes(),
+        choice_state.card_set.to_string().as_bytes(),
         b" is played.",
     );
 

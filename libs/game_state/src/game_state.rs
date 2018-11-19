@@ -243,11 +243,11 @@ impl Rules {
     }
 }
 
-use std::num::NonZeroU32;
+type Generation = u32;
 
 pub struct CardChanges {
     changes: Vec<in_game::Change>,
-    generation: Option<NonZeroU32>,
+    generation: Generation,
 }
 
 impl Default for CardChanges {
@@ -264,7 +264,7 @@ use std::collections::HashMap;
 pub struct CardChangeTable {
     map: HashMap<CardFlags, CardChanges>,
     index: HashMap<Card, Vec<CardFlags>>,
-    next_generation: NonZeroU32,
+    next_generation: Generation,
 }
 
 impl Default for CardChangeTable {
@@ -273,7 +273,7 @@ impl Default for CardChangeTable {
         CardChangeTable{
             map: HashMap::new(),
             index: HashMap::with_capacity(DECK_SIZE as usize),
-            next_generation: NonZeroU32::new(1).unwrap(),
+            next_generation: 1,
         }
     }
 }
@@ -291,11 +291,15 @@ impl CardChangeTable {
     pub fn get_card_flags_changes(&self, card_flags: CardFlags) -> &Vec<in_game::Change> {
         unimplemented!()
     }
-    pub fn get_card_flags_changes_mut(
-        &mut self,
-        card_flags: CardFlags,
-    ) -> &mut Vec<in_game::Change> {
-        unimplemented!()
+    pub fn set_changes(&mut self, card_flags: CardFlags, changes: Vec<in_game::Change>) {
+        self.map.insert(
+            card_flags,
+            CardChanges {
+                changes,
+                generation: self.next_generation,
+            },
+        );
+        self.next_generation += 1;
     }
 }
 
@@ -311,7 +315,7 @@ impl<'a> Iterator for CardChangeIter<'a> {
     type Item = in_game::Change;
 
     fn next(&mut self) -> Option<Self::Item> {
-        unimplemented!()
+        unimplemented!() //Should return changes for all `card_set`s sorted by generation
     }
 }
 

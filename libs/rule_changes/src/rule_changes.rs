@@ -142,9 +142,11 @@ pub fn apply_when_played_changes(
 
     let rules = &mut state.rules;
 
-    let changes = rules.when_played.get_card_flags_changes_mut(card_flags);
+    let edits = {
+        let changes = rules.when_played.get_card_flags_changes(card_flags);
 
-    let edits = get_edits(changes, &new_changes);
+        get_edits(changes, &new_changes)
+    };
 
     event_push!(
         state.event_log,
@@ -164,9 +166,7 @@ pub fn apply_when_played_changes(
         event_push!(state.event_log, prefix, c_string.as_bytes());
     }
 
-    /////////
-
-    *changes = new_changes;
+    rules.when_played.set_changes(card_flags, new_changes);
 }
 
 fn add_cpu_wild_change(state: &mut GameState, player: PlayerID) {
