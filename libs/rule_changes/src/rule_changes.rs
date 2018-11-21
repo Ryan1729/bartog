@@ -145,7 +145,9 @@ pub fn apply_when_played_changes(
     let edits = {
         let changes = rules.when_played.get_card_flags_changes(card_flags);
 
-        get_edits(changes, &new_changes)
+        let vec: Vec<_> = changes.collect();
+
+        get_edits(&vec, &new_changes)
     };
 
     event_push!(

@@ -765,7 +765,7 @@ impl<'a> CardFlagsSubChoice for ChoiceStateAndRules<'a> {
             .rules
             .when_played
             .get_card_flags_changes(self.choice_state.card_set)
-            .len();
+            .count();
         [
             bytes_to_status_line(format!("{}", len).as_bytes()),
             bytes_to_status_line(if len == 1 { b"change. " } else { b"changes." }),

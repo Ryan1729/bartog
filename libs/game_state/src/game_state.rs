@@ -279,17 +279,40 @@ impl Default for CardChangeTable {
 }
 
 impl CardChangeTable {
-    pub fn get_card_changes<'a>(&'a self, card: Card) -> CardChangeIter<'a> {
-        CardChangeIter {
-            map: &self.map,
-            flags: self.index.get(&card),
-            current_flags: None,
-            flag_index: 0,
-            change_index: 0,
-        }
+    pub fn get_card_changes<'a>(&'a self, card: Card) -> impl Iterator<Item = in_game::Change> {
+        let output: Vec<in_game::Change> = self
+            .index
+            .get(&card)
+            .map(|flags: &Vec<CardFlags>| {
+                //we assume tese flags are already in the right order.
+                flags
+                    .iter()
+                    .flat_map(|f| {
+                        self.map
+                            .get(f)
+                            .clone()
+                            .into_iter()
+                            .flat_map(|c| c.changes.iter())
+                    }).cloned()
+                    .collect::<Vec<_>>()
+            }).unwrap_or_default();
+
+        output.into_iter()
     }
-    pub fn get_card_flags_changes(&self, card_flags: CardFlags) -> &Vec<in_game::Change> {
-        unimplemented!()
+    pub fn get_card_flags_changes(
+        &self,
+        card_flags: CardFlags,
+    ) -> impl Iterator<Item = in_game::Change> {
+        let output: Vec<in_game::Change> = self
+            .map
+            .get(&card_flags)
+            .clone()
+            .into_iter()
+            .flat_map(|c| c.changes.iter())
+            .cloned()
+            .collect::<Vec<_>>();
+
+        output.into_iter()
     }
     pub fn set_changes(&mut self, card_flags: CardFlags, changes: Vec<in_game::Change>) {
         self.map.insert(
@@ -300,22 +323,6 @@ impl CardChangeTable {
             },
         );
         self.next_generation += 1;
-    }
-}
-
-pub struct CardChangeIter<'a> {
-    pub map: &'a HashMap<CardFlags, CardChanges>,
-    pub flags: Option<&'a Vec<CardFlags>>,
-    pub current_flags: Option<CardFlags>,
-    pub flag_index: usize,
-    pub change_index: usize,
-}
-
-impl<'a> Iterator for CardChangeIter<'a> {
-    type Item = in_game::Change;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        unimplemented!() //Should return changes for all `card_set`s sorted by generation
     }
 }
 
