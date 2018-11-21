@@ -207,6 +207,14 @@ mod tests {
                         .chain(n.shrink().map(Action::SelectWild));
                     Box::new(chain)
                 }
+                Action::MoveToDiscard => {
+                    let chain = single_shrinker(Action::PlayToDiscard);
+                    Box::new(chain)
+                }
+                Action::MoveToDeck => {
+                    let chain = single_shrinker(Action::PlayToDiscard);
+                    Box::new(chain)
+                }
             }
         }
     }

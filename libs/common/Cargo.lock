@@ -112,6 +112,7 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "criterion 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "features 0.1.0",
  "platform_types 0.1.0",
  "quickcheck 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -214,6 +215,13 @@ dependencies = [
  "quote 0.6.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 0.14.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "synstructure 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "features"
+version = "0.1.0"
+dependencies = [
+ "platform_types 0.1.0",
 ]
 
 [[package]]

@@ -19,6 +19,30 @@ pub fn get_sentence_list<T: AsRef<str>>(elements: &[T]) -> String {
     text
 }
 
+pub fn map_sentence_list<In, Out: AsRef<str>, M>(elements: &[In], mapper: M) -> String
+where
+    M: Fn(&In) -> Out,
+{
+    let mut text = String::new();
+
+    let len = elements.len();
+    if len >= 2 {
+        for i in 0..len {
+            text.push_str(mapper(&elements[i]).as_ref());
+
+            if i == len - 2 {
+                text.push_str(", and ");
+            } else if i < len - 2 {
+                text.push_str(", ");
+            }
+        }
+    } else if len == 1 {
+        text.push_str(mapper(&elements[0]).as_ref());
+    }
+
+    text
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
