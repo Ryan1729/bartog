@@ -185,7 +185,6 @@ pub fn get_suit_rank_pair_list(cards: &[Card]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck::*;
 
     #[test]
     fn test_get_suit_rank_pair_list_retains_layout_char() {

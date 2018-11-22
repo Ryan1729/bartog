@@ -11,6 +11,8 @@ pub struct CardFlags(u64);
 
 const ONE_PAST_CARD_FLAGS_MAX: u64 = 1 << DECK_SIZE as u64;
 
+// TODO make `Standard` generate mostly easy to describe subsets of the cards
+//and add another distribution if needed
 impl Distribution<CardFlags> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> CardFlags {
         CardFlags(rng.gen_range(0, ONE_PAST_CARD_FLAGS_MAX))
@@ -82,43 +84,6 @@ pub const RANK_FLAGS: [u64; RANK_COUNT as usize] = [
     rank_pattern!(11),
     rank_pattern!(12),
 ];
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    macro_rules! across_all_suits {
-        ($flags:expr) => {
-            ($flags & 0b0001_1111_1111_1111)
-                | (($flags & 0b0001_1111_1111_1111) << RANK_COUNT)
-                | (($flags & 0b0001_1111_1111_1111) << (RANK_COUNT * 2))
-                | (($flags & 0b0001_1111_1111_1111) << (RANK_COUNT * 3))
-        };
-    }
-
-    pub const OLD_RANK_FLAGS: [u64; RANK_COUNT as usize] = [
-        across_all_suits!(1),
-        across_all_suits!(1 << 1),
-        across_all_suits!(1 << 2),
-        across_all_suits!(1 << 3),
-        across_all_suits!(1 << 4),
-        across_all_suits!(1 << 5),
-        across_all_suits!(1 << 6),
-        across_all_suits!(1 << 7),
-        across_all_suits!(1 << 8),
-        across_all_suits!(1 << 9),
-        across_all_suits!(1 << 10),
-        across_all_suits!(1 << 11),
-        across_all_suits!(1 << 12),
-    ];
-
-    #[test]
-    fn RANK_FLAGS_matches_OLD_RANK_FLAGS() {
-        for i in 0..RANK_COUNT as usize {
-            assert_eq!(RANK_FLAGS[i], OLD_RANK_FLAGS[i]);
-        }
-    }
-}
 
 impl CardFlags {
     pub fn new(edges: u64) -> Self {
@@ -258,6 +223,8 @@ impl fmt::Display for CardFlags {
     }
 }
 
+const CARD_FLAGS_DISPLAY_FALLBACK: &'static str = "the selected cards";
+
 use std::borrow::Cow;
 fn write_card_set_str<'f, 's>(flags: &'f u64) -> Cow<'s, str> {
     macro_rules! rank_result {
@@ -288,13 +255,127 @@ fn write_card_set_str<'f, 's>(flags: &'f u64) -> Cow<'s, str> {
         rank_pattern!(11) => rank_result!(11).into(),
         rank_pattern!(12) => rank_result!(12).into(),
         //fs if flags.bit_count() == 1 => w!("{}", card_flag_to_card(fs)).into(),
-        _ => "the selected cards".into(),
+        _ => CARD_FLAGS_DISPLAY_FALLBACK.into(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quickcheck::*;
+
+    #[test]
+    fn test_no_card_flags_resort_to_the_fallback() {
+        quickcheck(no_card_flags_resort_to_the_fallback as fn(CardFlags) -> TestResult)
+    }
+    fn no_card_flags_resort_to_the_fallback(flags: CardFlags) -> TestResult {
+        let string = flags.to_string();
+
+        test_println!("{:#?} => {} <=", flags, string);
+
+        if string.contains(CARD_FLAGS_DISPLAY_FALLBACK) || string == "" {
+            TestResult::failed()
+        } else {
+            TestResult::passed()
+        }
+    }
+
+    #[test]
+    fn test_suits_combined_with_rank_does_not_use_the_fallback() {
+        let flags = CardFlags::new(rank_pattern!(0) | CLUBS_FLAGS);
+
+        assert!(!no_card_flags_resort_to_the_fallback(flags).is_failure())
+    }
+
+    impl Arbitrary for CardFlags {
+        fn arbitrary<G: Gen>(g: &mut G) -> Self {
+            CardFlags(g.gen_range(0, ONE_PAST_CARD_FLAGS_MAX))
+        }
+
+        fn shrink(&self) -> Box<Iterator<Item = Self>> {
+            match self.0 {
+                0 => empty_shrinker(),
+                x => {
+                    macro_rules! check {
+                        ($to_remove:expr) => {
+                            let new_x = x & !($to_remove);
+                            if new_x != x {
+                                return single_shrinker(CardFlags::new(new_x));
+                            }
+                        };
+                    }
+
+                    check!(CLUBS_FLAGS);
+                    check!(DIAMONDS_FLAGS);
+                    check!(HEARTS_FLAGS);
+                    check!(SPADES_FLAGS);
+                    check!(rank_pattern!(0));
+                    check!(rank_pattern!(1));
+                    check!(rank_pattern!(2));
+                    check!(rank_pattern!(3));
+                    check!(rank_pattern!(4));
+                    check!(rank_pattern!(5));
+                    check!(rank_pattern!(6));
+                    check!(rank_pattern!(7));
+                    check!(rank_pattern!(8));
+                    check!(rank_pattern!(9));
+                    check!(rank_pattern!(10));
+                    check!(rank_pattern!(11));
+                    check!(rank_pattern!(12));
+
+                    for i in 0..DECK_SIZE {
+                        check!(1 << i);
+                    }
+
+                    empty_shrinker()
+                }
+            }
+        }
+    }
+
+    macro_rules! across_all_suits {
+        ($flags:expr) => {
+            ($flags & 0b0001_1111_1111_1111)
+                | (($flags & 0b0001_1111_1111_1111) << RANK_COUNT)
+                | (($flags & 0b0001_1111_1111_1111) << (RANK_COUNT * 2))
+                | (($flags & 0b0001_1111_1111_1111) << (RANK_COUNT * 3))
+        };
+    }
+
+    pub const OLD_RANK_FLAGS: [u64; RANK_COUNT as usize] = [
+        across_all_suits!(1),
+        across_all_suits!(1 << 1),
+        across_all_suits!(1 << 2),
+        across_all_suits!(1 << 3),
+        across_all_suits!(1 << 4),
+        across_all_suits!(1 << 5),
+        across_all_suits!(1 << 6),
+        across_all_suits!(1 << 7),
+        across_all_suits!(1 << 8),
+        across_all_suits!(1 << 9),
+        across_all_suits!(1 << 10),
+        across_all_suits!(1 << 11),
+        across_all_suits!(1 << 12),
+    ];
+
+    #[test]
+    fn RANK_FLAGS_matches_OLD_RANK_FLAGS() {
+        for i in 0..RANK_COUNT as usize {
+            assert_eq!(RANK_FLAGS[i], OLD_RANK_FLAGS[i]);
+        }
     }
 }
 
 impl fmt::Debug for CardFlags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let v = self.0;
+        if f.alternate() {
+            return if v == 0 {
+                write!(f, "{:52b}", v)
+            } else {
+                write!(f, "{:052b}", v)
+            };
+        }
         if v >= 1 << 52 {
             write!(f, "INVALID EDGES: {:?}, valid portion:", v);
         }
