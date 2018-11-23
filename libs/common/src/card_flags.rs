@@ -216,9 +216,16 @@ impl fmt::Display for CardFlags {
             // Also proper supersets of these like "the red cards" and "the even cards".
             // This requires different control flow, probably `loop` and `break;`.
 
-            // TODO  write tests for this.
+            // TODO solve a toy version of the problem say one with only 8 bits, to try
+            // and get a handle on this.
         }
-
+        println!(
+            "{:?}",
+            subsets
+                .iter()
+                .map(|s| format!("{:052b}", s))
+                .collect::<Vec<_>>()
+        );
         write!(f, "{}", map_sentence_list(&subsets, write_card_set_str))
     }
 }
@@ -229,10 +236,9 @@ use std::borrow::Cow;
 fn write_card_set_str<'f, 's>(flags: &'f u64) -> Cow<'s, str> {
     macro_rules! rank_result {
         ($index:expr) => {{
-            format!("the {}s", get_rank_char_from_rank($index))
+            format!("the {}s", get_rank_str($index))
         }};
     }
-
     match *flags {
         0 => "{}".into(),
         //Suits
@@ -284,7 +290,7 @@ mod tests {
     fn test_suits_combined_with_rank_does_not_use_the_fallback() {
         let flags = CardFlags::new(rank_pattern!(0) | CLUBS_FLAGS);
 
-        assert!(!no_card_flags_resort_to_the_fallback(flags).is_failure())
+        assert!(!no_card_flags_resort_to_the_fallback(flags).is_failure());
     }
 
     impl Arbitrary for CardFlags {
