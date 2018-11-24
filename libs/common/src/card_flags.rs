@@ -339,6 +339,102 @@ mod tests {
         }
     }
 
+    mod toy {
+        use super::*;
+        type ToyFlags = u8;
+
+        pub const RANK_COUNT: ToyFlags = 2;
+
+        pub const CLUBS_FLAGS: ToyFlags = 0b0000_0011;
+        pub const DIAMONDS_FLAGS: ToyFlags = CLUBS_FLAGS << RANK_COUNT;
+        pub const HEARTS_FLAGS: ToyFlags = CLUBS_FLAGS << (RANK_COUNT * 2);
+        pub const SPADES_FLAGS: ToyFlags = CLUBS_FLAGS << (RANK_COUNT * 3);
+
+        macro_rules! rank_pattern {
+            (0) => {
+                0b0101_0101
+            };
+            (1) => {
+                0b1010_1010
+            };
+        }
+
+        pub const RANK_FLAGS: [ToyFlags; RANK_COUNT as usize] = [0b0101_0101, 0b1010_1010];
+
+        const FLAGS_DISPLAY_FALLBACK: &'static str = "the selected cards";
+
+        fn flags_string<'s>(flags: ToyFlags) -> Cow<'s, str> {
+            match flags {
+                0 => "{}".into(),
+                //Suits
+                CLUBS_FLAGS => "the clubs".into(),
+                DIAMONDS_FLAGS => "the diamonds".into(),
+                HEARTS_FLAGS => "the hearts".into(),
+                SPADES_FLAGS => "the spades".into(),
+                //Ranks
+                rank_pattern!(0) => "the aces".into(),
+                rank_pattern!(1) => "the twos".into(),
+                fs if flags.count_ones() == 1 => card_string(card_flag_to_card(fs)).into(),
+                _ => FLAGS_DISPLAY_FALLBACK.into(),
+            }
+        }
+
+        type ToyCard = u8;
+
+        fn card_flag_to_card(flags: ToyFlags) -> ToyCard {
+            flags.trailing_zeros() as ToyCard
+        }
+
+        fn card_string(flags: ToyCard) -> &'static str {
+            match flags {
+                0 => "the 1 of clubs",
+                1 => "the 2 of clubs",
+                2 => "the 1 of diamonds",
+                3 => "the 2 of diamonds",
+                4 => "the 1 of hearts",
+                5 => "the 2 of hearts",
+                6 => "the 1 of spades",
+                7 => "the 2 of spades",
+                _ => "fn card_string(flags: ToyCard) -> &'static str",
+            }
+        }
+
+        #[test]
+        fn card_flag_to_card_does_what_i_want() {
+            assert_eq!(card_flag_to_card(0b1), 0);
+            assert_eq!(card_flag_to_card(0b10), 1);
+            assert_eq!(card_flag_to_card(0b100), 2);
+            assert_eq!(card_flag_to_card(0b1000), 3);
+            assert_eq!(card_flag_to_card(0b10000), 4);
+            assert_eq!(card_flag_to_card(0b100000), 5);
+            assert_eq!(card_flag_to_card(0b1000000), 6);
+            assert_eq!(card_flag_to_card(0b10000000), 7);
+        }
+
+        #[test]
+        fn test_no_flags_resort_to_the_fallback() {
+            quickcheck(no_flags_resort_to_the_fallback as fn(ToyFlags) -> TestResult)
+        }
+        fn no_flags_resort_to_the_fallback(flags: ToyFlags) -> TestResult {
+            let string = flags_string(flags);
+
+            test_println!("{:08b} => {} <=", flags, string);
+
+            if string.contains(FLAGS_DISPLAY_FALLBACK) || string == "" {
+                TestResult::failed()
+            } else {
+                TestResult::passed()
+            }
+        }
+
+        #[test]
+        fn test_suits_combined_with_rank_does_not_use_the_fallback() {
+            let flags = rank_pattern!(0) | CLUBS_FLAGS;
+
+            assert!(!no_flags_resort_to_the_fallback(flags).is_failure());
+        }
+    }
+
     macro_rules! across_all_suits {
         ($flags:expr) => {
             ($flags & 0b0001_1111_1111_1111)
