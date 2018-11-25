@@ -377,6 +377,13 @@ mod tests {
                 fs if flags.count_ones() == 1 => card_string(card_flag_to_card(fs)).into(),
                 _ => FLAGS_DISPLAY_FALLBACK.into(),
             }
+
+            // idea of how the working version should work:
+            // go through te special subsets, largest to amallest.
+            // When you find a subset that is represented in the flags
+            // set those bits in another set of flags.call these the
+            // tracking flags, If a subset is completely covered by the
+            // set bit in the tracking flags then skip it.
         }
 
         type ToyCard = u8;
@@ -433,6 +440,27 @@ mod tests {
 
             assert!(!no_flags_resort_to_the_fallback(flags).is_failure());
         }
+
+        #[test]
+        fn test_pairs_of_cards_with_the_same_colour_and_rank_produce_the_expected_results() {
+            assert_eq!(
+                flags_string(0b01_00_00_01),
+                <Cow<str>>::from("the black aces")
+            );
+            assert_eq!(
+                flags_string(0b10_00_00_10),
+                <Cow<str>>::from("the black twos")
+            );
+            assert_eq!(
+                flags_string(0b00_01_01_00),
+                <Cow<str>>::from("the red aces")
+            );
+            assert_eq!(
+                flags_string(0b00_10_10_00),
+                <Cow<str>>::from("the red twos")
+            );
+        }
+
     }
 
     macro_rules! across_all_suits {
