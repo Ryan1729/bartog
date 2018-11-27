@@ -19,10 +19,54 @@ impl Distribution<CardFlags> for Standard {
     }
 }
 
-pub const CLUBS_FLAGS: u64 = 0b0001_1111_1111_1111;
-pub const DIAMONDS_FLAGS: u64 = CLUBS_FLAGS << RANK_COUNT;
-pub const HEARTS_FLAGS: u64 = CLUBS_FLAGS << (RANK_COUNT * 2);
-pub const SPADES_FLAGS: u64 = CLUBS_FLAGS << (RANK_COUNT * 3);
+macro_rules! all_suits_consts {
+    {
+        $vis:vis const $clubs:ident: $type:ty = $clubs_expr:expr;
+        $diamonds:ident;
+        $hearts:ident;
+        $spades:ident;
+    } => {
+        $vis const $clubs: $type = $clubs_expr;
+        $vis const $diamonds: $type = $clubs_expr << RANK_COUNT;
+        $vis const $hearts: $type = $clubs_expr << (RANK_COUNT * 2);
+        $vis const $spades: $type = $clubs_expr << (RANK_COUNT * 3);
+    }
+}
+
+all_suits_consts! {
+    pub const CLUBS_FLAGS: u64 = 0b0001_1111_1111_1111;
+    DIAMONDS_FLAGS;
+    HEARTS_FLAGS;
+    SPADES_FLAGS;
+}
+
+all_suits_consts! {
+    pub const CLUBS_FACE_FLAGS: u64 = 0b0001_1100_0000_0000;
+    DIAMONDS_FACE_FLAGS;
+    HEARTS_FACE_FLAGS;
+    SPADES_FACE_FLAGS;
+}
+
+all_suits_consts! {
+    pub const CLUBS_NUMBER_FLAGS: u64 = 0b0000_0011_1111_1111;
+    DIAMONDS_NUMBER_FLAGS;
+    HEARTS_NUMBER_FLAGS;
+    SPADES_NUMBER_FLAGS;
+}
+
+all_suits_consts! {
+    pub const CLUBS_EVEN_PLUS_QUEEN_FLAGS: u64 = 0b0000_1010_1010_1010;
+    DIAMONDS_EVEN_PLUS_QUEEN_FLAGS;
+    HEARTS_EVEN_PLUS_QUEEN_FLAGS;
+    SPADES_EVEN_PLUS_QUEEN_FLAGS;
+}
+
+all_suits_consts! {
+    pub const CLUBS_EVEN_SANS_QUEEN_FLAGS: u64 = 0b0000_0010_1010_1010;
+    DIAMONDS_EVEN_SANS_QUEEN_FLAGS;
+    HEARTS_EVEN_SANS_QUEEN_FLAGS;
+    SPADES_EVEN_SANS_QUEEN_FLAGS;
+}
 
 pub const SUIT_FLAGS: [u64; SUIT_COUNT as usize] =
     [CLUBS_FLAGS, DIAMONDS_FLAGS, HEARTS_FLAGS, SPADES_FLAGS];
@@ -170,6 +214,42 @@ impl Default for CardFlags {
     }
 }
 
+const SPECIAL_FLAGS: [u64; 33] = [
+    CLUBS_FLAGS,
+    DIAMONDS_FLAGS,
+    HEARTS_FLAGS,
+    SPADES_FLAGS,
+    CLUBS_FACE_FLAGS,
+    DIAMONDS_FACE_FLAGS,
+    HEARTS_FACE_FLAGS,
+    SPADES_FACE_FLAGS,
+    CLUBS_NUMBER_FLAGS,
+    DIAMONDS_NUMBER_FLAGS,
+    HEARTS_NUMBER_FLAGS,
+    SPADES_NUMBER_FLAGS,
+    CLUBS_EVEN_SANS_QUEEN_FLAGS,
+    DIAMONDS_EVEN_PLUS_QUEEN_FLAGS,
+    HEARTS_EVEN_PLUS_QUEEN_FLAGS,
+    SPADES_EVEN_PLUS_QUEEN_FLAGS,
+    CLUBS_EVEN_PLUS_QUEEN_FLAGS,
+    DIAMONDS_EVEN_PLUS_QUEEN_FLAGS,
+    HEARTS_EVEN_PLUS_QUEEN_FLAGS,
+    SPADES_EVEN_PLUS_QUEEN_FLAGS,
+    rank_pattern!(0),
+    rank_pattern!(1),
+    rank_pattern!(2),
+    rank_pattern!(3),
+    rank_pattern!(4),
+    rank_pattern!(5),
+    rank_pattern!(6),
+    rank_pattern!(7),
+    rank_pattern!(8),
+    rank_pattern!(9),
+    rank_pattern!(10),
+    rank_pattern!(11),
+    rank_pattern!(12),
+];
+
 impl fmt::Display for CardFlags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let original_flags = self.0;
@@ -177,15 +257,19 @@ impl fmt::Display for CardFlags {
 
         let mut subsets = Vec::new();
 
+        let mut tracking_flags = 0;
         macro_rules! push_and_remove {
             ($subset:expr) => {{
-                if original_flags & $subset == $subset {
-                    subsets.push($subset);
+                if tracking_flags & $subset != $subset {
+                    if original_flags & $subset == $subset {
+                        tracking_flags |= $subset;
+                        subsets.push($subset);
 
-                    #[allow(unused_assignments)]
-                    {
-                        flags &= !$subset;
-                    };
+                        #[allow(unused_assignments)]
+                        {
+                            flags &= !$subset;
+                        };
+                    }
                 }
             }};
         }
@@ -193,10 +277,43 @@ impl fmt::Display for CardFlags {
         if flags == 0 {
             subsets.push(0);
         } else {
+            // for f in SPECIAL_FLAGS.iter() {
+            //     if tracking_flags & f != f {
+            //         if original_flags & f == f {
+            //             tracking_flags |= f;
+            //             subsets.push(f);
+            //
+            //             flags &= !$subset;
+            //             if flags == 0 {
+            //                 break;
+            //             }
+            //         }
+            //     }
+            // }
             push_and_remove!(CLUBS_FLAGS);
             push_and_remove!(DIAMONDS_FLAGS);
             push_and_remove!(HEARTS_FLAGS);
             push_and_remove!(SPADES_FLAGS);
+
+            push_and_remove!(CLUBS_FACE_FLAGS);
+            push_and_remove!(DIAMONDS_FACE_FLAGS);
+            push_and_remove!(HEARTS_FACE_FLAGS);
+            push_and_remove!(SPADES_FACE_FLAGS);
+
+            push_and_remove!(CLUBS_NUMBER_FLAGS);
+            push_and_remove!(DIAMONDS_NUMBER_FLAGS);
+            push_and_remove!(HEARTS_NUMBER_FLAGS);
+            push_and_remove!(SPADES_NUMBER_FLAGS);
+
+            push_and_remove!(CLUBS_EVEN_SANS_QUEEN_FLAGS);
+            push_and_remove!(DIAMONDS_EVEN_PLUS_QUEEN_FLAGS);
+            push_and_remove!(HEARTS_EVEN_PLUS_QUEEN_FLAGS);
+            push_and_remove!(SPADES_EVEN_PLUS_QUEEN_FLAGS);
+
+            push_and_remove!(CLUBS_EVEN_PLUS_QUEEN_FLAGS);
+            push_and_remove!(DIAMONDS_EVEN_PLUS_QUEEN_FLAGS);
+            push_and_remove!(HEARTS_EVEN_PLUS_QUEEN_FLAGS);
+            push_and_remove!(SPADES_EVEN_PLUS_QUEEN_FLAGS);
 
             push_and_remove!(rank_pattern!(0));
             push_and_remove!(rank_pattern!(1));
@@ -302,11 +419,14 @@ mod tests {
             match self.0 {
                 0 => empty_shrinker(),
                 x => {
+                    let mut tracking_flags = 0;
                     macro_rules! check {
                         ($to_remove:expr) => {
-                            let new_x = x & !($to_remove);
-                            if new_x != x {
-                                return single_shrinker(CardFlags::new(new_x));
+                            if tracking_flags & $to_remove == $to_remove {
+                                let new_x = x & !($to_remove);
+                                if new_x != x {
+                                    return single_shrinker(CardFlags::new(new_x));
+                                }
                             }
                         };
                     }
@@ -315,6 +435,12 @@ mod tests {
                     check!(DIAMONDS_FLAGS);
                     check!(HEARTS_FLAGS);
                     check!(SPADES_FLAGS);
+
+                    check!(CLUBS_FACE_FLAGS);
+                    check!(DIAMONDS_FACE_FLAGS);
+                    check!(HEARTS_FACE_FLAGS);
+                    check!(SPADES_FACE_FLAGS);
+
                     check!(rank_pattern!(0));
                     check!(rank_pattern!(1));
                     check!(rank_pattern!(2));
@@ -339,6 +465,51 @@ mod tests {
         }
     }
 
+    #[derive(Clone, Debug)]
+    struct Special<T>(T);
+
+    impl Arbitrary for Special<CardFlags> {
+        fn arbitrary<G: Gen>(g: &mut G) -> Self {
+            Special(CardFlags(
+                SPECIAL_FLAGS[g.gen_range(0, SPECIAL_FLAGS.len())],
+            ))
+        }
+
+        fn shrink(&self) -> Box<Iterator<Item = Self>> {
+            Box::new(self.0.shrink().map(Special))
+        }
+    }
+
+    #[test]
+    fn test_no_special_flag_uses_the_fallback() {
+        quickcheck(no_special_flag_uses_the_fallback as fn(Special<CardFlags>) -> TestResult)
+    }
+    fn no_special_flag_uses_the_fallback(Special(flags): Special<CardFlags>) -> TestResult {
+        no_card_flags_resort_to_the_fallback(flags)
+    }
+
+    #[test]
+    fn test_each_special_flag_produces_the_expected_outcome() {
+        quickcheck(
+            each_special_flag_produces_the_expected_outcome as fn(Special<CardFlags>) -> TestResult,
+        )
+    }
+    fn each_special_flag_produces_the_expected_outcome(
+        Special(flags): Special<CardFlags>,
+    ) -> TestResult {
+        let expected = write_card_set_str(&flags.0);
+        let string = flags.to_string();
+
+        let passes = expected == string;
+
+        if !passes {
+            test_println!("{:#?} => {} =/= {}", flags, string, expected);
+        }
+
+        TestResult::from_bool(passes)
+    }
+
+    #[cfg(feature = "false")]
     mod toy {
         use super::*;
         type ToyFlags = u8;
