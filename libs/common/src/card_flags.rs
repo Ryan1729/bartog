@@ -256,6 +256,12 @@ pub const RED_RANK_FLAGS: [u64; RANK_COUNT as usize] = [
     rank_pattern!(12 red),
 ];
 
+macro_rules! consecutive_ranks {
+    (A-2) => {
+        //TODO write code to gernerate this macro and the usages of it.
+    };
+}
+
 impl CardFlags {
     pub fn new(edges: u64) -> Self {
         CardFlags(edges & (ONE_PAST_CARD_FLAGS_MAX - 1))
@@ -361,17 +367,17 @@ const SPECIAL_FLAGS: [u64; 69] = [
     HEARTS_EVEN_PLUS_Q,
     SPADES_EVEN_PLUS_Q,
     CLUBS_EVEN_SANS_Q,
-    DIAMONDS_EVEN_PLUS_Q,
-    HEARTS_EVEN_PLUS_Q,
-    SPADES_EVEN_PLUS_Q,
+    DIAMONDS_EVEN_SANS_Q,
+    HEARTS_EVEN_SANS_Q,
+    SPADES_EVEN_SANS_Q,
     CLUBS_ODD_PLUS_K_AND_J,
     DIAMONDS_ODD_PLUS_K_AND_J,
     HEARTS_ODD_PLUS_K_AND_J,
     SPADES_ODD_PLUS_K_AND_J,
     CLUBS_ODD_SANS_K_AND_J,
-    DIAMONDS_ODD_PLUS_K_AND_J,
-    HEARTS_ODD_PLUS_K_AND_J,
-    SPADES_ODD_PLUS_K_AND_J,
+    DIAMONDS_ODD_SANS_K_AND_J,
+    HEARTS_ODD_SANS_K_AND_J,
+    SPADES_ODD_SANS_K_AND_J,
     rank_pattern!(0),
     rank_pattern!(1),
     rank_pattern!(2),
@@ -413,31 +419,38 @@ const SPECIAL_FLAGS: [u64; 69] = [
     RED_RANK_FLAGS[12],
 ];
 
-impl fmt::Display for CardFlags {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let original_flags = self.0;
-        let mut flags = self.0;
+fn get_special_subsets(card_flags: CardFlags) -> Vec<u64> {
+    let original_flags = card_flags.0;
+    let mut flags = card_flags.0;
 
-        let mut subsets = Vec::new();
+    let mut subsets = Vec::new();
 
-        let mut tracking_flags = 0;
-        if flags == 0 {
-            subsets.push(0);
-        } else {
-            for &f in SPECIAL_FLAGS.iter() {
-                if tracking_flags & f != f {
-                    if original_flags & f == f {
-                        tracking_flags |= f;
-                        subsets.push(f);
+    let mut tracking_flags = 0;
+    if flags == 0 {
+        subsets.push(0);
+    } else {
+        for &f in SPECIAL_FLAGS.iter() {
+            if tracking_flags & f != f {
+                if original_flags & f == f {
+                    tracking_flags |= f;
+                    subsets.push(f);
 
-                        flags &= !f;
-                        if flags == 0 {
-                            break;
-                        }
+                    flags &= !f;
+                    if flags == 0 {
+                        break;
                     }
                 }
             }
         }
+    }
+
+    subsets
+}
+
+impl fmt::Display for CardFlags {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let subsets = get_special_subsets(*self);
+
         println!(
             "{:?}",
             subsets
@@ -559,7 +572,6 @@ mod tests {
 
     #[test]
     fn test_no_card_flags_resort_to_the_fallback() {
-        //TODO generate only flags not covered by `no_special_flag_uses_the_fallback`
         quickcheck(no_card_flags_resort_to_the_fallback as fn(CardFlags) -> TestResult)
     }
     fn no_card_flags_resort_to_the_fallback(flags: CardFlags) -> TestResult {
@@ -577,6 +589,18 @@ mod tests {
     #[test]
     fn test_suits_combined_with_rank_does_not_use_the_fallback() {
         let flags = CardFlags::new(rank_pattern!(0) | CLUBS_FLAGS);
+
+        assert!(!no_card_flags_resort_to_the_fallback(flags).is_failure());
+    }
+    #[test]
+    fn this_generated_one_does_not_use_the_fallback() {
+        //if this fails and everything else passes, then one of
+        //`test_no_card_flags_resort_to_the_fallback`,
+        //`test_no_special_flag_uses_the_fallback`, or
+        //`test_no_non_special_flag_uses_the_fallback`
+        //aren't covering enough space.
+
+        let flags = CardFlags::new(0b1000000010101000000000010000010101000100111110100000);
 
         assert!(!no_card_flags_resort_to_the_fallback(flags).is_failure());
     }
@@ -678,6 +702,50 @@ mod tests {
         }
 
         TestResult::from_bool(passes)
+    }
+
+    #[derive(Clone, Debug)]
+    struct NonSpecial<T>(T);
+
+    impl Arbitrary for NonSpecial<CardFlags> {
+        fn arbitrary<G: Gen>(g: &mut G) -> Self {
+            for _ in 0..16 {
+                let genned = CardFlags(g.gen_range(0, ONE_PAST_CARD_FLAGS_MAX));
+
+                let subsets = get_special_subsets(genned);
+
+                if subsets.len() == 0 {
+                    return NonSpecial(genned);
+                }
+
+                let mut test_genned = genned.0;
+                for subset in subsets {
+                    test_genned &= !subset;
+                    if test_genned == 0 {
+                        break;
+                    }
+                }
+
+                if test_genned != 0 {
+                    return NonSpecial(CardFlags(test_genned));
+                }
+            }
+            return NonSpecial(CardFlags(0));
+        }
+
+        fn shrink(&self) -> Box<Iterator<Item = Self>> {
+            Box::new(self.0.shrink().map(NonSpecial))
+        }
+    }
+
+    #[test]
+    fn test_no_non_special_flag_uses_the_fallback() {
+        quickcheck(no_non_special_flag_uses_the_fallback as fn(NonSpecial<CardFlags>) -> TestResult)
+    }
+    fn no_non_special_flag_uses_the_fallback(
+        NonSpecial(flags): NonSpecial<CardFlags>,
+    ) -> TestResult {
+        no_card_flags_resort_to_the_fallback(flags)
     }
 
     #[cfg(feature = "false")]
