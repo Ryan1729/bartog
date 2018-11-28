@@ -40,6 +40,9 @@ all_suits_consts! {
     SPADES_FLAGS;
 }
 
+pub const BLACK_FLAGS: u64 = CLUBS_FLAGS | SPADES_FLAGS;
+pub const RED_FLAGS: u64 = DIAMONDS_FLAGS | HEARTS_FLAGS;
+
 all_suits_consts! {
     pub const CLUBS_FACE_FLAGS: u64 = 0b0001_1100_0000_0000;
     DIAMONDS_FACE_FLAGS;
@@ -55,17 +58,31 @@ all_suits_consts! {
 }
 
 all_suits_consts! {
-    pub const CLUBS_EVEN_PLUS_QUEEN_FLAGS: u64 = 0b0000_1010_1010_1010;
-    DIAMONDS_EVEN_PLUS_QUEEN_FLAGS;
-    HEARTS_EVEN_PLUS_QUEEN_FLAGS;
-    SPADES_EVEN_PLUS_QUEEN_FLAGS;
+    pub const CLUBS_EVEN_PLUS_Q: u64 = 0b0000_1010_1010_1010;
+    DIAMONDS_EVEN_PLUS_Q;
+    HEARTS_EVEN_PLUS_Q;
+    SPADES_EVEN_PLUS_Q;
 }
 
 all_suits_consts! {
-    pub const CLUBS_EVEN_SANS_QUEEN_FLAGS: u64 = 0b0000_0010_1010_1010;
-    DIAMONDS_EVEN_SANS_QUEEN_FLAGS;
-    HEARTS_EVEN_SANS_QUEEN_FLAGS;
-    SPADES_EVEN_SANS_QUEEN_FLAGS;
+    pub const CLUBS_EVEN_SANS_Q: u64 = 0b0000_0010_1010_1010;
+    DIAMONDS_EVEN_SANS_Q;
+    HEARTS_EVEN_SANS_Q;
+    SPADES_EVEN_SANS_Q;
+}
+
+all_suits_consts! {
+    pub const CLUBS_ODD_PLUS_K_AND_J: u64 = 0b0001_0101_0101_0101;
+    DIAMONDS_ODD_PLUS_K_AND_J;
+    HEARTS_ODD_PLUS_K_AND_J;
+    SPADES_ODD_PLUS_K_AND_J;
+}
+
+all_suits_consts! {
+    pub const CLUBS_ODD_SANS_K_AND_J: u64 = 0b0000_0001_0101_0101;
+    DIAMONDS_ODD_SANS_K_AND_J;
+    HEARTS_ODD_SANS_K_AND_J;
+    SPADES_ODD_SANS_K_AND_J;
 }
 
 pub const SUIT_FLAGS: [u64; SUIT_COUNT as usize] =
@@ -111,6 +128,84 @@ macro_rules! rank_pattern {
     (12) => {
         0b1000000000000_1000000000000_1000000000000_1000000000000
     };
+    (0 red) => {
+        0b0000000000000_0000000000001_0000000000001_0000000000000
+    };
+    (1 red) => {
+        0b0000000000000_0000000000010_0000000000010_0000000000000
+    };
+    (2 red) => {
+        0b0000000000000_0000000000100_0000000000100_0000000000000
+    };
+    (3 red) => {
+        0b0000000000000_0000000001000_0000000001000_0000000000000
+    };
+    (4 red) => {
+        0b0000000000000_0000000010000_0000000010000_0000000000000
+    };
+    (5 red) => {
+        0b0000000000000_0000000100000_0000000100000_0000000000000
+    };
+    (6 red) => {
+        0b0000000000000_0000001000000_0000001000000_0000000000000
+    };
+    (7 red) => {
+        0b0000000000000_0000010000000_0000010000000_0000000000000
+    };
+    (8 red) => {
+        0b0000000000000_0000100000000_0000100000000_0000000000000
+    };
+    (9 red) => {
+        0b0000000000000_0001000000000_0001000000000_0000000000000
+    };
+    (10 red) => {
+        0b0000000000000_0010000000000_0010000000000_0000000000000
+    };
+    (11 red) => {
+        0b0000000000000_0100000000000_0100000000000_0000000000000
+    };
+    (12 red) => {
+        0b0000000000000_1000000000000_1000000000000_0000000000000
+    };
+    (0 black) => {
+        0b0000000000001_0000000000000_0000000000000_0000000000001
+    };
+    (1 black) => {
+        0b0000000000010_0000000000000_0000000000000_0000000000010
+    };
+    (2 black) => {
+        0b0000000000100_0000000000000_0000000000000_0000000000100
+    };
+    (3 black) => {
+        0b0000000001000_0000000000000_0000000000000_0000000001000
+    };
+    (4 black) => {
+        0b0000000010000_0000000000000_0000000000000_0000000010000
+    };
+    (5 black) => {
+        0b0000000100000_0000000000000_0000000000000_0000000100000
+    };
+    (6 black) => {
+        0b0000001000000_0000000000000_0000000000000_0000001000000
+    };
+    (7 black) => {
+        0b0000010000000_0000000000000_0000000000000_0000010000000
+    };
+    (8 black) => {
+        0b0000100000000_0000000000000_0000000000000_0000100000000
+    };
+    (9 black) => {
+        0b0001000000000_0000000000000_0000000000000_0001000000000
+    };
+    (10 black) => {
+        0b0010000000000_0000000000000_0000000000000_0010000000000
+    };
+    (11 black) => {
+        0b0100000000000_0000000000000_0000000000000_0100000000000
+    };
+    (12 black) => {
+        0b1000000000000_0000000000000_0000000000000_1000000000000
+    };
 }
 
 pub const RANK_FLAGS: [u64; RANK_COUNT as usize] = [
@@ -127,6 +222,38 @@ pub const RANK_FLAGS: [u64; RANK_COUNT as usize] = [
     rank_pattern!(10),
     rank_pattern!(11),
     rank_pattern!(12),
+];
+
+pub const BLACK_RANK_FLAGS: [u64; RANK_COUNT as usize] = [
+    rank_pattern!(0 black),
+    rank_pattern!(1 black),
+    rank_pattern!(2 black),
+    rank_pattern!(3 black),
+    rank_pattern!(4 black),
+    rank_pattern!(5 black),
+    rank_pattern!(6 black),
+    rank_pattern!(7 black),
+    rank_pattern!(8 black),
+    rank_pattern!(9 black),
+    rank_pattern!(10 black),
+    rank_pattern!(11 black),
+    rank_pattern!(12 black),
+];
+
+pub const RED_RANK_FLAGS: [u64; RANK_COUNT as usize] = [
+    rank_pattern!(0 red),
+    rank_pattern!(1 red),
+    rank_pattern!(2 red),
+    rank_pattern!(3 red),
+    rank_pattern!(4 red),
+    rank_pattern!(5 red),
+    rank_pattern!(6 red),
+    rank_pattern!(7 red),
+    rank_pattern!(8 red),
+    rank_pattern!(9 red),
+    rank_pattern!(10 red),
+    rank_pattern!(11 red),
+    rank_pattern!(12 red),
 ];
 
 impl CardFlags {
@@ -214,7 +341,9 @@ impl Default for CardFlags {
     }
 }
 
-const SPECIAL_FLAGS: [u64; 33] = [
+const SPECIAL_FLAGS: [u64; 69] = [
+    BLACK_FLAGS,
+    RED_FLAGS,
     CLUBS_FLAGS,
     DIAMONDS_FLAGS,
     HEARTS_FLAGS,
@@ -227,14 +356,22 @@ const SPECIAL_FLAGS: [u64; 33] = [
     DIAMONDS_NUMBER_FLAGS,
     HEARTS_NUMBER_FLAGS,
     SPADES_NUMBER_FLAGS,
-    CLUBS_EVEN_SANS_QUEEN_FLAGS,
-    DIAMONDS_EVEN_PLUS_QUEEN_FLAGS,
-    HEARTS_EVEN_PLUS_QUEEN_FLAGS,
-    SPADES_EVEN_PLUS_QUEEN_FLAGS,
-    CLUBS_EVEN_PLUS_QUEEN_FLAGS,
-    DIAMONDS_EVEN_PLUS_QUEEN_FLAGS,
-    HEARTS_EVEN_PLUS_QUEEN_FLAGS,
-    SPADES_EVEN_PLUS_QUEEN_FLAGS,
+    CLUBS_EVEN_PLUS_Q,
+    DIAMONDS_EVEN_PLUS_Q,
+    HEARTS_EVEN_PLUS_Q,
+    SPADES_EVEN_PLUS_Q,
+    CLUBS_EVEN_SANS_Q,
+    DIAMONDS_EVEN_PLUS_Q,
+    HEARTS_EVEN_PLUS_Q,
+    SPADES_EVEN_PLUS_Q,
+    CLUBS_ODD_PLUS_K_AND_J,
+    DIAMONDS_ODD_PLUS_K_AND_J,
+    HEARTS_ODD_PLUS_K_AND_J,
+    SPADES_ODD_PLUS_K_AND_J,
+    CLUBS_ODD_SANS_K_AND_J,
+    DIAMONDS_ODD_PLUS_K_AND_J,
+    HEARTS_ODD_PLUS_K_AND_J,
+    SPADES_ODD_PLUS_K_AND_J,
     rank_pattern!(0),
     rank_pattern!(1),
     rank_pattern!(2),
@@ -248,6 +385,32 @@ const SPECIAL_FLAGS: [u64; 33] = [
     rank_pattern!(10),
     rank_pattern!(11),
     rank_pattern!(12),
+    BLACK_RANK_FLAGS[0],
+    BLACK_RANK_FLAGS[1],
+    BLACK_RANK_FLAGS[2],
+    BLACK_RANK_FLAGS[3],
+    BLACK_RANK_FLAGS[4],
+    BLACK_RANK_FLAGS[5],
+    BLACK_RANK_FLAGS[6],
+    BLACK_RANK_FLAGS[7],
+    BLACK_RANK_FLAGS[8],
+    BLACK_RANK_FLAGS[9],
+    BLACK_RANK_FLAGS[10],
+    BLACK_RANK_FLAGS[11],
+    BLACK_RANK_FLAGS[12],
+    BLACK_RANK_FLAGS[0],
+    RED_RANK_FLAGS[1],
+    RED_RANK_FLAGS[2],
+    RED_RANK_FLAGS[3],
+    RED_RANK_FLAGS[4],
+    RED_RANK_FLAGS[5],
+    RED_RANK_FLAGS[6],
+    RED_RANK_FLAGS[7],
+    RED_RANK_FLAGS[8],
+    RED_RANK_FLAGS[9],
+    RED_RANK_FLAGS[10],
+    RED_RANK_FLAGS[11],
+    RED_RANK_FLAGS[12],
 ];
 
 impl fmt::Display for CardFlags {
@@ -258,83 +421,22 @@ impl fmt::Display for CardFlags {
         let mut subsets = Vec::new();
 
         let mut tracking_flags = 0;
-        macro_rules! push_and_remove {
-            ($subset:expr) => {{
-                if tracking_flags & $subset != $subset {
-                    if original_flags & $subset == $subset {
-                        tracking_flags |= $subset;
-                        subsets.push($subset);
-
-                        #[allow(unused_assignments)]
-                        {
-                            flags &= !$subset;
-                        };
-                    }
-                }
-            }};
-        }
-
         if flags == 0 {
             subsets.push(0);
         } else {
-            // for f in SPECIAL_FLAGS.iter() {
-            //     if tracking_flags & f != f {
-            //         if original_flags & f == f {
-            //             tracking_flags |= f;
-            //             subsets.push(f);
-            //
-            //             flags &= !$subset;
-            //             if flags == 0 {
-            //                 break;
-            //             }
-            //         }
-            //     }
-            // }
-            push_and_remove!(CLUBS_FLAGS);
-            push_and_remove!(DIAMONDS_FLAGS);
-            push_and_remove!(HEARTS_FLAGS);
-            push_and_remove!(SPADES_FLAGS);
+            for &f in SPECIAL_FLAGS.iter() {
+                if tracking_flags & f != f {
+                    if original_flags & f == f {
+                        tracking_flags |= f;
+                        subsets.push(f);
 
-            push_and_remove!(CLUBS_FACE_FLAGS);
-            push_and_remove!(DIAMONDS_FACE_FLAGS);
-            push_and_remove!(HEARTS_FACE_FLAGS);
-            push_and_remove!(SPADES_FACE_FLAGS);
-
-            push_and_remove!(CLUBS_NUMBER_FLAGS);
-            push_and_remove!(DIAMONDS_NUMBER_FLAGS);
-            push_and_remove!(HEARTS_NUMBER_FLAGS);
-            push_and_remove!(SPADES_NUMBER_FLAGS);
-
-            push_and_remove!(CLUBS_EVEN_SANS_QUEEN_FLAGS);
-            push_and_remove!(DIAMONDS_EVEN_PLUS_QUEEN_FLAGS);
-            push_and_remove!(HEARTS_EVEN_PLUS_QUEEN_FLAGS);
-            push_and_remove!(SPADES_EVEN_PLUS_QUEEN_FLAGS);
-
-            push_and_remove!(CLUBS_EVEN_PLUS_QUEEN_FLAGS);
-            push_and_remove!(DIAMONDS_EVEN_PLUS_QUEEN_FLAGS);
-            push_and_remove!(HEARTS_EVEN_PLUS_QUEEN_FLAGS);
-            push_and_remove!(SPADES_EVEN_PLUS_QUEEN_FLAGS);
-
-            push_and_remove!(rank_pattern!(0));
-            push_and_remove!(rank_pattern!(1));
-            push_and_remove!(rank_pattern!(2));
-            push_and_remove!(rank_pattern!(3));
-            push_and_remove!(rank_pattern!(4));
-            push_and_remove!(rank_pattern!(5));
-            push_and_remove!(rank_pattern!(6));
-            push_and_remove!(rank_pattern!(7));
-            push_and_remove!(rank_pattern!(8));
-            push_and_remove!(rank_pattern!(9));
-            push_and_remove!(rank_pattern!(10));
-            push_and_remove!(rank_pattern!(11));
-            push_and_remove!(rank_pattern!(12));
-
-            // TODO proper subsets of these like "The red twos" and "the even spades".
-            // Also proper supersets of these like "the red cards" and "the even cards".
-            // This requires different control flow, probably `loop` and `break;`.
-
-            // TODO solve a toy version of the problem say one with only 8 bits, to try
-            // and get a handle on this.
+                        flags &= !f;
+                        if flags == 0 {
+                            break;
+                        }
+                    }
+                }
+            }
         }
         println!(
             "{:?}",
@@ -355,14 +457,54 @@ fn write_card_set_str<'f, 's>(flags: &'f u64) -> Cow<'s, str> {
         ($index:expr) => {{
             format!("the {}s", get_rank_str($index))
         }};
+        ($index:expr, black) => {{
+            format!("the black {}s", get_rank_str($index))
+        }};
+        ($index:expr, red) => {{
+            format!("the red {}s", get_rank_str($index))
+        }};
     }
     match *flags {
         0 => "{}".into(),
+        //Colours
+        BLACK_FLAGS => "the black cards".into(),
+        RED_FLAGS => "the red cards".into(),
         //Suits
         CLUBS_FLAGS => "the clubs".into(),
         DIAMONDS_FLAGS => "the diamonds".into(),
         HEARTS_FLAGS => "the hearts".into(),
         SPADES_FLAGS => "the spades".into(),
+
+        CLUBS_FACE_FLAGS => "the club faces".into(),
+        DIAMONDS_FACE_FLAGS => "the diamond faces".into(),
+        HEARTS_FACE_FLAGS => "the heart faces".into(),
+        SPADES_FACE_FLAGS => "the spade faces".into(),
+
+        CLUBS_NUMBER_FLAGS => "the club numbers".into(),
+        DIAMONDS_NUMBER_FLAGS => "the diamond numbers".into(),
+        HEARTS_NUMBER_FLAGS => "the heart numbers".into(),
+        SPADES_NUMBER_FLAGS => "the spade numbers".into(),
+
+        CLUBS_EVEN_SANS_Q => "the even clubs (sans queen)".into(),
+        DIAMONDS_EVEN_SANS_Q => "the even diamonds (sans queen)".into(),
+        HEARTS_EVEN_SANS_Q => "the even hearts (sans queen)".into(),
+        SPADES_EVEN_SANS_Q => "the even spades (sans queen)".into(),
+
+        CLUBS_EVEN_PLUS_Q => "the even clubs (including queen)".into(),
+        DIAMONDS_EVEN_PLUS_Q => "the even diamonds (including queen)".into(),
+        HEARTS_EVEN_PLUS_Q => "the even hearts (including queen)".into(),
+        SPADES_EVEN_PLUS_Q => "the even spades (including queen)".into(),
+
+        CLUBS_ODD_SANS_K_AND_J => "the odd clubs (sans the king and jack)".into(),
+        DIAMONDS_ODD_SANS_K_AND_J => "the odd diamonds (sans the king and jack)".into(),
+        HEARTS_ODD_SANS_K_AND_J => "the odd hearts (sans the king and jack)".into(),
+        SPADES_ODD_SANS_K_AND_J => "the odd spades (sans the king and jack)".into(),
+
+        CLUBS_ODD_PLUS_K_AND_J => "the odd clubs (including the king and jack)".into(),
+        DIAMONDS_ODD_PLUS_K_AND_J => "the odd diamonds (including the king and jack)".into(),
+        HEARTS_ODD_PLUS_K_AND_J => "the odd hearts (including the king and jack)".into(),
+        SPADES_ODD_PLUS_K_AND_J => "the odd spades (including the king and jack)".into(),
+
         //Ranks
         rank_pattern!(0) => rank_result!(0).into(),
         rank_pattern!(1) => rank_result!(1).into(),
@@ -377,7 +519,35 @@ fn write_card_set_str<'f, 's>(flags: &'f u64) -> Cow<'s, str> {
         rank_pattern!(10) => rank_result!(10).into(),
         rank_pattern!(11) => rank_result!(11).into(),
         rank_pattern!(12) => rank_result!(12).into(),
-        //fs if flags.bit_count() == 1 => w!("{}", card_flag_to_card(fs)).into(),
+
+        rank_pattern!(0 black) => rank_result!(0, black).into(),
+        rank_pattern!(1 black) => rank_result!(1, black).into(),
+        rank_pattern!(2 black) => rank_result!(2, black).into(),
+        rank_pattern!(3 black) => rank_result!(3, black).into(),
+        rank_pattern!(4 black) => rank_result!(4, black).into(),
+        rank_pattern!(5 black) => rank_result!(5, black).into(),
+        rank_pattern!(6 black) => rank_result!(6, black).into(),
+        rank_pattern!(7 black) => rank_result!(7, black).into(),
+        rank_pattern!(8 black) => rank_result!(8, black).into(),
+        rank_pattern!(9 black) => rank_result!(9, black).into(),
+        rank_pattern!(10 black) => rank_result!(10, black).into(),
+        rank_pattern!(11 black) => rank_result!(11, black).into(),
+        rank_pattern!(12 black) => rank_result!(12, black).into(),
+
+        rank_pattern!(0 red) => rank_result!(0, red).into(),
+        rank_pattern!(1 red) => rank_result!(1, red).into(),
+        rank_pattern!(2 red) => rank_result!(2, red).into(),
+        rank_pattern!(3 red) => rank_result!(3, red).into(),
+        rank_pattern!(4 red) => rank_result!(4, red).into(),
+        rank_pattern!(5 red) => rank_result!(5, red).into(),
+        rank_pattern!(6 red) => rank_result!(6, red).into(),
+        rank_pattern!(7 red) => rank_result!(7, red).into(),
+        rank_pattern!(8 red) => rank_result!(8, red).into(),
+        rank_pattern!(9 red) => rank_result!(9, red).into(),
+        rank_pattern!(10 red) => rank_result!(10, red).into(),
+        rank_pattern!(11 red) => rank_result!(11, red).into(),
+        rank_pattern!(12 red) => rank_result!(12, red).into(),
+
         _ => CARD_FLAGS_DISPLAY_FALLBACK.into(),
     }
 }
@@ -389,6 +559,7 @@ mod tests {
 
     #[test]
     fn test_no_card_flags_resort_to_the_fallback() {
+        //TODO generate only flags not covered by `no_special_flag_uses_the_fallback`
         quickcheck(no_card_flags_resort_to_the_fallback as fn(CardFlags) -> TestResult)
     }
     fn no_card_flags_resort_to_the_fallback(flags: CardFlags) -> TestResult {
