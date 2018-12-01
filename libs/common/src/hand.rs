@@ -1,4 +1,3 @@
-use english::ordinal_display;
 use inner_common::*;
 use traits::AllValues;
 

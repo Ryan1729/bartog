@@ -9,8 +9,14 @@ rand = "0.5"
 [dependencies.platform_types]
 path = "../platform_types"
 
+[dependencies.card_flags]
+path = "../card_flags"
+
 [dependencies.features]
 path = "../features"
+
+[dependencies.inner_common]
+path = "../inner_common"
 
 [dev-dependencies]
 quickcheck = "0.6"

@@ -124,6 +124,12 @@ extern crate quickcheck;
 
 extern crate platform_types;
 
+extern crate inner_common;
+pub use inner_common::*;
+
+extern crate card_flags;
+pub use card_flags::*;
+
 extern crate features;
 pub use features::*;
 
@@ -131,9 +137,6 @@ extern crate rand;
 
 mod rendering;
 pub use rendering::*;
-
-mod inner_common;
-pub use inner_common::*;
 
 mod card_animation;
 pub use card_animation::*;
@@ -149,9 +152,3 @@ pub use hand::*;
 
 mod traits;
 pub use traits::*;
-
-mod english;
-pub use english::*;
-
-mod card_flags;
-pub use card_flags::*;
