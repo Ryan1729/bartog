@@ -200,7 +200,7 @@ pub fn do_suit_choice(
     let h = SPRITE_SIZE * 3;
     let x = SPRITE_SIZE;
 
-    for (i, suit) in Suits::ALL.iter().cloned().enumerate() {
+    for (i, suit) in suits::ALL.iter().cloned().enumerate() {
         let i = (i + 1) as u8;
 
         let (_, suit_char) = get_suit_colour_and_char(suit);

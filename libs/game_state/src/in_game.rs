@@ -233,7 +233,8 @@ impl AllValues for Change {
                 CardMovement::all_values()
                     .into_iter()
                     .map(Change::CardLocation),
-            ).collect()
+            )
+            .collect()
     }
 }
 
@@ -255,11 +256,11 @@ impl fmt::Debug for Change {
 impl fmt::Display for Change {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if f.alternate() {
-            change_match!{*self, {
+            change_match! {*self, {
                 v => write!(f, "{:#}", v)
             }}
         } else {
-            change_match!{*self, {
+            change_match! {*self, {
                 v => write!(f, "{}", v)
             }}
         }
@@ -268,7 +269,7 @@ impl fmt::Display for Change {
 
 impl RowDisplay for Change {
     fn row_label(&self) -> RowLabel {
-        change_match!{*self, {
+        change_match! {*self, {
             v => v.row_label()
         }}
     }

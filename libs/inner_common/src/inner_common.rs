@@ -298,7 +298,7 @@ pub fn nth_previous_card(current: Card, offset: u8) -> Card {
 
 pub type Suit = u8;
 
-pub mod Suits {
+pub mod suits {
     use super::*;
 
     pub const CLUBS: Suit = 0;
@@ -315,27 +315,27 @@ pub fn get_suit(card: Card) -> Suit {
 
 pub fn get_suit_colour_and_char(suit: Suit) -> (u8, u8) {
     match suit {
-        Suits::CLUBS => (BLACK_INDEX, CLUB_CHAR),
-        Suits::DIAMONDS => (RED_INDEX, DIAMOND_CHAR),
-        Suits::HEARTS => (RED_INDEX, HEART_CHAR),
-        Suits::SPADES => (BLACK_INDEX, SPADE_CHAR),
+        suits::CLUBS => (BLACK_INDEX, CLUB_CHAR),
+        suits::DIAMONDS => (RED_INDEX, DIAMOND_CHAR),
+        suits::HEARTS => (RED_INDEX, HEART_CHAR),
+        suits::SPADES => (BLACK_INDEX, SPADE_CHAR),
         _ => (PURPLE_INDEX, 33), //purple "!"
     }
 }
 
 pub fn get_suit_str(suit: Suit) -> &'static str {
     match suit {
-        Suits::CLUBS => "clubs",
-        Suits::DIAMONDS => "diamonds",
-        Suits::HEARTS => "hearts",
-        Suits::SPADES => "spades",
+        suits::CLUBS => "clubs",
+        suits::DIAMONDS => "diamonds",
+        suits::HEARTS => "hearts",
+        suits::SPADES => "spades",
         _ => "unknown",
     }
 }
 
 pub type Rank = u8;
 
-pub mod Ranks {
+pub mod ranks {
     use super::*;
 
     pub const ACE: Rank = 0;
@@ -425,40 +425,40 @@ pub fn all_player_ids() -> [PlayerID; PLAYER_ID_COUNT] {
 }
 
 #[inline]
-pub fn is_cpu_player(playerId: PlayerID) -> bool {
-    playerId < PLAYER_ID
+pub fn is_cpu_player(player_id: PlayerID) -> bool {
+    player_id < PLAYER_ID
 }
 
 // Having invalid ids treated as player ids curruntly works fine most places, and it's nice if
 // `is_cpu_player` and `is_player` cover all the cases. we can make `is_strictly_player` or
 // something if we need to.
 #[inline]
-pub fn is_player(playerId: PlayerID) -> bool {
-    playerId >= PLAYER_ID
+pub fn is_player(player_id: PlayerID) -> bool {
+    player_id >= PLAYER_ID
 }
 
-pub fn player_name(playerId: PlayerID) -> String {
-    if is_cpu_player(playerId) {
-        format!("cpu {}", playerId)
-    } else if playerId == MAX_PLAYER_ID {
+pub fn player_name(player_id: PlayerID) -> String {
+    if is_cpu_player(player_id) {
+        format!("cpu {}", player_id)
+    } else if player_id == MAX_PLAYER_ID {
         "you".to_owned()
     } else {
         "???".to_owned()
     }
 }
 
-pub fn player_1_char_name(playerId: PlayerID) -> String {
-    if is_cpu_player(playerId) {
-        format!("{}", playerId)
-    } else if playerId == MAX_PLAYER_ID {
+pub fn player_1_char_name(player_id: PlayerID) -> String {
+    if is_cpu_player(player_id) {
+        format!("{}", player_id)
+    } else if player_id == MAX_PLAYER_ID {
         "u".to_owned()
     } else {
         "?".to_owned()
     }
 }
 
-pub fn get_pronoun(playerId: PlayerID) -> String {
-    if playerId == MAX_PLAYER_ID {
+pub fn get_pronoun(player_id: PlayerID) -> String {
+    if player_id == MAX_PLAYER_ID {
         "you".to_string()
     } else {
         "they".to_string()

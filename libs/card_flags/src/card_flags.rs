@@ -1766,28 +1766,32 @@ fn write_card_set_str<'f, 's>(flags: &'f u64) -> Cow<'s, str> {
                 "{} to {} of clubs",
                 get_rank_str($start),
                 get_rank_str($end)
-            ).into()
+            )
+            .into()
         }};
         ($start:expr => $end:expr, diamonds) => {{
             format!(
                 "{} to {} of diamonds",
                 get_rank_str($start),
                 get_rank_str($end)
-            ).into()
+            )
+            .into()
         }};
         ($start:expr => $end:expr, hearts) => {{
             format!(
                 "{} to {} of hearts",
                 get_rank_str($start),
                 get_rank_str($end)
-            ).into()
+            )
+            .into()
         }};
         ($start:expr => $end:expr, spades) => {{
             format!(
                 "{} to {} of spades",
                 get_rank_str($start),
                 get_rank_str($end)
-            ).into()
+            )
+            .into()
         }};
     }
     match *flags {
@@ -2551,7 +2555,7 @@ impl fmt::Debug for CardFlags {
             };
         }
         if v >= 1 << 52 {
-            write!(f, "INVALID EDGES: {:?}, valid portion:", v);
+            write!(f, "INVALID EDGES: {:?}, valid portion:", v)?;
         }
 
         write!(

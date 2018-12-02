@@ -14,7 +14,7 @@ pub trait ApplyToState {
 
 impl ApplyToState for Change {
     fn apply_to_state(&self, state: &mut in_game::State, event_log: &mut EventLog) {
-        change_match!{*self, {
+        change_match! {*self, {
             v => v.apply_to_state(state, event_log)
         }}
     }
@@ -230,7 +230,7 @@ pub fn add_discard_animation(
         event_push!(
             event_log,
             player_name.as_bytes(),
-            if rank == Ranks::ACE || rank == Ranks::EIGHT {
+            if rank == ranks::ACE || rank == ranks::EIGHT {
                 b" played an "
             } else {
                 b" played a "

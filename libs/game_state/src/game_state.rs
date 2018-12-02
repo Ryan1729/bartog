@@ -293,9 +293,11 @@ impl CardChangeTable {
                             .clone()
                             .into_iter()
                             .flat_map(|c| c.changes.iter())
-                    }).cloned()
+                    })
+                    .cloned()
                     .collect::<Vec<_>>()
-            }).unwrap_or_default();
+            })
+            .unwrap_or_default();
 
         output.into_iter()
     }
@@ -329,7 +331,7 @@ impl CardChangeTable {
 impl Default for Rules {
     fn default() -> Self {
         Rules {
-            wild: CardFlags::new(RANK_FLAGS[Ranks::EIGHT as usize]),
+            wild: CardFlags::new(RANK_FLAGS[ranks::EIGHT as usize]),
             can_play_graph: d!(),
             when_played: d!(),
         }
