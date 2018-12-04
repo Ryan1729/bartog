@@ -328,6 +328,29 @@ impl CardChangeTable {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_set_changes_with_ALL_FLAGS_causes_get_card_changes_to_return_for_any_card() {
+        let mut table = CardChangeTable::default();
+
+        let changes: Vec<in_game::Change> = in_game::RelativePlayer::all_values()
+            .into_iter()
+            .map(in_game::Change::CurrentPlayer)
+            .collect();
+
+        table.set_changes(CardFlags::new(ALL_FLAGS), changes.clone());
+
+        let card = 0; //TODO make this a quickcheck test that selects a card
+
+        let actual: Vec<in_game::Change> = table.get_card_changes(card).collect();
+
+        assert_eq!(changes, actual);
+    }
+}
+
 impl Default for Rules {
     fn default() -> Self {
         Rules {

@@ -153,7 +153,7 @@ pub fn apply_when_played_changes(
     event_push!(
         state.event_log,
         pronoun.as_bytes(),
-        b" changed what happens when the ",
+        b" changed what happens when ",
         card_flags.to_string().as_bytes(),
         b" is played:",
     );

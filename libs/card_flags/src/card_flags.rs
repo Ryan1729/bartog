@@ -8,7 +8,8 @@ use rand::Rng;
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CardFlags(u64);
 
-const ONE_PAST_CARD_FLAGS_MAX: u64 = 1 << DECK_SIZE as u64;
+pub const ONE_PAST_CARD_FLAGS_MAX: u64 = 1 << DECK_SIZE as u64;
+pub const ALL_FLAGS: u64 = ONE_PAST_CARD_FLAGS_MAX - 1;
 
 // TODO make `Standard` generate mostly easy to describe subsets of the cards
 //and add another distribution if needed
@@ -1241,6 +1242,10 @@ impl CardFlags {
     pub fn get_bits(&self) -> u64 {
         self.0
     }
+
+    pub fn size(&self) -> u32 {
+        self.0.count_ones()
+    }
 }
 
 use std::ops::BitOr;
@@ -1272,7 +1277,8 @@ impl Default for CardFlags {
     }
 }
 
-const SPECIAL_FLAGS: [u64; 421] = [
+const SPECIAL_FLAGS: [u64; 422] = [
+    ALL_FLAGS,
     BLACK_FLAGS,
     RED_FLAGS,
     CLUBS_FLAGS,
@@ -1796,6 +1802,7 @@ fn write_card_set_str<'f, 's>(flags: &'f u64) -> Cow<'s, str> {
     }
     match *flags {
         0 => "{}".into(),
+        ALL_FLAGS => "any card".into(),
         //Colours
         BLACK_FLAGS => "the black cards".into(),
         RED_FLAGS => "the red cards".into(),

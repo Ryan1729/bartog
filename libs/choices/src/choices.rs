@@ -380,10 +380,18 @@ fn in_game_changes_choose_changes(
 ) {
     framebuffer.full_window();
 
+    let size = choice_state.card_set.size();
+    let verb_to_be: &[u8] = if size == 1 || size == DECK_SIZE as u32 {
+        b" is "
+    } else {
+        b" are "
+    };
+
     let text = bytes_concat!(
         b"choose what will happen when ",
         choice_state.card_set.to_string().as_bytes(),
-        b" is played.",
+        verb_to_be,
+        b"played.",
     );
 
     let max_heading_y = print_choice_header(framebuffer, text);
