@@ -325,6 +325,24 @@ impl CardChangeTable {
             },
         );
         self.next_generation += 1;
+
+        for card in card_flags.clone() {
+            let flag_vec = self.index.entry(card).or_default();
+            let map = &self.map;
+            let search_result = flag_vec.binary_search_by_key(
+                &CardChangeTable::get_flag_sort_key(map, &card_flags),
+                |flags| CardChangeTable::get_flag_sort_key(map, flags)
+            );
+
+            match search_result {
+                Ok(_) => {},
+                Err(i) => flag_vec.insert(i, card_flags),
+            };
+        }
+    }
+
+    fn get_flag_sort_key(map: &HashMap<CardFlags, CardChanges>, flags: &CardFlags) -> Generation {
+        map.get(&flags).map(|ch| ch.generation).unwrap_or(Generation::max_value())
     }
 }
 

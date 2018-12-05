@@ -19,6 +19,110 @@ impl Distribution<CardFlags> for Standard {
     }
 }
 
+impl CardFlags {
+    pub fn new(edges: u64) -> Self {
+        CardFlags(edges & (ONE_PAST_CARD_FLAGS_MAX - 1))
+    }
+
+    pub fn has_card(&self, card: Card) -> bool {
+        self.0 & (1 << card) != 0
+    }
+
+    pub fn toggle_card(&mut self, card: Card) {
+        let was = self.has_card(card);
+        self.set_card_to(card, !was)
+    }
+
+    pub fn set_card_to(&mut self, card: Card, to: bool) {
+        if to {
+            self.set_card(card);
+        } else {
+            self.unset_card(card);
+        }
+    }
+
+    pub fn set_card(&mut self, card: Card) {
+        self.0 |= 1 << card;
+    }
+    pub fn unset_card(&mut self, card: Card) {
+        self.0 &= !(1 << card);
+    }
+
+    pub fn cards(&self) -> Vec<Card> {
+        let mut output = Vec::with_capacity(DECK_SIZE as _);
+
+        for card in 0..DECK_SIZE {
+            if self.has_card(card) {
+                output.push(card);
+            }
+        }
+
+        output
+    }
+
+    pub fn from_cards(cards: Vec<Card>) -> Self {
+        let mut output = CardFlags(0);
+
+        for card in cards {
+            output.set_card(card);
+        }
+
+        output
+    }
+
+    pub fn get_bits(&self) -> u64 {
+        self.0
+    }
+
+    pub fn size(&self) -> u32 {
+        self.0.count_ones()
+    }
+}
+
+impl Iterator for CardFlags {
+    type Item = Card;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.size() == 0 {
+            return None;
+        }
+        let card = get_lowest_card(self.0);
+
+        self.0 &= !(1 << (card as u64));
+
+        Some(card as Card)
+    }
+}
+
+use std::ops::BitOr;
+
+impl BitOr<CardFlags> for CardFlags {
+    type Output = CardFlags;
+    fn bitor(self, other: CardFlags) -> Self::Output {
+        CardFlags(self.0 | other.0)
+    }
+}
+
+impl BitOr<u64> for CardFlags {
+    type Output = CardFlags;
+    fn bitor(self, other: u64) -> Self::Output {
+        CardFlags(self.0 | other)
+    }
+}
+
+impl BitOr<CardFlags> for u64 {
+    type Output = CardFlags;
+    fn bitor(self, other: CardFlags) -> Self::Output {
+        CardFlags(self | other.0)
+    }
+}
+
+impl Default for CardFlags {
+    fn default() -> Self {
+        CardFlags(0)
+    }
+}
+
 macro_rules! all_suits_consts {
     {
         $vis:vis const $clubs:ident: $type:ty = $clubs_expr:expr;
@@ -1188,95 +1292,6 @@ macro_rules! consecutive_ranks {
     };
 }
 
-impl CardFlags {
-    pub fn new(edges: u64) -> Self {
-        CardFlags(edges & (ONE_PAST_CARD_FLAGS_MAX - 1))
-    }
-
-    pub fn has_card(&self, card: Card) -> bool {
-        self.0 & (1 << card) != 0
-    }
-
-    pub fn toggle_card(&mut self, card: Card) {
-        let was = self.has_card(card);
-        self.set_card_to(card, !was)
-    }
-
-    pub fn set_card_to(&mut self, card: Card, to: bool) {
-        if to {
-            self.set_card(card);
-        } else {
-            self.unset_card(card);
-        }
-    }
-
-    pub fn set_card(&mut self, card: Card) {
-        self.0 |= 1 << card;
-    }
-    pub fn unset_card(&mut self, card: Card) {
-        self.0 &= !(1 << card);
-    }
-
-    pub fn cards(&self) -> Vec<Card> {
-        let mut output = Vec::with_capacity(DECK_SIZE as _);
-
-        for card in 0..DECK_SIZE {
-            if self.has_card(card) {
-                output.push(card);
-            }
-        }
-
-        output
-    }
-
-    pub fn from_cards(cards: Vec<Card>) -> Self {
-        let mut output = CardFlags(0);
-
-        for card in cards {
-            output.set_card(card);
-        }
-
-        output
-    }
-
-    pub fn get_bits(&self) -> u64 {
-        self.0
-    }
-
-    pub fn size(&self) -> u32 {
-        self.0.count_ones()
-    }
-}
-
-use std::ops::BitOr;
-
-impl BitOr<CardFlags> for CardFlags {
-    type Output = CardFlags;
-    fn bitor(self, other: CardFlags) -> Self::Output {
-        CardFlags(self.0 | other.0)
-    }
-}
-
-impl BitOr<u64> for CardFlags {
-    type Output = CardFlags;
-    fn bitor(self, other: u64) -> Self::Output {
-        CardFlags(self.0 | other)
-    }
-}
-
-impl BitOr<CardFlags> for u64 {
-    type Output = CardFlags;
-    fn bitor(self, other: CardFlags) -> Self::Output {
-        CardFlags(self | other.0)
-    }
-}
-
-impl Default for CardFlags {
-    fn default() -> Self {
-        CardFlags(0)
-    }
-}
-
 const SPECIAL_FLAGS: [u64; 422] = [
     ALL_FLAGS,
     BLACK_FLAGS,
@@ -2194,13 +2209,13 @@ fn write_card_set_str<'f, 's>(flags: &'f u64) -> Cow<'s, str> {
         consecutive_ranks!(11-12 hearts) => consecutive_ranks_result!(11=>12, hearts),
         consecutive_ranks!(11-12 spades) => consecutive_ranks_result!(11=>12, spades),
 
-        fs if flags.count_ones() == 1 => get_card_string(card_flag_to_card(fs)).into(),
+        fs if flags.count_ones() == 1 => get_card_string(get_lowest_card(fs)).into(),
 
         _ => CARD_FLAGS_DISPLAY_FALLBACK.into(),
     }
 }
 
-fn card_flag_to_card(flags: u64) -> Card {
+fn get_lowest_card(flags: u64) -> Card {
     flags.trailing_zeros() as Card
 }
 
@@ -2423,7 +2438,7 @@ mod tests {
                 //Ranks
                 rank_pattern!(0) => "the aces".into(),
                 rank_pattern!(1) => "the twos".into(),
-                fs if flags.count_ones() == 1 => card_string(card_flag_to_card(fs)).into(),
+                fs if flags.count_ones() == 1 => card_string(get_lowest_card(fs)).into(),
                 _ => FLAGS_DISPLAY_FALLBACK.into(),
             }
 
@@ -2437,7 +2452,7 @@ mod tests {
 
         type ToyCard = u8;
 
-        fn card_flag_to_card(flags: ToyFlags) -> ToyCard {
+        fn get_lowest_card(flags: ToyFlags) -> ToyCard {
             flags.trailing_zeros() as ToyCard
         }
 
@@ -2456,15 +2471,15 @@ mod tests {
         }
 
         #[test]
-        fn card_flag_to_card_does_what_i_want() {
-            assert_eq!(card_flag_to_card(0b1), 0);
-            assert_eq!(card_flag_to_card(0b10), 1);
-            assert_eq!(card_flag_to_card(0b100), 2);
-            assert_eq!(card_flag_to_card(0b1000), 3);
-            assert_eq!(card_flag_to_card(0b10000), 4);
-            assert_eq!(card_flag_to_card(0b100000), 5);
-            assert_eq!(card_flag_to_card(0b1000000), 6);
-            assert_eq!(card_flag_to_card(0b10000000), 7);
+        fn get_lowest_card_does_what_i_want() {
+            assert_eq!(get_lowest_card(0b1), 0);
+            assert_eq!(get_lowest_card(0b10), 1);
+            assert_eq!(get_lowest_card(0b100), 2);
+            assert_eq!(get_lowest_card(0b1000), 3);
+            assert_eq!(get_lowest_card(0b10000), 4);
+            assert_eq!(get_lowest_card(0b100000), 5);
+            assert_eq!(get_lowest_card(0b1000000), 6);
+            assert_eq!(get_lowest_card(0b10000000), 7);
         }
 
         #[test]
