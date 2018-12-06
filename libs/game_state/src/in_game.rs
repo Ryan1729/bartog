@@ -657,7 +657,7 @@ impl fmt::Display for RelativeHand {
             RelativeHand::Player(p) => match p {
                 RelativePlayer::Same => write!(f, "their hand"),
                 RelativePlayer::Next => write!(f, "the next player's hand"),
-                RelativePlayer::Across => write!(f, "the hande of the player across from them"),
+                RelativePlayer::Across => write!(f, "the hand of the player across from them"),
                 RelativePlayer::Previous => write!(f, "the previous player's hand"),
             },
             RelativeHand::Deck => write!(f, "the deck"),

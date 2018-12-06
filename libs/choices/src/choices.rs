@@ -1091,9 +1091,7 @@ pub fn do_can_play_graph_choice(
                         choice_state.reset_edges = choice_state.edges;
                     }
                     can_play::Layer::Done => {
-                        chosen = Some(Choice::Already(Chosen::CanPlayGraph(
-                            choice_state.changes.clone(),
-                        )));
+
                     }
                     can_play::Layer::Card => {}
                 }
@@ -1113,6 +1111,18 @@ pub fn do_can_play_graph_choice(
                     choice_state,
                     text,
                 );
+
+                match choice_state.layer {
+                    can_play::Layer::Done => {
+                        choice_state.changes.push(can_play::Change::new(choice_state.edges, choice_state.card));
+                        log!("Layer::Done");
+                        chosen = Some(Choice::Already(Chosen::CanPlayGraph(
+                            choice_state.changes.clone(),
+                        )));
+                    }
+                    can_play::Layer::Edges => {}
+                    can_play::Layer::Card => {}
+                }
             }
             can_play::Layer::Done => {
                 framebuffer.center_half_window();
@@ -1127,6 +1137,7 @@ pub fn do_can_play_graph_choice(
 
     //This could be done in the above match with non-lexical lifetimes
     if let Some(chosen) = chosen {
+        log!(chosen);
         state.choice = chosen;
     }
 
