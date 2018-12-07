@@ -582,8 +582,8 @@ impl fmt::Display for CardMovement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{:#} {:#} {:#} {:#} ",
-            self.affected, self.selection, self.source, self.target
+            "{:#} {:#} {:#} {:#}",
+            self.affected, self.source, self.target, self.selection
         )?;
 
         write!(
