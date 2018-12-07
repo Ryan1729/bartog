@@ -1091,7 +1091,9 @@ pub fn do_can_play_graph_choice(
                         choice_state.reset_edges = choice_state.edges;
                     }
                     can_play::Layer::Done => {
-
+                        chosen = Some(Choice::Already(Chosen::CanPlayGraph(
+                            choice_state.changes.clone(),
+                        )));
                     }
                     can_play::Layer::Card => {}
                 }
@@ -1113,15 +1115,11 @@ pub fn do_can_play_graph_choice(
                 );
 
                 match choice_state.layer {
-                    can_play::Layer::Done => {
-                        choice_state.changes.push(can_play::Change::new(choice_state.edges, choice_state.card));
-                        log!("Layer::Done");
-                        chosen = Some(Choice::Already(Chosen::CanPlayGraph(
-                            choice_state.changes.clone(),
-                        )));
-                    }
+                    can_play::Layer::Done => {}
                     can_play::Layer::Edges => {}
-                    can_play::Layer::Card => {}
+                    can_play::Layer::Card => {
+                        choice_state.changes.push(can_play::Change::new(choice_state.edges, choice_state.card));
+                    }
                 }
             }
             can_play::Layer::Done => {

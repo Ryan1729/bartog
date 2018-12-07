@@ -3,6 +3,13 @@
 Making additional menus is too annoying to hook things up for. Make some usage code that has the interface  I'd actually want, then make it work
     I want something like `choose!(CardFlags, CardFlags, Vec<in_game::change>)`
         We might require extra information like how the text should be generated etc.
+    Buttons work well. Why don't we do things more like they are done?
+      Have a spec struct and just return an option of what we want to choose.
+    The problem is that the choices have their own state which is too complicated to encode in the UIContext.
+      So we need to use the same storage we were using before, and we need to pass in the mutable state.
+      Traits merely allow us to use the same function but have the buttons etc. do slightly different things.
+      We *might* be able to reuse the same struct with the appropriate trait, or have multiple traits to reduce duplication,
+        but I don't know what we can do to fundamentally improve how adding a new choice screen is done, that will actually work.
 
 Choose card set to affect rather than single card when choosing card play ability.
   remember to change how CPU generates these

@@ -132,7 +132,7 @@ implement!(BorrowPairMut<Card, CardFlags> for ChoiceState: s, (s.edges_card, s.e
 
 impl CardFlagsSubChoice for ChoiceState {
     fn mark_done(&mut self) {
-        self.layer = Layer::Done;
+        self.layer = Layer::Card;
     }
     fn reset(&mut self) {
         self.edges = self.reset_edges;
