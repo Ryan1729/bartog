@@ -1,4 +1,4 @@
-extern crate platform_types;
+
 
 use platform_types::Logger;
 

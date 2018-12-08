@@ -1,6 +1,6 @@
-extern crate web;
+use web;
 
-extern crate game;
+use game;
 
 fn main() {
     let params = web::get_state_params();

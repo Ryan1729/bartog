@@ -60,7 +60,7 @@ impl Change {
 const RESET_ALL: Change = Change(-1i64 as u64);
 
 impl fmt::Debug for Change {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if *self == RESET_ALL {
             write!(f, "reset to default")?;
             return Ok(());

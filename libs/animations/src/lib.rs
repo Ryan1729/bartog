@@ -10,4 +10,4 @@ extern crate platform_types;
 extern crate game_state;
 
 mod animations;
-pub use animations::*;
+pub use self::animations::*;

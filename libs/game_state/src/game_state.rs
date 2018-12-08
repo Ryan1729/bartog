@@ -1,6 +1,6 @@
-use can_play;
+use crate::can_play;
+use crate::in_game;
 use common::{bytes_lines, bytes_reflow, slice_until_first_0, CardFlags, UIContext, RANK_FLAGS, *};
-use in_game;
 
 use std::collections::VecDeque;
 
@@ -331,18 +331,20 @@ impl CardChangeTable {
             let map = &self.map;
             let search_result = flag_vec.binary_search_by_key(
                 &CardChangeTable::get_flag_sort_key(map, &card_flags),
-                |flags| CardChangeTable::get_flag_sort_key(map, flags)
+                |flags| CardChangeTable::get_flag_sort_key(map, flags),
             );
 
             match search_result {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(i) => flag_vec.insert(i, card_flags),
             };
         }
     }
 
     fn get_flag_sort_key(map: &HashMap<CardFlags, CardChanges>, flags: &CardFlags) -> Generation {
-        map.get(&flags).map(|ch| ch.generation).unwrap_or(Generation::max_value())
+        map.get(&flags)
+            .map(|ch| ch.generation)
+            .unwrap_or(Generation::max_value())
     }
 }
 

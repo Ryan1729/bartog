@@ -1,5 +1,7 @@
 use inner_common::RANK_SUIT_PAIR_LAYOUT_CHAR;
 
+use inner_common::test_log;
+
 #[macro_export]
 macro_rules! bytes_concat {
     ($($byte_strings:expr),*$(,)*) => {{
@@ -217,6 +219,7 @@ pub fn bytes_split_whitespace<'a>(bytes: &'a [u8]) -> impl Iterator<Item = &'a [
 mod tests {
     use super::*;
     use quickcheck::*;
+    use inner_common::test_println;
 
     #[test]
     fn test_bytes_reflow_then_lines_produces_lines_of_the_correct_length() {

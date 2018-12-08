@@ -1,5 +1,5 @@
+use crate::traits::AllValues;
 use inner_common::*;
-use traits::AllValues;
 
 use std::cmp::{max, min};
 use std::fmt;
@@ -210,7 +210,7 @@ pub enum CardSelection {
 }
 
 impl fmt::Display for CardSelection {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             match *self {
                 CardSelection::NthModuloCount(n) => {

@@ -2,14 +2,13 @@
 name = "web"
 version = "0.1.0"
 authors = ["Ryan1729 <Ryan1729@gmail.com>"]
+edition = "2018"
 
 [dependencies]
 serde = "1"
 serde_derive = "1"
 bitflags = "0.7"
-quickcheck = "0.6"
 stdweb = "0.4"
-rand = "0.5"
 
 [dependencies.platform_types]
 path = "../platform_types"

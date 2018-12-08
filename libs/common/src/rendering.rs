@@ -1,6 +1,6 @@
+use crate::text::bytes_lines;
 use inner_common::*;
 use std::cmp::max;
-use text::bytes_lines;
 
 pub struct Framebuffer {
     pub buffer: Vec<u32>,
@@ -966,7 +966,7 @@ mod tests {
 
     #[test]
     fn test_get_text_dimensions_then_center_rect_in_rect_matches_center_line_in_rect_for_a_single_line(
-) {
+    ) {
         quickcheck(
                     get_text_dimensions_then_center_rect_in_rect_matches_center_line_in_rect_for_a_single_line
                         as fn(u8, (u8, u8, u8, u8)) -> TestResult,

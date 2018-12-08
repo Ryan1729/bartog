@@ -9,7 +9,7 @@ use game_state::{
 use rand::Rng;
 
 pub trait ApplyToState {
-    fn apply_to_state(&self, &mut in_game::State, &mut EventLog);
+    fn apply_to_state(&self, s: &mut in_game::State, e: &mut EventLog);
 }
 
 impl ApplyToState for Change {

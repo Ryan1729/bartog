@@ -1,6 +1,6 @@
+use crate::rendering::{center_line_in_rect, Framebuffer};
 use inner_common::*;
 use platform_types::{Button, Input, Speaker, SFX};
-use rendering::{center_line_in_rect, Framebuffer};
 
 pub type UIId = u8;
 

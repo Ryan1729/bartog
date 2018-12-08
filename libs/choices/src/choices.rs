@@ -1118,7 +1118,9 @@ pub fn do_can_play_graph_choice(
                     can_play::Layer::Done => {}
                     can_play::Layer::Edges => {}
                     can_play::Layer::Card => {
-                        choice_state.changes.push(can_play::Change::new(choice_state.edges, choice_state.card));
+                        choice_state
+                            .changes
+                            .push(can_play::Change::new(choice_state.edges, choice_state.card));
                     }
                 }
             }
@@ -1242,7 +1244,7 @@ pub fn do_status_choice(
     for (i, status) in RULE_TYPES.iter().cloned().enumerate() {
         let i = (i + 1) as u8;
 
-        let mut text = get_status_text(status).to_string();
+        let text = get_status_text(status).to_string();
 
         let spec = ButtonSpec {
             x,

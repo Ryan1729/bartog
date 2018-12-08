@@ -2,6 +2,7 @@
 name = "bartog"
 version = "1.0.0"
 authors = ["Ryan Wiedemann <Ryan1729@gmail.com>"]
+edition = "2018"
 
 [dependencies]
 

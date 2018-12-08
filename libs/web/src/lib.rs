@@ -5,12 +5,6 @@
 #[macro_use]
 extern crate stdweb;
 
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
-
-extern crate rand;
-
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
@@ -20,7 +14,7 @@ use stdweb::web::{self, Element, IElement, IEventTarget, INode, INonElementParen
 
 use stdweb::{UnsafeTypedArray, Value};
 
-extern crate platform_types;
+
 use platform_types::{Button, State, StateParams, SFX};
 
 macro_rules! enclose {
@@ -250,13 +244,13 @@ impl<S: State> PinkyWeb<S> {
         self.busy = false;
     }
 
-    fn execute_cycle(&mut self) -> Result<bool, Box<Error>> {
+    fn execute_cycle(&mut self) -> Result<bool, Box<dyn Error>> {
         self.state.frame(handle_sound);
 
         Ok(true)
     }
 
-    fn run_a_bit(&mut self) -> Result<bool, Box<Error>> {
+    fn run_a_bit(&mut self) -> Result<bool, Box<dyn Error>> {
         if self.paused {
             return Ok(true);
         }
@@ -433,7 +427,7 @@ fn support_input<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>>) {
     }));
 }
 
-fn handle_error<E: Into<Box<Error>>>(error: E) {
+fn handle_error<E: Into<Box<dyn Error>>>(error: E) {
     let error_message = format!("{}", error.into());
     web::document()
         .get_element_by_id("error-description")

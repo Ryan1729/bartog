@@ -1,5 +1,5 @@
+use crate::game_state::Rules;
 use common::{ByteStrRowDisplay, RowDisplay, *};
-use game_state::Rules;
 
 use lazy_static::lazy_static;
 use rand::distributions::{Distribution, Standard};
@@ -248,13 +248,13 @@ implement!(
 );
 
 impl fmt::Debug for Change {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
 impl fmt::Display for Change {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             change_match! {*self, {
                 v => write!(f, "{:#}", v)
@@ -318,7 +318,7 @@ impl RelativePlayer {
 }
 
 impl fmt::Debug for RelativePlayer {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             RelativePlayer::Same => write!(f, "my turn again"),
             RelativePlayer::Next => write!(f, "next after me"),
@@ -329,7 +329,7 @@ impl fmt::Debug for RelativePlayer {
 }
 
 impl fmt::Display for RelativePlayer {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             return match self {
                 RelativePlayer::Same => write!(f, "s"),
@@ -448,7 +448,7 @@ impl RelativePlayerSet {
 }
 
 impl fmt::Debug for RelativePlayerSet {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{{")?;
         for player in RelativePlayer::all_values() {
             if self.contains(player) {
@@ -466,7 +466,7 @@ impl fmt::Debug for RelativePlayerSet {
 }
 
 impl fmt::Display for RelativePlayerSet {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             write!(f, "{{")?;
             for player in RelativePlayer::all_values() {
@@ -518,7 +518,7 @@ impl fmt::Display for RelativePlayerSet {
     }
 }
 
-fn set_display(player: RelativePlayer, f: &mut fmt::Formatter) -> fmt::Result {
+fn set_display(player: RelativePlayer, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match player {
         RelativePlayer::Previous => write!(f, "the previous player"),
         RelativePlayer::Across => write!(f, "the across player"),
@@ -579,7 +579,7 @@ impl<'a> ByteStrRowDisplay<'a> for CardMovement {
 }
 
 impl fmt::Display for CardMovement {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{:#} {:#} {:#} {:#}",
@@ -645,7 +645,7 @@ impl RelativeHand {
 }
 
 impl fmt::Display for RelativeHand {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             return match *self {
                 RelativeHand::Player(p) => write!(f, "{:#}", p),
@@ -699,7 +699,7 @@ impl RelativeHand {
 }
 
 impl fmt::Display for AbsoluteHand {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             return match *self {
                 AbsoluteHand::Player(p) => write!(f, "{}", player_1_char_name(p)),

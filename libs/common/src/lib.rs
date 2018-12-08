@@ -1,27 +1,5 @@
 #![allow(non_snake_case)]
 
-//This is useful since I can only use println! in non browser exectutions,
-//(it crashes otherwise) and this makes it easy to check that the only
-//instances of println are in these macros.
-#[allow(unused_macros)]
-#[macro_export]
-macro_rules! test_println {
-    ($($arg:tt)*) => ({
-        if cfg!(test) {
-            println!($($arg)*);
-        }
-    })
-}
-
-#[macro_export]
-macro_rules! test_log {
-    ($e:expr) => {{
-        if cfg!(test) {
-            println!(concat!(stringify!($e), ": {:#?}"), $e);
-        }
-    }};
-}
-
 #[macro_export]
 macro_rules! d {
     () => {
@@ -136,19 +114,19 @@ pub use features::*;
 extern crate rand;
 
 mod rendering;
-pub use rendering::*;
+pub use self::rendering::*;
 
 mod card_animation;
-pub use card_animation::*;
+pub use self::card_animation::*;
 
 mod text;
-pub use text::*;
+pub use self::text::*;
 
 mod gui;
-pub use gui::*;
+pub use self::gui::*;
 
 mod hand;
-pub use hand::*;
+pub use self::hand::*;
 
 mod traits;
-pub use traits::*;
+pub use self::traits::*;

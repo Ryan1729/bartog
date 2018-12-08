@@ -84,7 +84,7 @@ mod tests {
 }
 
 use std::fmt;
-pub fn ordinal_display(n: u8, f: &mut fmt::Formatter) -> fmt::Result {
+pub fn ordinal_display(n: u8, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     let s = n.to_string();
 
     let suffix = if s.ends_with("1") && !s.ends_with("11") {
