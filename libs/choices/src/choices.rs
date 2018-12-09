@@ -265,40 +265,39 @@ pub fn do_in_game_changes_choice(
     input: Input,
     speaker: &mut Speaker,
 ) {
-    let mut chosen = None;
-    let mut cancel = CancelRuleChoice::No;
-
     if let Choice::OfInGameChanges(ref mut choice_state) = state.choice {
         match choice_state.layer {
             in_game::Layer::Card => {
-                {
-                    let mut sub_choice = in_game::ChoiceStateAndRules {
-                        choice_state,
-                        rules: &state.rules,
-                    };
+                let mut sub_choice = in_game::ChoiceStateAndRules {
+                    choice_state,
+                    rules: &state.rules,
+                };
 
-                    cancel = do_card_flags_sub_choice(
-                        framebuffer,
-                        &mut state.context,
-                        input,
-                        speaker,
-                        &mut sub_choice,
-                        b"choose a set of cards.",
-                    );
-                }
+                let cancel = do_card_flags_sub_choice(
+                    framebuffer,
+                    &mut state.context,
+                    input,
+                    speaker,
+                    &mut sub_choice,
+                    b"choose a set of cards.",
+                );
 
-                match choice_state.layer {
-                    in_game::Layer::Changes => {
-                        let card_changes = state
-                            .rules
-                            .when_played
-                            .get_card_flags_changes(choice_state.card_set);
-                        choice_state.changes.clear();
-                        for change in card_changes {
-                            choice_state.changes.push(change.clone());
+                if let CancelRuleChoice::Yes = cancel {
+                    cancel_rule_selection!(state);
+                } else {
+                    match choice_state.layer {
+                        in_game::Layer::Changes => {
+                            let card_changes = state
+                                .rules
+                                .when_played
+                                .get_card_flags_changes(choice_state.card_set);
+                            choice_state.changes.clear();
+                            for change in card_changes {
+                                choice_state.changes.push(change.clone());
+                            }
                         }
+                        in_game::Layer::Done | in_game::Layer::Card => {}
                     }
-                    in_game::Layer::Done | in_game::Layer::Card => {}
                 }
             }
             in_game::Layer::Changes => {
@@ -313,7 +312,7 @@ pub fn do_in_game_changes_choice(
                 match choice_state.layer {
                     in_game::Layer::Changes => {}
                     in_game::Layer::Done => {
-                        chosen = Some(Choice::Already(Chosen::InGameChanges(choice_state.clone())));
+                        state.choice = Choice::Already(Chosen::InGameChanges(choice_state.clone()));
                     }
                     in_game::Layer::Card => {}
                 }
@@ -327,16 +326,6 @@ pub fn do_in_game_changes_choice(
             { state.choice = Choice::NoChoice },
             "`do_in_game_changes_choice` was called with the wrong choice type!"
         )
-    }
-
-    //This could be done in the above match with non-lexical lifetimes
-    if let Some(chosen) = chosen {
-        state.choice = chosen
-    }
-
-    //possibly this could be avoided with NLL too.
-    if let CancelRuleChoice::Yes = cancel {
-        cancel_rule_selection!(state);
     }
 }
 
@@ -1063,10 +1052,9 @@ pub fn do_can_play_graph_choice(
     input: Input,
     speaker: &mut Speaker,
 ) {
-    let mut chosen = None;
-    let mut cancel = CancelRuleChoice::No;
-
     if let Choice::OfCanPlayGraph(ref mut choice_state) = state.choice {
+        let mut cancel = CancelRuleChoice::No;
+
         match choice_state.layer {
             can_play::Layer::Card => {
                 cancel = do_card_sub_choice(
@@ -1091,9 +1079,8 @@ pub fn do_can_play_graph_choice(
                         choice_state.reset_edges = choice_state.edges;
                     }
                     can_play::Layer::Done => {
-                        chosen = Some(Choice::Already(Chosen::CanPlayGraph(
-                            choice_state.changes.clone(),
-                        )));
+                        state.choice =
+                            Choice::Already(Chosen::CanPlayGraph(choice_state.changes.clone()));
                     }
                     can_play::Layer::Card => {}
                 }
@@ -1128,22 +1115,15 @@ pub fn do_can_play_graph_choice(
                 framebuffer.center_half_window();
             }
         }
+
+        if let CancelRuleChoice::Yes = cancel {
+            cancel_rule_selection!(state);
+        }
     } else {
         invariant_violation!(
             { state.choice = Choice::NoChoice },
             "`do_can_play_graph_choice` was called with the wrong choice type!"
         )
-    }
-
-    //This could be done in the above match with non-lexical lifetimes
-    if let Some(chosen) = chosen {
-        log!(chosen);
-        state.choice = chosen;
-    }
-
-    //possibly this could be avoided with NLL too.
-    if let CancelRuleChoice::Yes = cancel {
-        cancel_rule_selection!(state);
     }
 }
 
@@ -1168,12 +1148,8 @@ pub fn do_card_flags_choice(
     input: Input,
     speaker: &mut Speaker,
 ) {
-    let mut chosen = None;
-    #[allow(unused_assignments)] //this is used only if "invariant-checking" is off
-    let mut cancel = CancelRuleChoice::No;
-
     if let Choice::OfCardFlags(ref mut card_flags_state) = state.choice {
-        cancel = do_card_flags_sub_choice(
+        let cancel = do_card_flags_sub_choice(
             framebuffer,
             &mut state.context,
             input,
@@ -1182,22 +1158,16 @@ pub fn do_card_flags_choice(
             b"select which cards are wild",
         );
 
-        if let Some(c) = card_flags_state.get_chosen() {
-            chosen = Some(c);
+        if let CancelRuleChoice::Yes = cancel {
+            cancel_rule_selection!(state);
+        } else if let Some(c) = card_flags_state.get_chosen() {
+            state.choice = Choice::Already(Chosen::CardFlags(c));
         }
     } else {
         invariant_violation!(
             { state.choice = Choice::NoChoice },
             "`do_card_flags_choice` was called with the wrong choice type!"
         )
-    }
-
-    if let Some(chosen) = chosen {
-        state.choice = Choice::Already(Chosen::CardFlags(chosen));
-    }
-
-    if let CancelRuleChoice::Yes = cancel {
-        cancel_rule_selection!(state);
     }
 }
 
