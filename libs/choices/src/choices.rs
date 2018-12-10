@@ -639,8 +639,10 @@ fn do_card_flags_sub_choice<C: CardFlagsSubChoice>(
     let h = SPRITE_SIZE * 3;
     let x = SCREEN_WIDTH as u8 - (w + SPRITE_SIZE);
 
+    let upward_offset = SPRITE_SIZE * 3 / 4;
+
     {
-        let y = SPRITE_SIZE * 4;
+        let y = SPRITE_SIZE * 4 - upward_offset;
 
         let spec = ButtonSpec {
             x,
@@ -657,7 +659,7 @@ fn do_card_flags_sub_choice<C: CardFlagsSubChoice>(
     }
 
     {
-        let y = SPRITE_SIZE * 7;
+        let y = SPRITE_SIZE * 7 - upward_offset * 2;
 
         let spec = ButtonSpec {
             x,
@@ -674,7 +676,7 @@ fn do_card_flags_sub_choice<C: CardFlagsSubChoice>(
     }
 
     {
-        let y = SPRITE_SIZE * 10;
+        let y = SPRITE_SIZE * 10 - upward_offset * 3;
 
         let spec = ButtonSpec {
             x,
@@ -690,19 +692,26 @@ fn do_card_flags_sub_choice<C: CardFlagsSubChoice>(
         }
     }
 
+    let (scroll_card, flags) = choice_state.borrow_pair_mut();
+
     {
-        let x = SPRITE_SIZE * 11;
-        let y = SPRITE_SIZE * 13;
+        let y = SPRITE_SIZE * 13 - upward_offset * 4;
 
-        let lines = choice_state.get_status_lines();
+        let spec = ButtonSpec {
+            x,
+            y,
+            w,
+            h,
+            id: 4,
+            text: "invert".to_owned(),
+        };
 
-        framebuffer.print_line(&lines[0], x, y, WHITE_INDEX);
-        framebuffer.print_line(&lines[1], x, y + FONT_SIZE, WHITE_INDEX);
+        if do_button(framebuffer, context, input, speaker, &spec) {
+            flags.invert();
+        }
     }
 
-    const FIRST_CHECKBOX_ID: UIId = 4;
-
-    let (scroll_card, flags) = choice_state.borrow_pair_mut();
+    const FIRST_CHECKBOX_ID: UIId = 5;
 
     do_scrolling_card_checkbox(
         framebuffer,
@@ -714,6 +723,16 @@ fn do_card_flags_sub_choice<C: CardFlagsSubChoice>(
         FIRST_CHECKBOX_ID,
         max_heading_y,
     );
+
+    {
+        let x = SPRITE_SIZE * 11;
+        let y = SPRITE_SIZE * 13;
+
+        let lines = choice_state.get_status_lines();
+
+        framebuffer.print_line(&lines[0], x, y, WHITE_INDEX);
+        framebuffer.print_line(&lines[1], x, y + FONT_SIZE, WHITE_INDEX);
+    }
 
     output
 }

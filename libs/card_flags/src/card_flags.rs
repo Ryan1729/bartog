@@ -48,6 +48,10 @@ impl CardFlags {
         self.0 &= !(1 << card);
     }
 
+    pub fn invert(&mut self) {
+        *self = CardFlags::new(!self.0);
+    }
+
     pub fn cards(&self) -> Vec<Card> {
         let mut output = Vec::with_capacity(DECK_SIZE as _);
 

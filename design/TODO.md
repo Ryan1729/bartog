@@ -1,5 +1,11 @@
 ## TODO
 
+Show when the deck is empty
+  display deck count?
+
+Reshuffle the discard pile during card movements if the deck runs out
+  Shuffle animation?
+
 Making additional menus is too annoying to hook things up for. Make some usage code that has the interface  I'd actually want, then make it work
     I want something like `choose!(CardFlags, CardFlags, Vec<in_game::change>)`
         We might require extra information like how the text should be generated etc.
@@ -10,6 +16,7 @@ Making additional menus is too annoying to hook things up for. Make some usage c
       Traits merely allow us to use the same function but have the buttons etc. do slightly different things.
       We *might* be able to reuse the same struct with the appropriate trait, or have multiple traits to reduce duplication,
         but I don't know what we can do to fundamentally improve how adding a new choice screen is done, that will actually work.
+      We also want to allow adding multiple changes at once.
 
 Choose card set to affect rather than single card when choosing card play ability.
   remember to change how CPU generates these
