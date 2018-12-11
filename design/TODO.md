@@ -1,10 +1,11 @@
 ## TODO
 
-Show when the deck is empty
-  display deck count?
+make allow jumping around in the event log: go to next or previous of: end, beginning, each `--------`
 
 Reshuffle the discard pile during card movements if the deck runs out
   Shuffle animation?
+
+allow temporarily hiding the wild suit selection menu, so the user can look at their hand.
 
 Making additional menus is too annoying to hook things up for. Make some usage code that has the interface  I'd actually want, then make it work
     I want something like `choose!(CardFlags, CardFlags, Vec<in_game::change>)`

@@ -128,7 +128,6 @@ fn play_to_discard(state: &mut GameState, card: Card) {
     }
 
     state.in_game.discard.push(card);
-    event_push!(state.event_log, b"play_to_discard!" as &[u8],);
     for change in state.rules.when_played.get_card_changes(card) {
         event_push!(
             state.event_log,

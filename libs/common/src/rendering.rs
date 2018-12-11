@@ -527,6 +527,10 @@ impl Framebuffer {
         }
     }
 
+    pub fn print_single_line_number(&mut self, number: usize, x: u8, y :u8, colour: u8) {
+        self.print_line_raw(number.to_string().as_bytes(), x, y, colour);
+    }
+
     pub fn print_char(&mut self, character: u8, x: u8, y: u8, colour: u8) {
         let (sprite_x, sprite_y) = get_char_xy(character);
         self.print_char_raw(sprite_x, sprite_y, FONT_SIZE, FONT_SIZE, x, y, colour);

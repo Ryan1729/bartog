@@ -446,13 +446,27 @@ fn update_in_game(state: &mut GameState, input: Input, speaker: &mut Speaker) {
     }
 }
 
+fn print_number_below_card(framebuffer: &mut Framebuffer, number: u8, x: u8, y :u8) {
+    framebuffer.print_single_line_number(
+        number as usize,
+        x + (card::WIDTH / 2) - FONT_ADVANCE,
+        y + card::HEIGHT + FONT_SIZE / 2,
+        BLACK_INDEX
+    );
+}
+
 #[inline]
 pub fn render_in_game(framebuffer: &mut Framebuffer, state: &in_game::State) {
     for hand in state.cpu_hands.iter() {
         draw_hand(framebuffer, hand, Face::Down);
     }
 
-    framebuffer.draw_card_back(DECK_X, DECK_Y);
+    let deck_len = state.deck.len();
+    if deck_len > 0 {
+        framebuffer.draw_card_back(DECK_X, DECK_Y);
+    }
+
+    print_number_below_card(framebuffer, deck_len, DECK_X, DECK_Y);
 
     match state.top_wild_declared_as {
         Some(suit) => {
@@ -473,6 +487,8 @@ pub fn render_in_game(framebuffer: &mut Framebuffer, state: &in_game::State) {
         .iter()
         .last()
         .map(|&c| framebuffer.draw_card(c, DISCARD_X, DISCARD_Y));
+
+    print_number_below_card(framebuffer, state.discard.len(), DISCARD_X, DISCARD_Y);
 
     draw_hand_with_cursor(framebuffer, &state.hand, state.hand_index as usize);
 
