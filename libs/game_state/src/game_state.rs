@@ -90,6 +90,41 @@ impl EventLog {
     pub fn get_window_slice<'a>(&'a self) -> impl Iterator<Item = &'a [u8]> {
         self.iter().skip(self.top_index).take(EventLog::HEIGHT)
     }
+
+    pub fn is_at_hr(&self) -> bool {
+        let line = self.buffer[self.top_index];
+
+        line.iter().all(|&c| c == b'-')
+    }
+
+    pub fn jump_backward(&mut self) {
+        if self.top_index == 0  {
+            self.top_index = self.len() - 1;
+            return;
+        }
+
+        loop {
+            self.top_index = self.top_index .saturating_sub(1);
+
+            if self.top_index == 0 || self.is_at_hr() {
+                break;
+            }
+        }
+    }
+    pub fn jump_forward(&mut self) {
+        if self.top_index == self.len() - 1  {
+            self.top_index = 0;
+            return;
+        }
+
+        loop {
+            self.top_index += 1;
+
+            if self.top_index == self.len() - 1 || self.is_at_hr() {
+                break;
+            }
+        }
+    }
 }
 
 #[macro_export]

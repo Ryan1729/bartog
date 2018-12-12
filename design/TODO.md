@@ -1,7 +1,5 @@
 ## TODO
 
-make allow jumping around in the event log: go to next or previous of: end, beginning, each `--------`
-
 Reshuffle the discard pile during card movements if the deck runs out
   Shuffle animation?
 

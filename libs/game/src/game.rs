@@ -425,13 +425,17 @@ fn update_in_game(state: &mut GameState, input: Input, speaker: &mut Speaker) {
     if state.log_height > 0 {
         if input.pressed_this_frame(Button::Up) {
             state.event_log.top_index = state.event_log.top_index.saturating_sub(1);
-        //TODO feedback when you hit the top edge
+            //TODO feedback when you hit the top edge
         } else if input.pressed_this_frame(Button::Down) {
             if state.event_log.top_index < state.event_log.len() {
                 state.event_log.top_index += 1;
             } else {
                 //TODO feedback when you hit the bottom edge
             }
+        } else if input.pressed_this_frame(Button::A) {
+            state.event_log.jump_backward();
+        } else if input.pressed_this_frame(Button::B) {
+            state.event_log.jump_forward();
         }
     } else if state.choice.is_idle() {
         if state.animations_settled() {
