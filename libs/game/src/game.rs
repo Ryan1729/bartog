@@ -238,11 +238,12 @@ fn can_play(state: &in_game::State, rules: &Rules, &card: &Card) -> bool {
     if let Some(&top_of_discard) = state.discard.last() {
         // TODO should a card that is wild allow a non-wild card of the same rank
         // to be played on it?
-        rules.is_wild(card) || if rules.is_wild(top_of_discard) {
-            state.top_wild_declared_as == Some(get_suit(card))
-        } else {
-            rules.can_play_graph.is_playable_on(card, top_of_discard)
-        }
+        rules.is_wild(card)
+            || if rules.is_wild(top_of_discard) {
+                state.top_wild_declared_as == Some(get_suit(card))
+            } else {
+                rules.can_play_graph.is_playable_on(card, top_of_discard)
+            }
     } else {
         true
     }
@@ -253,10 +254,10 @@ fn cpu_would_play<R: Rng>(
     state: &mut in_game::State,
     rng: &mut R,
     rules: &Rules,
-    playerId: PlayerID,
+    player_id: PlayerID,
 ) -> Option<u8> {
     let playable: Vec<(usize, Card)> = {
-        let hand = state.get_hand(playerId);
+        let hand = state.get_hand(player_id);
         hand.iter()
             .cloned()
             .enumerate()
@@ -264,7 +265,130 @@ fn cpu_would_play<R: Rng>(
             .collect()
     };
 
-    rng.choose(&playable).map(|&(i, _)| i as u8)
+    let sim_state = get_sim_state(state, rng, player_id);
+
+    let mut indexes_and_hand_deltas = Vec::with_capacity(playable.len());
+
+    for (i, card) in playable {
+        let delta = get_hand_delta(&sim_state, rules, rng, player_id, card);
+
+        indexes_and_hand_deltas.push((i, delta));
+    }
+
+    indexes_and_hand_deltas.sort_by_key(
+        |&(_, delta)| -delta, //highest negative delta to end
+    );
+
+    indexes_and_hand_deltas.pop().map(|(i, _)| i as u8)
+}
+
+fn get_hand_delta<R: Rng>(
+    state: &in_game::State,
+    rules: &Rules,
+    rng: &mut R,
+    player_id: PlayerID,
+    card: Card,
+) -> i8 {
+    let original = state.get_hand(player_id).len() as i8;
+    let mut s: in_game::State = (*state).clone();
+
+    animations::play_to_discard_parts(&mut s, rules, rng, &mut None, card);
+
+    let new = s.get_hand(player_id).len() as i8;
+
+    new - original
+}
+
+fn get_sim_state<R: Rng>(
+    state: &in_game::State,
+    rng: &mut R,
+    player_id: PlayerID,
+) -> in_game::State {
+    // We don't want the cpu to cheat, so don't let them see what is really on top of the deck.
+    // or which cards are in each player's hand either. So put all unknown cards in one pile
+    // then shuffle them randomly to each unknown zone, maintaining the original amounts.
+    let mut pile = Vec::with_capacity(DECK_SIZE as usize);
+
+    macro_rules! add_to_pile {
+        ($e:expr) => {
+            pile.extend($e.clone().drain());
+        };
+    }
+
+    add_to_pile!(state.deck);
+    add_to_pile!(state.discard);
+
+    match player_id {
+        0 => {
+            add_to_pile!(state.cpu_hands[1]);
+            add_to_pile!(state.cpu_hands[2]);
+            add_to_pile!(state.hand);
+        }
+        1 => {
+            add_to_pile!(state.cpu_hands[0]);
+            add_to_pile!(state.cpu_hands[2]);
+            add_to_pile!(state.hand);
+        }
+        2 => {
+            add_to_pile!(state.cpu_hands[1]);
+            add_to_pile!(state.cpu_hands[2]);
+            add_to_pile!(state.hand);
+        }
+        MAX_PLAYER_ID => {
+            add_to_pile!(state.cpu_hands[0]);
+            add_to_pile!(state.cpu_hands[1]);
+            add_to_pile!(state.cpu_hands[2]);
+        }
+        _ => invariant_violation!({}, "get_sim_state called with bad PlayerID"),
+    }
+
+    rng.shuffle(&mut pile);
+
+    let mut output = in_game::State {
+        current_player: state.current_player,
+        top_wild_declared_as: state.top_wild_declared_as,
+        ..d!()
+    };
+
+    macro_rules! deal_into {
+        ($hand:ident) => {
+            let pile_drain = pile.drain(..state.$hand.len() as usize);
+            output.$hand.fill(pile_drain);
+        };
+        ($hand:ident, [$index:expr]) => {
+            let pile_drain = pile.drain(..state.$hand[$index].len() as usize);
+            output.$hand[$index].fill(pile_drain);
+        };
+    }
+
+    deal_into!(deck);
+    deal_into!(discard);
+
+    match player_id {
+        0 => {
+            deal_into!(cpu_hands, [1]);
+            deal_into!(cpu_hands, [2]);
+            deal_into!(hand);
+        }
+        1 => {
+            deal_into!(cpu_hands, [0]);
+            deal_into!(cpu_hands, [2]);
+            deal_into!(hand);
+        }
+        2 => {
+            deal_into!(cpu_hands, [1]);
+            deal_into!(cpu_hands, [2]);
+            deal_into!(hand);
+        }
+        MAX_PLAYER_ID => {
+            deal_into!(cpu_hands, [0]);
+            deal_into!(cpu_hands, [1]);
+            deal_into!(cpu_hands, [2]);
+        }
+        _ => invariant_violation!({}, "get_sim_state called with bad PlayerID"),
+    }
+
+    output
 }
 
 fn incremented_current_player(state: &in_game::State) -> PlayerID {
@@ -353,9 +477,7 @@ fn update_when_played(state: &mut GameState) {
             card_set,
             ref changes,
             ..
-        }
-            if changes.len() > 0 =>
-        {
+        } if changes.len() > 0 => {
             apply_when_played_changes(state, card_set, changes.clone(), PLAYER_ID);
 
             state.status = Status::InGame;
@@ -425,7 +547,7 @@ fn update_in_game(state: &mut GameState, input: Input, speaker: &mut Speaker) {
     if state.log_height > 0 {
         if input.pressed_this_frame(Button::Up) {
             state.event_log.top_index = state.event_log.top_index.saturating_sub(1);
-            //TODO feedback when you hit the top edge
+        //TODO feedback when you hit the top edge
         } else if input.pressed_this_frame(Button::Down) {
             if state.event_log.top_index < state.event_log.len() {
                 state.event_log.top_index += 1;
@@ -450,12 +572,12 @@ fn update_in_game(state: &mut GameState, input: Input, speaker: &mut Speaker) {
     }
 }
 
-fn print_number_below_card(framebuffer: &mut Framebuffer, number: u8, x: u8, y :u8) {
+fn print_number_below_card(framebuffer: &mut Framebuffer, number: u8, x: u8, y: u8) {
     framebuffer.print_single_line_number(
         number as usize,
         x + (card::WIDTH / 2) - FONT_ADVANCE,
         y + card::HEIGHT + FONT_SIZE / 2,
-        BLACK_INDEX
+        BLACK_INDEX,
     );
 }
 

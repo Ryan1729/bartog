@@ -1,7 +1,10 @@
 ## TODO
 
-Reshuffle the discard pile during card movements if the deck runs out
-  Shuffle animation?
+allow playing on top of the discard pile if a wild card ends up there, even if top_wild is none
+
+put "started new" round after you pick the new rule.
+
+don't put --- between multiple changes by the same cpu player
 
 allow temporarily hiding the wild suit selection menu, so the user can look at their hand.
 

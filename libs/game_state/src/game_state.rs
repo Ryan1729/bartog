@@ -20,7 +20,7 @@ impl EventLog {
     const WIDTH: usize = NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as usize;
     const HEIGHT: usize = NINE_SLICE_MAX_INTERIOR_HEIGHT_IN_CHARS as usize;
 
-    const BUFFER_SIZE: usize = 1024;
+    const BUFFER_SIZE: usize = 1 << 11;
 
     pub fn new() -> Self {
         let buffer = VecDeque::with_capacity(EventLog::BUFFER_SIZE);
@@ -98,13 +98,13 @@ impl EventLog {
     }
 
     pub fn jump_backward(&mut self) {
-        if self.top_index == 0  {
+        if self.top_index == 0 {
             self.top_index = self.len() - 1;
             return;
         }
 
         loop {
-            self.top_index = self.top_index .saturating_sub(1);
+            self.top_index = self.top_index.saturating_sub(1);
 
             if self.top_index == 0 || self.is_at_hr() {
                 break;
@@ -112,7 +112,7 @@ impl EventLog {
         }
     }
     pub fn jump_forward(&mut self) {
-        if self.top_index == self.len() - 1  {
+        if self.top_index == self.len() - 1 {
             self.top_index = 0;
             return;
         }
@@ -131,6 +131,15 @@ impl EventLog {
 macro_rules! event_push {
     ($event_log:expr, $($byte_strings:tt)*) => {{
         $event_log.push(bytes_concat!($($byte_strings)*));
+    }}
+}
+
+#[macro_export]
+macro_rules! optionally_event_push {
+    ($event_log:expr, $($byte_strings:tt)*) => {{
+        if let Some(e) = $event_log {
+            event_push!(e, $($byte_strings)*);
+        }
     }}
 }
 

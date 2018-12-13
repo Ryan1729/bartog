@@ -13,6 +13,12 @@ pub enum Spread {
     TTB((u8, u8), u8),
 }
 
+impl Default for Spread {
+    fn default() -> Self {
+        Spread::LTR((0, 0), 0)
+    }
+}
+
 impl Spread {
     pub fn stack(x: u8, y: u8) -> Self {
         Spread::LTR((x, x.saturating_add(card::WIDTH)), y)
@@ -44,7 +50,7 @@ pub fn get_card_position(spread: Spread, len: u8, index: u8) -> (u8, u8) {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Hand {
     cards: Vec<Card>,
     pub spread: Spread,

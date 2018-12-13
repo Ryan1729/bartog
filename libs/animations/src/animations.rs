@@ -3,28 +3,43 @@ use common::*;
 use game_state::{
     event_push,
     in_game::{self, CardMovement, Change, RelativeHand, RelativePlayer},
-    EventLog, GameState, Rules,
+    optionally_event_push, EventLog, GameState, Rules,
 };
 
 use rand::Rng;
 
 pub trait ApplyToState {
-    fn apply_to_state(&self, s: &mut in_game::State, e: &mut EventLog);
+    fn apply_to_state<R: Rng>(
+        &self,
+        s: &mut in_game::State,
+        rng: &mut R,
+        e: &mut Option<&mut EventLog>,
+    );
 }
 
 impl ApplyToState for Change {
-    fn apply_to_state(&self, state: &mut in_game::State, event_log: &mut EventLog) {
+    fn apply_to_state<R: Rng>(
+        &self,
+        state: &mut in_game::State,
+        rng: &mut R,
+        event_log: &mut Option<&mut EventLog>,
+    ) {
         change_match! {*self, {
-            v => v.apply_to_state(state, event_log)
+            v => v.apply_to_state(state, rng, event_log)
         }}
     }
 }
 
 impl ApplyToState for CardMovement {
-    fn apply_to_state(&self, state: &mut in_game::State, event_log: &mut EventLog) {
+    fn apply_to_state<R: Rng>(
+        &self,
+        state: &mut in_game::State,
+        rng: &mut R,
+        event_log: &mut Option<&mut EventLog>,
+    ) {
         if self.source == self.target {
             let source_str = self.source.to_string();
-            event_push!(
+            optionally_event_push!(
                 event_log,
                 b"cards moved from ",
                 source_str.as_bytes(),
@@ -39,12 +54,17 @@ impl ApplyToState for CardMovement {
         for player in players {
             let source_str = self.source.apply(player).to_string();
             let card = {
+                if self.source == RelativeHand::Deck {
+                    state.reshuffle_discard(rng);
+                }
+
                 let source: &mut Hand = state.get_relative_hand_mut(self.source, player);
+
                 source.remove_selected(self.selection)
             };
 
             if let Some(card) = card {
-                event_push!(
+                optionally_event_push!(
                     event_log,
                     player_name(player).as_bytes(),
                     b" moves ",
@@ -61,7 +81,7 @@ impl ApplyToState for CardMovement {
                     || self.source == game_player_hand
                     || self.target == game_player_hand
                 {
-                    event_push!(
+                    optionally_event_push!(
                         event_log,
                         b"The card was the ",
                         get_card_string(card.card).as_bytes(),
@@ -78,7 +98,7 @@ impl ApplyToState for CardMovement {
                     get_move_action(self.target, player),
                 ));
             } else {
-                event_push!(
+                optionally_event_push!(
                     event_log,
                     player_name(player).as_bytes(),
                     b" tries to move ",
@@ -105,11 +125,16 @@ fn get_move_action(hand: RelativeHand, player: PlayerID) -> Action {
 }
 
 impl ApplyToState for RelativePlayer {
-    fn apply_to_state(&self, state: &mut in_game::State, event_log: &mut EventLog) {
+    fn apply_to_state<R: Rng>(
+        &self,
+        state: &mut in_game::State,
+        _rng: &mut R,
+        event_log: &mut Option<&mut EventLog>,
+    ) {
         let new_player = self.apply(state.current_player);
         let new_player_str = new_player.to_string();
 
-        event_push!(
+        optionally_event_push!(
             event_log,
             b"It becomes ",
             new_player_str.as_bytes(),
@@ -122,19 +147,37 @@ impl ApplyToState for RelativePlayer {
     }
 }
 
-fn play_to_discard(state: &mut GameState, card: Card) {
-    if !state.rules.is_wild(card) {
-        state.in_game.top_wild_declared_as = None;
+pub fn play_to_discard(state: &mut GameState, card: Card) {
+    play_to_discard_parts(
+        &mut state.in_game,
+        &state.rules,
+        &mut state.rng,
+        &mut Some(&mut state.event_log),
+        card,
+    )
+}
+pub fn play_to_discard_parts<R: Rng>(
+    in_game: &mut in_game::State,
+    rules: &Rules,
+    rng: &mut R,
+    event_log: &mut Option<&mut EventLog>,
+    card: Card,
+) {
+    if !rules.is_wild(card) {
+        in_game.top_wild_declared_as = None;
     }
 
-    state.in_game.discard.push(card);
-    for change in state.rules.when_played.get_card_changes(card) {
-        event_push!(
-            state.event_log,
-            b"change" as &[u8],
-            format!("{:?}", change).as_bytes() as &[u8]
-        );
-        change.apply_to_state(&mut state.in_game, &mut state.event_log)
+    in_game.discard.push(card);
+    for change in rules.when_played.get_card_changes(card) {
+        if let Some(event_log) = event_log {
+            event_push!(
+                event_log,
+                b"change" as &[u8],
+                format!("{:?}", change).as_bytes() as &[u8]
+            );
+        }
+
+        change.apply_to_state(in_game, rng, event_log);
     }
 }
 
@@ -279,12 +322,7 @@ fn get_draw_animation<R: Rng>(
         if let Some(c) = state.deck.draw() {
             Some(c)
         } else {
-            let top_card = state.discard.draw()?;
-
-            state.deck.fill(state.discard.drain());
-            state.deck.shuffle(rng);
-
-            state.discard.push(top_card);
+            state.reshuffle_discard(rng)?;
 
             state.deck.draw()
         }

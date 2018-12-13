@@ -6,14 +6,15 @@ use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use std::fmt;
 
+#[derive(Clone, Default)]
 pub struct State {
     pub cpu_hands: [Hand; 3],
     pub hand: Hand,
     pub deck: Hand,
     pub discard: Hand,
     pub current_player: PlayerID,
-    pub winners: Vec<PlayerID>,
     pub top_wild_declared_as: Option<Suit>,
+    pub winners: Vec<PlayerID>,
     pub card_animations: Vec<CardAnimation>,
     // control state
     pub hand_index: u8,
@@ -80,6 +81,17 @@ impl State {
             card_animations,
             hand_index: 0,
         }
+    }
+
+    pub fn reshuffle_discard<R: Rng>(&mut self, rng: &mut R) -> Option<()> {
+        let top_card = self.discard.draw()?;
+
+        self.deck.fill(self.discard.drain());
+        self.deck.shuffle(rng);
+
+        self.discard.push(top_card);
+
+        Some(())
     }
 
     pub fn remove_positioned_card(
