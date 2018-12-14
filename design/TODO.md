@@ -1,6 +1,8 @@
 ## TODO
 
-allow playing on top of the discard pile if a wild card ends up there, even if top_wild is none
+set top wild to None when a card is moved (not played) on top of the discard pile
+
+calculate odds of getting an guaranteed win hand if you use your first rule to make each card set the current turn to your tun again, to see if that should be removed.
 
 put "started new" round after you pick the new rule.
 

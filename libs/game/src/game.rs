@@ -241,6 +241,8 @@ fn can_play(state: &in_game::State, rules: &Rules, &card: &Card) -> bool {
         rules.is_wild(card)
             || if rules.is_wild(top_of_discard) {
                 state.top_wild_declared_as == Some(get_suit(card))
+                    //this can happen depending on the card movement rules
+                    || state.top_wild_declared_as == None
             } else {
                 rules.can_play_graph.is_playable_on(card, top_of_discard)
             }
