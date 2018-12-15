@@ -89,6 +89,10 @@ impl ApplyToState for CardMovement {
                     );
                 }
 
+                if self.target == RelativeHand::Discard {
+                    state.top_wild_declared_as = None;
+                }
+
                 let (x, y) = state.get_new_card_position(self.target, player);
 
                 state.card_animations.push(CardAnimation::new(

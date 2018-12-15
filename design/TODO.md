@@ -1,14 +1,14 @@
 ## TODO
 
-set top wild to None when a card is moved (not played) on top of the discard pile
-
-calculate odds of getting an guaranteed win hand if you use your first rule to make each card set the current turn to your tun again, to see if that should be removed.
+allow expressing "when certain cards are played then place them on top of the deck"
 
 put "started new" round after you pick the new rule.
 
 don't put --- between multiple changes by the same cpu player
 
 allow temporarily hiding the wild suit selection menu, so the user can look at their hand.
+
+make cpu players generate specail card sets most of the time, but still do "full random" occasionally
 
 Making additional menus is too annoying to hook things up for. Make some usage code that has the interface  I'd actually want, then make it work
     I want something like `choose!(CardFlags, CardFlags, Vec<in_game::change>)`
