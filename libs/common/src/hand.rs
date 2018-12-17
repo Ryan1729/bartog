@@ -205,6 +205,22 @@ impl Hand {
             }
         }
     }
+
+    pub fn inverse_remove_selected(&mut self, selection: CardSelection) -> Option<PositionedCard> {
+        let len = self.cards.len();
+        if len == 0 {
+            return None;
+        }
+
+        match selection {
+            CardSelection::NthModuloCount(n) => {
+                let len = len as u8;
+                let i = (len - 1) - ((n.get() - 1) % len);
+
+                self.remove_if_present(i)
+            }
+        }
+    }
 }
 
 use std::num::NonZeroU8;

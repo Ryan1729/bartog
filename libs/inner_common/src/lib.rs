@@ -20,6 +20,8 @@ macro_rules! test_log {
     }};
 }
 
+pub use features::*;
+
 mod inner_common;
 pub use self::inner_common::*;
 

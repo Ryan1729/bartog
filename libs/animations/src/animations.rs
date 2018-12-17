@@ -55,12 +55,21 @@ impl ApplyToState for CardMovement {
             let source_str = self.source.apply(player).to_string();
             let card = {
                 if self.source == RelativeHand::Deck {
-                    state.reshuffle_discard(rng);
+                    let source: &Hand = state.get_relative_hand_mut(self.source, player);
+                    if source.len() == 0 {
+                        state.reshuffle_discard(rng);
+                    }
                 }
 
                 let source: &mut Hand = state.get_relative_hand_mut(self.source, player);
 
-                source.remove_selected(self.selection)
+                if self.source == RelativeHand::Discard {
+                    //the first card of a pile intuitively refers to the top.
+                    source.inverse_remove_selected(self.selection)
+                } else {
+                    // the deck already works correctly.
+                    source.remove_selected(self.selection)
+                }
             };
 
             if let Some(card) = card {
@@ -89,7 +98,10 @@ impl ApplyToState for CardMovement {
                     );
                 }
 
-                if self.target == RelativeHand::Discard {
+                if self.target == RelativeHand::Discard || (
+                    self.source == RelativeHand::Discard
+                     && self.selection == CardSelection::NthModuloCount(nu8!(1))
+                )  {
                     state.top_wild_declared_as = None;
                 }
 
