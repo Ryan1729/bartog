@@ -1,5 +1,7 @@
 ## TODO
 
+make visual graph of card movements so we can figure out if cutting out stuff to prevent loops leaves enough to use
+
 allow expressing "when certain cards are played then place them on top of the deck"
 
 put "started new" round after you pick the new rule.
