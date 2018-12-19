@@ -1,6 +1,8 @@
 ## TODO
 
 make visual graph of card movements so we can figure out if cutting out stuff to prevent loops leaves enough to use
+    Specifically we want a graph where the six relative card locations are nodes and the card movements are edges. Then we want to compare that graph with a version where there is no path from the discard pile to the current player's hand. Note that we actually want to prevent cycles that pass through the current player's hand, but since we always want to allow playing to the discard pile, the previous condition is equivalent.
+    We should write a program in the tooling directory that can import `CardMovement` and can turn them into a `.tgf` file. The six nodes are fixed and can be done manually so we really just need a way to turn `CardMovement`s into tgf edges.
 
 allow expressing "when certain cards are played then place them on top of the deck"
 
