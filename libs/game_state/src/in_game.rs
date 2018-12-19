@@ -430,7 +430,7 @@ impl AllValues for RelativePlayerSet {
 use std::ops::Range;
 
 impl RelativePlayerSet {
-    fn all_non_empty_values() -> Vec<Self> {
+    pub fn all_non_empty_values() -> Vec<Self> {
         RelativePlayerSet::sets_from_range(1..1 << 4)
     }
 

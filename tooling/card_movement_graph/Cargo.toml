@@ -1,0 +1,13 @@
+[package]
+name = "card_movement_graph"
+version = "0.1.0"
+authors = ["Ryan1729 <Ryan1729@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+
+[dependencies.game_state]
+path = "../../libs/game_state"
+
+[dependencies.common]
+path = "../../libs/common"
