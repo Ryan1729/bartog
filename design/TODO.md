@@ -1,8 +1,6 @@
 ## TODO
 
-make visual graph of card movements so we can figure out if cutting out stuff to prevent loops leaves enough to use
-    Specifically we want a graph where the six relative card locations are nodes and the card movements are edges. Then we want to compare that graph with a version where there is no path from the discard pile to the current player's hand. Note that we actually want to prevent cycles that pass through the current player's hand, but since we always want to allow playing to the discard pile, the previous condition is equivalent.
-    We should write a program in the tooling directory that can import `CardMovement` and can turn them into a `.tgf` file. The six nodes are fixed and can be done manually so we really just need a way to turn `CardMovement`s into tgf edges.
+answer the question posed in this [rule_space.md](rule_space.md) section: So now that we're sure that turns will have to be a certain way, is there any remaining way to have loops? What if each card has an effect that places it in the next player's hand? Then, once the deck is empty every move would be equivalent, and none of them would move the game forward. What would be required to prevent this scenario?
 
 allow expressing "when certain cards are played then place them on top of the deck"
 
