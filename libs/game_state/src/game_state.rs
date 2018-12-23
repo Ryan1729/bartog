@@ -459,16 +459,11 @@ impl GameState {
         seed: [u8; 16],
         status: Status,
         rules: Rules,
-        mut event_log: EventLog,
+        event_log: EventLog,
     ) -> GameState {
         // We always want to log the seed, if there is a logger available, so use the function,
         // not the macro.
         log(&format!("{:?}", seed));
-
-        event_log.push_hr();
-        //TODO keep track of round count and change to "started round N"
-        //TODO scroll the event log to the start of the new round?
-        event_log.push(b"started a new round.");
 
         let mut rng = XorShiftRng::from_seed(seed);
 
@@ -487,6 +482,16 @@ impl GameState {
 
     pub fn winners(&self) -> &Vec<PlayerID> {
         &self.in_game.winners
+    }
+
+    pub fn start_new_round(&mut self) {
+        self.status = Status::InGame;
+
+        self.event_log.push_hr();
+        //TODO keep track of round count and change to "started round N"
+        self.event_log.push(b"started a new round.");
+
+        self.event_log.push_hr();
     }
 
     pub fn animations_settled(&self) -> bool {

@@ -2,10 +2,6 @@
 
 answer the question posed in this [rule_space.md](rule_space.md) section: So now that we're sure that turns will have to be a certain way, is there any remaining way to have loops? What if each card has an effect that places it in the next player's hand? Then, once the deck is empty every move would be equivalent, and none of them would move the game forward. What would be required to prevent this scenario?
 
-allow expressing "when certain cards are played then place them on top of the deck"
-
-put "started new" round after you pick the new rule.
-
 don't put --- between multiple changes by the same cpu player
 
 allow temporarily hiding the wild suit selection menu, so the user can look at their hand.
