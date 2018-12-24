@@ -469,3 +469,7 @@ Also of note, I have realized that the above argument involving a scenario where
 It seems like removing both turn changes and current player card movements is sufficient to prevent loops. Is removing the turn changes necessary though? If we assume that each card has an effect that puts that card in the hand of the player across from them, and makes it the player that received the card's turn, then we can have an endless loop. So yes we need to remove turn changing effects.
 
 So now that we're sure that turns will have to be a certain way, is there any remaining way to have loops? What if each card has an effect that places it in the next player's hand? Then, once the deck is empty every move would be equivalent, and none of them would move the game forward. What would be required to prevent this scenario?
+
+____
+
+After some testing it is clear that this problem come up if all the cards are move themselves into any relative player's hand. In order to prevent this possibility we would need to prevent any way for cards from the discard pile to go to the player's hands. If we cut out only those edges going directly there but leave the edge to the deck, the problem persists. We need to also prevent things going from either the deck into hands or the discard to the deck. If we delete the discard to deck edge then cards can still get to the deck from the discard when the deck is reshuffled, so the game can still loop. So we need to remove all the deck to hand edges too.
