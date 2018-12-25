@@ -1,5 +1,3 @@
-
-
 use platform_types::Logger;
 
 pub static mut GLOBAL_LOGGER: Logger = None;
@@ -91,4 +89,13 @@ macro_rules! invariant_assert_eq {
 #[macro_export]
 macro_rules! invariant_assert_eq {
     ($($whatever:tt)*) => {};
+}
+
+// This is only slightly nicer to use than using the body of the macro directly, but
+// it's nice to have all the features stuff in one place as a form of documentation.
+#[macro_export]
+macro_rules! loops_allowed {
+    () => {
+        cfg!(feature = "loops-allowed")
+    };
 }

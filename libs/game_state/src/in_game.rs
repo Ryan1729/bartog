@@ -238,15 +238,20 @@ macro_rules! change_match {
 impl AllValues for Change {
     //TODO write a procedural macro or something to make mainatining this easier.
     fn all_values() -> Vec<Self> {
-        RelativePlayer::all_values()
-            .into_iter()
-            .map(Change::CurrentPlayer)
-            .chain(
-                CardMovement::all_values()
-                    .into_iter()
-                    .map(Change::CardLocation),
-            )
-            .collect()
+        let intial = if loops_allowed!() {
+            RelativePlayer::all_values()
+        } else {
+            vec![]
+        }
+        .into_iter()
+        .map(Change::CurrentPlayer);
+
+        intial.chain(
+            CardMovement::all_values()
+                .into_iter()
+                .map(Change::CardLocation),
+        )
+        .collect()
     }
 }
 
@@ -562,6 +567,7 @@ impl AllValues for CardMovement {
         let mut output =
             Vec::with_capacity(sets.len() * hands.len() * hands.len() * selections.len());
 
+        log!(sets);
         for selection in selections {
             for &affected in sets.iter() {
                 for &source in hands.iter() {
@@ -569,6 +575,23 @@ impl AllValues for CardMovement {
                         if source == target {
                             continue;
                         }
+
+                        if loops_allowed!() {
+                            //allow all combinations
+                        } else {
+                            if target == RelativeHand::Player(RelativePlayer::Same){
+                                continue;
+                            }
+
+                            if source == RelativeHand::Discard && target != RelativeHand::Deck {
+                                continue;
+                            }
+
+                            if source == RelativeHand::Deck && target != RelativeHand::Discard {
+                                continue;
+                            }
+                        }
+
                         output.push(CardMovement {
                             affected,
                             source,
@@ -579,6 +602,8 @@ impl AllValues for CardMovement {
                 }
             }
         }
+
+
 
         output
     }

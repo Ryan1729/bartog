@@ -3,10 +3,6 @@
 fix everything but the clubs number cards (excluding ace, so the set does contain the ace,) being renderd as "The red cards, the spades, the aces, the jacks, the queens, and the kings"
     maybe just make sure the card set descriptions are never longer than what fits on the when played choices screen.
 
-remove the turn change rules and certain card movements as described in [rule_space.md](./rule_space.md). Maybe allow re-enabling them with a feature flag. "loops-allowed"?
-
-answer the question posed in this [rule_space.md](rule_space.md) section: So now that we're sure that turns will have to be a certain way, is there any remaining way to have loops? What if each card has an effect that places it in the next player's hand? Then, once the deck is empty every move would be equivalent, and none of them would move the game forward. What would be required to prevent this scenario?
-
 don't put --- between multiple changes by the same cpu player
 
 allow temporarily hiding the wild suit selection menu, so the user can look at their hand.
