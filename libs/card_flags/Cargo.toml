@@ -9,3 +9,6 @@ rand = "0.5"
 
 [dependencies.inner_common]
 path = "../inner_common"
+
+[dev-dependencies]
+quickcheck = "0.6"

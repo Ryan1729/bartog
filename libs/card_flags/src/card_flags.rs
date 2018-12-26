@@ -1759,8 +1759,8 @@ impl fmt::Display for CardFlags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let subsets = get_special_subsets(*self);
 
-        println!(
-            "{:?}",
+        test_println!(
+            "subsets: {:?}",
             subsets
                 .iter()
                 .map(|s| format!("{:052b}", s))
@@ -2272,7 +2272,7 @@ mod tests {
             match self.0 {
                 0 => empty_shrinker(),
                 x => {
-                    let mut tracking_flags = 0;
+                    let tracking_flags = 0;
                     macro_rules! check {
                         ($to_remove:expr) => {
                             if tracking_flags & $to_remove == $to_remove {
@@ -2384,8 +2384,8 @@ mod tests {
                     }
                 }
 
-                if test_genned != 0 {
-                    return NonSpecial(CardFlags(test_genned));
+                if test_genned == 0 {
+                    return NonSpecial(genned);
                 }
             }
             return NonSpecial(CardFlags(0));
@@ -2404,6 +2404,33 @@ mod tests {
         NonSpecial(flags): NonSpecial<CardFlags>,
     ) -> TestResult {
         no_card_flags_resort_to_the_fallback(flags)
+    }
+
+    #[test]
+    fn test_no_non_special_is_too_long() {
+        QuickCheck::new()
+        .min_tests_passed(52 << 4)
+        .quickcheck(no_non_special_is_too_long as fn(NonSpecial<CardFlags>) -> bool);
+    }
+    fn no_non_special_is_too_long(
+        NonSpecial(flags): NonSpecial<CardFlags>,
+    ) -> bool {
+        flag_string_is_not_too_long(flags)
+    }
+
+    #[test]
+    fn all_but_clubs_number_cards_is_not_too_long() {
+        let flags = RED_FLAGS | SPADES_FLAGS | CLUBS_FACE_FLAGS | rank_pattern!(0);
+
+        assert!(flag_string_is_not_too_long(CardFlags::new(flags)));
+    }
+
+    fn flag_string_is_not_too_long(
+        flags: CardFlags,
+    ) -> bool {
+        let string = flags.to_string();
+        test_println!("{}", string);
+        string.len() <= 64
     }
 
     #[cfg(feature = "false")]
@@ -2562,6 +2589,7 @@ mod tests {
         across_all_suits!(1 << 12),
     ];
 
+    #[allow(non_snake_case)]
     #[test]
     fn RANK_FLAGS_matches_OLD_RANK_FLAGS() {
         for i in 0..RANK_COUNT as usize {
