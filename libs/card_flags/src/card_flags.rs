@@ -1729,12 +1729,11 @@ const SPECIAL_FLAGS: [u64; 422] = [
 
 fn get_special_subsets(card_flags: CardFlags) -> Vec<u64> {
     let original_flags = card_flags.0;
-    let mut flags = card_flags.0;
 
     let mut subsets = Vec::new();
 
     let mut tracking_flags = 0;
-    if flags == 0 {
+    if original_flags == 0 {
         subsets.push(0);
     } else {
         for &f in SPECIAL_FLAGS.iter() {
@@ -1743,8 +1742,7 @@ fn get_special_subsets(card_flags: CardFlags) -> Vec<u64> {
                     tracking_flags |= f;
                     subsets.push(f);
 
-                    flags &= !f;
-                    if flags == 0 {
+                    if tracking_flags & original_flags == original_flags {
                         break;
                     }
                 }
@@ -1753,6 +1751,20 @@ fn get_special_subsets(card_flags: CardFlags) -> Vec<u64> {
     }
 
     subsets
+
+macro_rules! formatted_vec {
+    ($fmt_str:expr, $vec:expr) => {
+        $vec
+            .iter()
+            .map(|s| format!($fmt_str, s))
+            .collect::<Vec<_>>()
+    }
+}
+
+macro_rules! card_bin_formatted_vec {
+    ($vec:expr) => {
+        formatted_vec!("{:052b}", $vec)
+    }
 }
 
 impl fmt::Display for CardFlags {
@@ -1761,10 +1773,7 @@ impl fmt::Display for CardFlags {
 
         test_println!(
             "subsets: {:?}",
-            subsets
-                .iter()
-                .map(|s| format!("{:052b}", s))
-                .collect::<Vec<_>>()
+            card_bin_formatted_vec!(subsets)
         );
         write!(f, "{}", map_sentence_list(&subsets, write_card_set_str))
     }
@@ -2318,8 +2327,70 @@ mod tests {
         }
     }
 
-    #[derive(Clone, Debug)]
-    struct Special<T>(T);
+    #[derive(Clone)]
+    pub struct Special<T>(T);
+
+    impl Arbitrary for Special<u64> {
+        fn arbitrary<G: Gen>(g: &mut G) -> Self {
+            let index = g.gen_range(0, SPECIAL_FLAGS.len());
+            test_println!("index: {}", index);
+            Special(SPECIAL_FLAGS[index])
+        }
+
+        fn shrink(&self) -> Box<Iterator<Item = Self>> {
+            #[allow(dead_code)]
+            pub struct FlagShrinker {
+                i: usize,
+            }
+
+            impl FlagShrinker {
+                pub fn new(x: u64) -> Box<Iterator<Item=Special<u64>>> {
+                    if x == 0 {
+                        Box::new(std::iter::empty().map(Special))
+                    } else if let Some(i) = SPECIAL_FLAGS
+                            .iter()
+                            .position(|&e| e == x) {
+                        Box::new(FlagShrinker {
+                            i
+                        })
+                    } else {
+                        Box::new(std::iter::empty().map(Special))
+                    }
+                }
+            }
+
+            impl Iterator for FlagShrinker {
+                type Item = Special<u64>;
+                fn next(&mut self) -> Option<Special<u64>> {
+                    // let old_value = SPECIAL_FLAGS[self.i];
+                    // let mut new_index = self.i + 1;
+                    // while new_index < SPECIAL_FLAGS.len() {
+                    //     let new_value = SPECIAL_FLAGS[new_index];
+                    //
+                    //     if new_value.count_ones() < old_value.count_ones() {
+                    //         test_println!("shrunk index: {}", new_index);
+                    //         return Some(Special(SPECIAL_FLAGS[new_index]));
+                    //     } else {
+                    //         test_println!("skipped index: {}", new_index);
+                    //         return None;
+                    //     }
+                    //     new_index += 1;
+                    // }
+
+                    //the above is so slow I suspoect it doesn't actually terminate.
+                    None
+                }
+            }
+
+            Box::new(FlagShrinker::new(self.0))
+        }
+    }
+
+    impl fmt::Debug for Special<u64> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{:052b}", self.0)
+        }
+    }
 
     impl Arbitrary for Special<CardFlags> {
         fn arbitrary<G: Gen>(g: &mut G) -> Self {
@@ -2332,6 +2403,13 @@ mod tests {
             Box::new(self.0.shrink().map(Special))
         }
     }
+
+    impl fmt::Debug for Special<CardFlags> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{:052b}", (self.0).0)
+        }
+    }
+
 
     #[test]
     fn test_no_special_flag_uses_the_fallback() {
@@ -2423,6 +2501,7 @@ mod tests {
         let flags = RED_FLAGS | SPADES_FLAGS | CLUBS_FACE_FLAGS | rank_pattern!(0);
 
         assert!(flag_string_is_not_too_long(CardFlags::new(flags)));
+        assert!(false);
     }
 
     fn flag_string_is_not_too_long(
@@ -2431,6 +2510,62 @@ mod tests {
         let string = flags.to_string();
         test_println!("{}", string);
         string.len() <= 64
+    }
+
+    #[test]
+    fn all_but_clubs_number_cards_produces_correct_subsets() {
+        let flags = RED_FLAGS | SPADES_FLAGS | CLUBS_FACE_FLAGS | rank_pattern!(0);
+
+        assert_eq!(
+            vec![RED_FLAGS, SPADES_FLAGS, CLUBS_FACE_FLAGS, rank_pattern!(0)],
+            get_special_subsets(CardFlags::new(flags))
+        );
+    }
+
+    #[test]
+    fn test_no_flag_produces_more_subsets_than_were_used_to_make_it() {
+        // this ensures that not string is longer than it needs to be.
+        quickcheck(
+            no_flag_produces_more_subsets_than_were_used_to_make_it
+            as fn(Vec<Special<u64>>) -> TestResult
+        )
+    }
+    fn no_flag_produces_more_subsets_than_were_used_to_make_it(
+        original_subsets: Vec<Special<u64>>,
+    ) -> TestResult {
+        let original_subsets: Vec<_> = original_subsets
+            .into_iter().map(|Special(flags)| flags).collect();
+        let original_len = original_subsets.len();
+        if original_len == 0 {
+            return TestResult::discard();
+        }
+
+        let flags = original_subsets.iter().fold(0u64, |acc, flag| acc | flag);
+
+        let actual_subsets = get_special_subsets(CardFlags::new(flags));
+
+        let actual_len = actual_subsets.len();
+
+        let was_le = actual_len <= original_len;
+
+        if !was_le {
+            panic!("actual was larger than original!:\n  actual: `{:?}`,\n original: `{:?}`",
+               card_bin_formatted_vec!(actual_subsets),
+               card_bin_formatted_vec!(original_subsets)
+           );
+        }
+
+        TestResult::from_bool(was_le)
+    }
+
+    #[test]
+    fn test_small_subsets_do_not_produce_more_subsets_than_were_used_to_make_them() {
+        no_flag_produces_more_subsets_than_were_used_to_make_it(
+            vec![
+                Special(consecutive_ranks!(1-2 spades)),
+                Special(consecutive_ranks!(0-1 clubs))
+            ]
+        );
     }
 
     #[cfg(feature = "false")]
