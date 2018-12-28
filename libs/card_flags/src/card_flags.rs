@@ -127,6 +127,20 @@ impl Default for CardFlags {
     }
 }
 
+macro_rules! formatted_vec {
+    ($fmt_str:expr, $vec:expr) => {
+        $vec.iter()
+            .map(|s| format!($fmt_str, s))
+            .collect::<Vec<_>>()
+    };
+}
+
+macro_rules! card_bin_formatted_vec {
+    ($vec:expr) => {
+        formatted_vec!("{:052b}", $vec)
+    };
+}
+
 macro_rules! all_suits_consts {
     {
         $vis:vis const $clubs:ident: $type:ty = $clubs_expr:expr;
@@ -1750,31 +1764,64 @@ fn get_special_subsets(card_flags: CardFlags) -> Vec<u64> {
         }
     }
 
-    subsets
-
-macro_rules! formatted_vec {
-    ($fmt_str:expr, $vec:expr) => {
-        $vec
-            .iter()
-            .map(|s| format!($fmt_str, s))
-            .collect::<Vec<_>>()
-    }
+    optimize_set_cover(subsets)
 }
 
-macro_rules! card_bin_formatted_vec {
-    ($vec:expr) => {
-        formatted_vec!("{:052b}", $vec)
+fn optimize_set_cover(sets: Vec<u64>) -> Vec<u64> {
+    //TODO see if `HashMap`s or `BTreeMap`s something would be noticably faster
+    let universe = sets.iter().fold(0, |acc, s| acc | s);
+
+    let mut left_to_cover = universe;
+
+    let mut unchosen_sets = get_unchosen_sets(universe);
+
+    let mut output = Vec::with_capacity(unchosen_sets.capacity());
+
+    while left_to_cover != 0 {
+        if output.len() == sets.len() {
+            return sets;
+        }
+
+        let (i, next_set) = maximally_covering_subset(&unchosen_sets, left_to_cover);
+        i.map(|i| unchosen_sets.remove(i));
+        output.push(next_set);
+        left_to_cover &= !next_set;
+        test_println!("output: {:?}", card_bin_formatted_vec!(output));
     }
+
+    output
+}
+
+fn get_unchosen_sets(universe: u64) -> Vec<u64> {
+    let mut output = Vec::new();
+    for &flags in SPECIAL_FLAGS.iter() {
+        if universe & flags == flags {
+            output.push(flags);
+        }
+    }
+    output
+}
+
+//the set from `sets` that covers the most extra area of `target`.
+fn maximally_covering_subset(sets: &Vec<u64>, target: u64) -> (Option<usize>, u64) {
+    let mut previously_covered: u64 = 0;
+    let mut previously_covered_index = None;
+    for (i, set) in sets.iter().enumerate() {
+        let newly_covered = target & set;
+        if newly_covered.count_ones() > previously_covered.count_ones() {
+            previously_covered = newly_covered;
+            previously_covered_index = Some(i);
+        }
+    }
+
+    (previously_covered_index, previously_covered)
 }
 
 impl fmt::Display for CardFlags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let subsets = get_special_subsets(*self);
 
-        test_println!(
-            "subsets: {:?}",
-            card_bin_formatted_vec!(subsets)
-        );
+        test_println!("subsets: {:?}", card_bin_formatted_vec!(subsets));
         write!(f, "{}", map_sentence_list(&subsets, write_card_set_str))
     }
 }
@@ -2344,15 +2391,11 @@ mod tests {
             }
 
             impl FlagShrinker {
-                pub fn new(x: u64) -> Box<Iterator<Item=Special<u64>>> {
+                pub fn new(x: u64) -> Box<Iterator<Item = Special<u64>>> {
                     if x == 0 {
                         Box::new(std::iter::empty().map(Special))
-                    } else if let Some(i) = SPECIAL_FLAGS
-                            .iter()
-                            .position(|&e| e == x) {
-                        Box::new(FlagShrinker {
-                            i
-                        })
+                    } else if let Some(i) = SPECIAL_FLAGS.iter().position(|&e| e == x) {
+                        Box::new(FlagShrinker { i })
                     } else {
                         Box::new(std::iter::empty().map(Special))
                     }
@@ -2409,7 +2452,6 @@ mod tests {
             write!(f, "{:052b}", (self.0).0)
         }
     }
-
 
     #[test]
     fn test_no_special_flag_uses_the_fallback() {
@@ -2487,12 +2529,10 @@ mod tests {
     #[test]
     fn test_no_non_special_is_too_long() {
         QuickCheck::new()
-        .min_tests_passed(52 << 4)
-        .quickcheck(no_non_special_is_too_long as fn(NonSpecial<CardFlags>) -> bool);
+            .min_tests_passed(52 << 4)
+            .quickcheck(no_non_special_is_too_long as fn(NonSpecial<CardFlags>) -> bool);
     }
-    fn no_non_special_is_too_long(
-        NonSpecial(flags): NonSpecial<CardFlags>,
-    ) -> bool {
+    fn no_non_special_is_too_long(NonSpecial(flags): NonSpecial<CardFlags>) -> bool {
         flag_string_is_not_too_long(flags)
     }
 
@@ -2504,9 +2544,7 @@ mod tests {
         assert!(false);
     }
 
-    fn flag_string_is_not_too_long(
-        flags: CardFlags,
-    ) -> bool {
+    fn flag_string_is_not_too_long(flags: CardFlags) -> bool {
         let string = flags.to_string();
         test_println!("{}", string);
         string.len() <= 64
@@ -2527,14 +2565,16 @@ mod tests {
         // this ensures that not string is longer than it needs to be.
         quickcheck(
             no_flag_produces_more_subsets_than_were_used_to_make_it
-            as fn(Vec<Special<u64>>) -> TestResult
+                as fn(Vec<Special<u64>>) -> TestResult,
         )
     }
     fn no_flag_produces_more_subsets_than_were_used_to_make_it(
         original_subsets: Vec<Special<u64>>,
     ) -> TestResult {
         let original_subsets: Vec<_> = original_subsets
-            .into_iter().map(|Special(flags)| flags).collect();
+            .into_iter()
+            .map(|Special(flags)| flags)
+            .collect();
         let original_len = original_subsets.len();
         if original_len == 0 {
             return TestResult::discard();
@@ -2549,10 +2589,11 @@ mod tests {
         let was_le = actual_len <= original_len;
 
         if !was_le {
-            panic!("actual was larger than original!:\n  actual: `{:?}`,\n original: `{:?}`",
-               card_bin_formatted_vec!(actual_subsets),
-               card_bin_formatted_vec!(original_subsets)
-           );
+            panic!(
+                "actual was larger than original!:\n  actual: `{:?}`,\n original: `{:?}`",
+                card_bin_formatted_vec!(actual_subsets),
+                card_bin_formatted_vec!(original_subsets)
+            );
         }
 
         TestResult::from_bool(was_le)
@@ -2560,12 +2601,36 @@ mod tests {
 
     #[test]
     fn test_small_subsets_do_not_produce_more_subsets_than_were_used_to_make_them() {
-        no_flag_produces_more_subsets_than_were_used_to_make_it(
-            vec![
-                Special(consecutive_ranks!(1-2 spades)),
-                Special(consecutive_ranks!(0-1 clubs))
-            ]
+        no_flag_produces_more_subsets_than_were_used_to_make_it(vec![
+            Special(consecutive_ranks!(0-1 clubs)),
+            Special(consecutive_ranks!(1-2 spades)),
+        ]);
+    }
+
+    #[test]
+    fn test_small_subsets_are_optimized_properly() {
+        let too_many_sets = vec![
+            rank_pattern!(0) & CLUBS_FLAGS,
+            rank_pattern!(1 black),
+            rank_pattern!(2) & SPADES_FLAGS,
+        ];
+        assert!(
+            false,
+            "test assert {:?}",
+            card_bin_formatted_vec!(get_unchosen_sets(
+                too_many_sets.iter().fold(0, |acc, f| acc | f)
+            ))
         );
+        let mut output = optimize_set_cover(too_many_sets);
+
+        output.sort();
+
+        let expected = vec![
+            consecutive_ranks!(0-1 clubs),
+            consecutive_ranks!(1-2 spades),
+        ];
+
+        assert_eq!(output, expected);
     }
 
     #[cfg(feature = "false")]
