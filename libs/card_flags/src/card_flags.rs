@@ -1741,7 +1741,7 @@ const SPECIAL_FLAGS: [u64; 422] = [
     1 << 51,
 ];
 
-fn get_special_subsets(card_flags: CardFlags) -> Vec<u64> {
+fn get_special_subsets(all_special_flags: &[u64], card_flags: CardFlags) -> Vec<u64> {
     let original_flags = card_flags.0;
 
     let mut subsets = Vec::new();
@@ -1750,7 +1750,7 @@ fn get_special_subsets(card_flags: CardFlags) -> Vec<u64> {
     if original_flags == 0 {
         subsets.push(0);
     } else {
-        for &f in SPECIAL_FLAGS.iter() {
+        for &f in all_special_flags.iter() {
             if tracking_flags & f != f {
                 if original_flags & f == f {
                     tracking_flags |= f;
@@ -1764,16 +1764,16 @@ fn get_special_subsets(card_flags: CardFlags) -> Vec<u64> {
         }
     }
 
-    optimize_set_cover(subsets)
+    optimize_set_cover(all_special_flags, subsets)
 }
 
-fn optimize_set_cover(sets: Vec<u64>) -> Vec<u64> {
+fn optimize_set_cover(all_special_flags: &[u64], sets: Vec<u64>) -> Vec<u64> {
     //TODO see if `HashMap`s or `BTreeMap`s something would be noticably faster
     let universe = sets.iter().fold(0, |acc, s| acc | s);
 
     let mut left_to_cover = universe;
 
-    let mut unchosen_sets = get_unchosen_sets(universe);
+    let mut unchosen_sets = get_unchosen_sets(all_special_flags, universe);
 
     let mut output = Vec::with_capacity(unchosen_sets.capacity());
 
@@ -1792,9 +1792,9 @@ fn optimize_set_cover(sets: Vec<u64>) -> Vec<u64> {
     output
 }
 
-fn get_unchosen_sets(universe: u64) -> Vec<u64> {
+fn get_unchosen_sets(all_special_flags: &[u64], universe: u64) -> Vec<u64> {
     let mut output = Vec::new();
-    for &flags in SPECIAL_FLAGS.iter() {
+    for &flags in all_special_flags.iter() {
         if universe & flags == flags {
             output.push(flags);
         }
@@ -1819,7 +1819,7 @@ fn maximally_covering_subset(sets: &Vec<u64>, target: u64) -> (Option<usize>, u6
 
 impl fmt::Display for CardFlags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let subsets = get_special_subsets(*self);
+        let subsets = get_special_subsets(&SPECIAL_FLAGS, *self);
 
         test_println!("subsets: {:?}", card_bin_formatted_vec!(subsets));
         write!(f, "{}", map_sentence_list(&subsets, write_card_set_str))
@@ -2490,7 +2490,7 @@ mod tests {
             for _ in 0..16 {
                 let genned = CardFlags(g.gen_range(0, ONE_PAST_CARD_FLAGS_MAX));
 
-                let subsets = get_special_subsets(genned);
+                let subsets = get_special_subsets(&SPECIAL_FLAGS, genned);
 
                 if subsets.len() == 0 {
                     return NonSpecial(genned);
@@ -2556,7 +2556,7 @@ mod tests {
 
         assert_eq!(
             vec![RED_FLAGS, SPADES_FLAGS, CLUBS_FACE_FLAGS, rank_pattern!(0)],
-            get_special_subsets(CardFlags::new(flags))
+            get_special_subsets(&SPECIAL_FLAGS, CardFlags::new(flags))
         );
     }
 
@@ -2582,7 +2582,7 @@ mod tests {
 
         let flags = original_subsets.iter().fold(0u64, |acc, flag| acc | flag);
 
-        let actual_subsets = get_special_subsets(CardFlags::new(flags));
+        let actual_subsets = get_special_subsets(&SPECIAL_FLAGS, CardFlags::new(flags));
 
         let actual_len = actual_subsets.len();
 
@@ -2618,10 +2618,11 @@ mod tests {
             false,
             "test assert {:?}",
             card_bin_formatted_vec!(get_unchosen_sets(
+                &SPECIAL_FLAGS,
                 too_many_sets.iter().fold(0, |acc, f| acc | f)
             ))
         );
-        let mut output = optimize_set_cover(too_many_sets);
+        let mut output = optimize_set_cover(&SPECIAL_FLAGS, too_many_sets);
 
         output.sort();
 
@@ -2634,7 +2635,7 @@ mod tests {
     }
 
     #[cfg(feature = "false")]
-    mod toy {
+    mod toy_4_suits {
         use super::*;
         type ToyFlags = u8;
 
@@ -2762,6 +2763,358 @@ mod tests {
             );
         }
 
+    }
+
+    mod toy_2_suits {
+        use super::*;
+        type ToyFlags = u64;
+
+        pub const RANK_COUNT: ToyFlags = 4;
+
+        pub const CLUBS_FLAGS: ToyFlags = 0b0000_1111;
+        pub const DIAMONDS_FLAGS: ToyFlags = CLUBS_FLAGS << RANK_COUNT;
+
+        macro_rules! rank_pattern {
+            (0) => {
+                0b0001_0001
+            };
+            ($x:expr) => {
+                rank_pattern!(0) << $x
+            };
+        }
+
+        //TODO complete these two arrays
+        pub const SPECIAL_FLAGS: [ToyFlags;11] = [0b1111_1111, 0b1111_0000, 0b0000_1111, 0b1000_0000, 0b0100_0000, 0b0010_0000, 0b0001_0000, 0b0000_1000, 0b0000_0100, 0b0000_0010, 0b0000_0001];
+        pub const OPTIMAL_SUBSETS: [&'static [ToyFlags]; 256] = [
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+        ];
+
+        #[derive(Clone, Debug)]
+        struct PermutedSpecialFlags(Vec<ToyFlags>);
+
+        impl Arbitrary for PermutedSpecialFlags {
+            fn arbitrary<G: Gen>(g: &mut G) -> Self {
+                let mut all_special_flags: Vec<_> = SPECIAL_FLAGS.iter().cloned().collect();
+
+                //TODO use only plausible orderings
+                g.shuffle(&mut all_special_flags);
+
+                PermutedSpecialFlags(all_special_flags)
+            }
+
+            fn shrink(&self) -> Box<Iterator<Item = Self>> {
+                Box::new(self.0.shrink().map(PermutedSpecialFlags))
+            }
+        }
+
+        #[test]
+        fn test_that_there_is_no_order_that_always_produces_no_more_subsets_than_were_used_to_make_it(
+        ) {
+            // this ensures that not string is longer than it needs to be.
+            quickcheck(
+                no_set_of_flags_produces_more_subsets_than_were_used_to_make_it
+                    as fn(PermutedSpecialFlags) -> TestResult,
+            )
+        }
+
+        fn no_set_of_flags_produces_more_subsets_than_were_used_to_make_it(PermutedSpecialFlags(p): PermutedSpecialFlags) -> TestResult {
+            let mut result;
+            for i in 0..=u8::max_value() {
+                result = no_flag_produces_more_subsets_than_were_used_to_make_it(&p, OPTIMAL_SUBSETS[i as usize]);
+
+                if result.is_failure() {
+                    return result;
+                }
+            }
+            panic!(
+                "permutation appeared to work! `{:?}`",
+                card_bin_formatted_vec!(p),
+            );
+            result
+        }
+
+        fn no_flag_produces_more_subsets_than_were_used_to_make_it(
+            all_special_flags: &[ToyFlags],
+            original_subsets: &[ToyFlags],
+        ) -> TestResult {
+            let original_len = original_subsets.len();
+            if original_len == 0 {
+                return TestResult::discard();
+            }
+
+            let flags = original_subsets.iter().fold(0u64, |acc, flag| acc | flag);
+
+            let actual_subsets = get_special_subsets(all_special_flags, CardFlags::new(flags));
+
+            let actual_len = actual_subsets.len();
+
+            let was_le = actual_len <= original_len;
+
+            if !was_le {
+                panic!(
+                    "actual was larger than original!:\n  actual: `{:?}`,\n original: `{:?}`",
+                    card_bin_formatted_vec!(actual_subsets),
+                    card_bin_formatted_vec!(original_subsets)
+                );
+            }
+
+            TestResult::from_bool(was_le)
+        }
     }
 
     macro_rules! across_all_suits {
