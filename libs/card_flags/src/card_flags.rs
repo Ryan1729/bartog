@@ -2765,6 +2765,7 @@ mod tests {
 
     }
 
+    #[cfg(feature = "false")]
     mod toy_2_suits {
         use super::*;
         type ToyFlags = u64;
@@ -2783,93 +2784,148 @@ mod tests {
             };
         }
 
+        macro_rules! consecutive_ranks {
+            (0-1 clubs) => {
+                0b0000_0011
+            };
+            (0-2 clubs) => {
+                0b0000_0111
+            };
+            (1-2 clubs) => {
+                0b0000_0110
+            };
+            (1-3 clubs) => {
+                0b0000_1110
+            };
+            (2-3 clubs) => {
+                0b0000_1100
+            };
+            (0-1 diamonds) => {
+                0b0011_0000
+            };
+            (0-2 diamonds) => {
+                0b0111_0000
+            };
+            (1-2 diamonds) => {
+                0b0110_0000
+            };
+            (1-3 diamonds) => {
+                0b1110_0000
+            };
+            (2-3 diamonds) => {
+                0b1100_0000
+            };
+        }
+
         //TODO complete these two arrays
-        pub const SPECIAL_FLAGS: [ToyFlags;11] = [0b1111_1111, 0b1111_0000, 0b0000_1111, 0b1000_0000, 0b0100_0000, 0b0010_0000, 0b0001_0000, 0b0000_1000, 0b0000_0100, 0b0000_0010, 0b0000_0001];
+        pub const SPECIAL_FLAGS: [ToyFlags; 25] = [
+            0b1111_1111,
+            DIAMONDS_FLAGS,
+            CLUBS_FLAGS,
+            rank_pattern!(0),
+            rank_pattern!(1),
+            rank_pattern!(2),
+            rank_pattern!(3),
+            consecutive_ranks!(0-1 clubs),
+            consecutive_ranks!(0-2 clubs),
+            consecutive_ranks!(1-2 clubs),
+            consecutive_ranks!(1-3 clubs),
+            consecutive_ranks!(2-3 clubs),
+            consecutive_ranks!(0-1 diamonds),
+            consecutive_ranks!(0-2 diamonds),
+            consecutive_ranks!(1-2 diamonds),
+            consecutive_ranks!(1-3 diamonds),
+            consecutive_ranks!(2-3 diamonds),
+             0b1000_0000, 0b0100_0000, 0b0010_0000, 0b0001_0000, 0b0000_1000, 0b0000_0100, 0b0000_0010, 0b0000_0001];
         pub const OPTIMAL_SUBSETS: [&'static [ToyFlags]; 256] = [
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
-            &[],
+            &[0b0000_0000],
+            &[0b0000_0001],
+            &[0b0000_0010],
+            &[consecutive_ranks!(0-1 clubs)],
+            &[0b0000_0100],
+            &[0b0000_0001, 0b0000_0100],
+            &[consecutive_ranks!(1-2 clubs)],
+            &[consecutive_ranks!(0-2 clubs)],
+            &[0b0000_1000],
+            &[0b0000_0001, 0b0000_1000],
+            &[0b0000_0010, 0b0000_1000],
+            &[consecutive_ranks!(0-1 clubs), 0b0000_1000],
+            &[consecutive_ranks!(2-3 clubs)],
+            &[0b0000_0001, consecutive_ranks!(2-3 clubs)],
+            &[consecutive_ranks!(1-3 clubs)],
+            &[0b0000_1111],
+            // //
+            &[0b0001_0000],
+            &[rank_pattern!(0)],
+            &[0b0000_0010, 0b0001_0000],
+            &[0b0000_0010, rank_pattern!(0)],
+            &[0b0000_0100, 0b0001_0000],
+            &[0b0000_0100, rank_pattern!(0)],
+            &[consecutive_ranks!(0-2 clubs), 0b0001_0000],
+            &[0b0000_1000, 0b0001_0000],
+            &[0b0000_0001, 0b0000_1000, 0b0001_0000],
+            &[0b0000_0010, 0b0000_1000, 0b0001_0000],
+            &[consecutive_ranks!(0-1 clubs), 0b0000_1000, 0b0001_0000],
+            &[0b0000_0100, rank_pattern!(0)],
+            &[consecutive_ranks!(1-2 clubs), 0b0001_0000],
+            &[consecutive_ranks!(0-2 clubs), 0b0001_0000],
+            &[0b0000_1000, 0b0001_0000],
+            &[0b0000_1000, rank_pattern!(0)],
+            &[0b0000_0010, 0b0000_1000, 0b0001_0000],
+            &[consecutive_ranks!(0-1 clubs), 0b0000_1000, 0b0001_0000],
+            &[consecutive_ranks!(2-3 clubs), 0b0001_0000],
+            &[0b0000_0001, consecutive_ranks!(2-3 clubs), 0b0001_0000],
+            &[consecutive_ranks!(1-3 clubs), 0b0001_0000],
+            &[0b0000_1111, 0b0001_0000],
+            // //
+            &[0b0010_0000],
+            &[0b0010_0000, 0b0000_0001],
+            &[rank_pattern!(1)],
+            &[0b0000_0001, rank_pattern!(1)],
+            &[0b0000_0100, 0b0010_0000],
+            &[consecutive_ranks!(0-1 clubs), 0b0010_0000],
+            &[consecutive_ranks!(1-2 clubs), 0b0010_0000],
+            &[consecutive_ranks!(0-2 clubs), 0b0010_0000],
+            &[0b0000_1000, 0b0010_0000],
+            &[0b0000_0001, 0b0000_1000, 0b0010_0000],
+            &[0b0000_0010, 0b0000_1000, 0b0010_0000],
+            &[consecutive_ranks!(0-1 clubs), 0b0000_1000, 0b0010_0000],
+            &[consecutive_ranks!(1-2 clubs), 0b0010_0000],
+            &[0b0000_0100, rank_pattern!(1)],
+            &[consecutive_ranks!(0-2 clubs), 0b0010_0000],
+            &[0b0000_1000, 0b0010_0000],
+            &[0b0000_0001, 0b0000_1000, 0b0010_0000],
+            &[0b0000_1000, rank_pattern!(1)],
+            &[consecutive_ranks!(0-1 clubs), 0b0000_1000, 0b0010_0000],
+            &[consecutive_ranks!(2-3 clubs), 0b0010_0000],
+            &[0b0000_0001, consecutive_ranks!(2-3 clubs), 0b0010_0000],
+            &[consecutive_ranks!(1-3 clubs), 0b0010_0000],
+            &[0b0000_1111, 0b0010_0000],
+            // //
+            &[consecutive_ranks!(0-1 diamonds)],
+            &[consecutive_ranks!(0-1 diamonds), 0b0000_0001],
+            &[0b0001_0000, rank_pattern!(1)],
+            &[0b0000_0001, rank_pattern!(2)],
+            &[0b0000_0100, consecutive_ranks!(0-1 diamonds)],
+            &[consecutive_ranks!(0-1 clubs), consecutive_ranks!(0-1 diamonds)],
+            &[consecutive_ranks!(1-2 clubs), consecutive_ranks!(0-1 diamonds)],
+            &[consecutive_ranks!(0-2 clubs), consecutive_ranks!(0-1 diamonds)],
+            &[0b0000_1000, consecutive_ranks!(0-1 diamonds)],
+            &[0b0000_0001, 0b0000_1000, consecutive_ranks!(0-1 diamonds)],
+            &[0b0000_0010, 0b0000_1000, consecutive_ranks!(0-1 diamonds)],
+            &[consecutive_ranks!(0-1 clubs), 0b0000_1000, consecutive_ranks!(0-1 diamonds)],
+            &[consecutive_ranks!(1-2 clubs), consecutive_ranks!(0-1 diamonds)],
+            &[0b0000_0100, rank_pattern!(1)],
+            &[consecutive_ranks!(0-2 clubs), consecutive_ranks!(0-1 diamonds)],
+            &[0b0000_1000, consecutive_ranks!(0-1 diamonds)],
+            &[0b0000_0001, 0b0000_1000, consecutive_ranks!(0-1 diamonds)],
+            &[0b0000_1000, rank_pattern!(1)],
+            &[consecutive_ranks!(0-1 clubs), 0b0000_1000, consecutive_ranks!(0-1 diamonds)],
+            &[consecutive_ranks!(2-3 clubs), consecutive_ranks!(0-1 diamonds)],
+            &[0b0000_0001, consecutive_ranks!(2-3 clubs), consecutive_ranks!(0-1 diamonds)],
+            &[consecutive_ranks!(1-3 clubs), consecutive_ranks!(0-1 diamonds)],
+            &[0b0000_1111, consecutive_ranks!(0-1 diamonds)],
+            // //
             &[],
             &[],
             &[],
