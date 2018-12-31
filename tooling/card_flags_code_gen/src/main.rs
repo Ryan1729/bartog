@@ -66,7 +66,7 @@ fn main() {
             }};
         }
 
-        macro_rules! four_times {
+        macro_rules! thirteen_times {
             ($fmt_str:expr) => {
                 pf!(
                     $fmt_str,
@@ -89,15 +89,19 @@ fn main() {
             };
         }
 
-        four_times!("({}-{} clubs) => {{ 0b{}_{}{}{}{}_{}{}{}{}_{}{}{}{} }};");
-        four_times!("({}-{} diamonds) => {{ 0b{}_{}{}{}{}_{}{}{}{}_{}{}{}{}__0_0000_0000_0000 }};");
-        four_times!("({}-{} hearts) => {{ 0b{}_{}{}{}{}_{}{}{}{}_{}{}{}{}__0_0000_0000_0000__0_0000_0000_0000 }};");
-        four_times!("({}-{} spades) => {{ 0b{}_{}{}{}{}_{}{}{}{}_{}{}{}{}__0_0000_0000_0000__0_0000_0000_0000__0_0000_0000_0000 }};");
+        thirteen_times!("({}-{} black) => {{ 0b{2}_{3}{4}{5}{6}_{7}{8}{9}{10}_{11}{12}{13}{14}__0_0000_0000_0000__0_0000_0000_0000__{2}_{3}{4}{5}{6}_{7}{8}{9}{10}_{11}{12}{13}{14} }};");
+        thirteen_times!("({}-{} red) => {{ 0b{2}_{3}{4}{5}{6}_{7}{8}{9}{10}_{11}{12}{13}{14}__{2}_{3}{4}{5}{6}_{7}{8}{9}{10}_{11}{12}{13}{14}__0_0000_0000_0000 }};");
+        thirteen_times!("({}-{} clubs) => {{ 0b{}_{}{}{}{}_{}{}{}{}_{}{}{}{} }};");
+        thirteen_times!("({}-{} diamonds) => {{ 0b{}_{}{}{}{}_{}{}{}{}_{}{}{}{}__0_0000_0000_0000 }};");
+        thirteen_times!("({}-{} hearts) => {{ 0b{}_{}{}{}{}_{}{}{}{}_{}{}{}{}__0_0000_0000_0000__0_0000_0000_0000 }};");
+        thirteen_times!("({}-{} spades) => {{ 0b{}_{}{}{}{}_{}{}{}{}_{}{}{}{}__0_0000_0000_0000__0_0000_0000_0000__0_0000_0000_0000 }};");
     }
     p!("}\n\n");
 
+    let suits = ["black", "red", "clubs", "diamonds", "hearts", "spades"];
+
     for (start, end) in sorted_extrema.iter() {
-        for suit in ["clubs", "diamonds", "hearts", "spades"].iter() {
+        for suit in suits.iter() {
             pf!("consecutive_ranks!({0}-{1} {2}),\n", start, end, suit);
         }
     }
@@ -105,7 +109,7 @@ fn main() {
     p!("\n\n");
 
     for (start, end) in sorted_extrema.iter() {
-        for suit in ["clubs", "diamonds", "hearts", "spades"].iter() {
+        for suit in suits.iter() {
             pf!(
                 "consecutive_ranks!({0}-{1} {2}) => consecutive_ranks_result!({0}=>{1}, {2}),\n",
                 start,
