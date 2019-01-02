@@ -3115,6 +3115,36 @@ mod tests {
 
         assert!(!no_card_flags_resort_to_the_fallback(flags).is_failure());
     }
+    #[test]
+    fn this_second_generated_one_does_not_use_the_fallback() {
+        let flags = CardFlags::new(0b0100111011111000011000101010101110101001001011101111);
+
+        assert!(!no_card_flags_resort_to_the_fallback(flags).is_failure());
+    }
+
+    #[test]
+    fn test_no_card_flags_cause_get_special_subsets_to_return_non_special_subsets() {
+        quickcheck(no_card_flags_cause_get_special_subsets_to_return_non_special_subsets as fn(CardFlags) -> TestResult)
+    }
+    fn no_card_flags_cause_get_special_subsets_to_return_non_special_subsets(flags: CardFlags) -> TestResult {
+        let subsets = get_special_subsets(&SPECIAL_FLAGS, flags);
+
+        let non_special_flags: Vec<_> = subsets.iter().filter(|s| !SPECIAL_FLAGS.contains(s)).collect();
+
+        if non_special_flags.len() == 0 {
+            TestResult::passed()
+        } else {
+            panic!("non_special_flags: {:?}", card_bin_formatted_vec!(non_special_flags));
+            TestResult::failed()
+        }
+    }
+
+    #[test]
+    fn test_suits_combined_with_rank_does_not_cause_get_special_subsets_to_return_non_special_subsets() {
+        let flags = CardFlags::new(rank_pattern!(0) | CLUBS_FLAGS);
+
+        assert!(!no_card_flags_cause_get_special_subsets_to_return_non_special_subsets(flags).is_failure());
+    }
 
     impl Arbitrary for CardFlags {
         fn arbitrary<G: Gen>(g: &mut G) -> Self {
@@ -3367,6 +3397,13 @@ mod tests {
             vec![RED_FLAGS, SPADES_FLAGS, CLUBS_FACE_FLAGS, rank_pattern!(0)],
             get_special_subsets(&SPECIAL_FLAGS, CardFlags::new(flags))
         );
+    }
+
+    #[test]
+    fn all_but_clubs_number_cards_does_not_cause_get_special_subsets_to_return_non_special_subsets() {
+        let flags = RED_FLAGS | SPADES_FLAGS | CLUBS_FACE_FLAGS | rank_pattern!(0);
+
+        assert!(!no_card_flags_cause_get_special_subsets_to_return_non_special_subsets(CardFlags::new(flags)).is_failure());
     }
 
     #[test]
