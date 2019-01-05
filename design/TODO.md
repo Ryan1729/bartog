@@ -1,13 +1,16 @@
 ## TODO
 
-fix everything but the clubs number cards (excluding ace, so the set does contain the ace,) being renderd as "The red cards, the spades, the aces, the jacks, the queens, and the kings"
-    maybe just make sure the card set descriptions are never longer than what fits on the when played choices screen.
+### planned before release
 
 don't put --- between multiple changes by the same cpu player
 
 allow temporarily hiding the wild suit selection menu, so the user can look at their hand.
 
-make cpu players generate specail card sets most of the time, but still do "full random" occasionally
+make cpu players generate special card sets most of the time, but still do "full random" occasionally
+
+____
+
+### after release, which means potentially never
 
 Making additional menus is too annoying to hook things up for. Make some usage code that has the interface  I'd actually want, then make it work
     I want something like `choose!(CardFlags, CardFlags, Vec<in_game::change>)`
