@@ -268,14 +268,14 @@ pub fn apply_can_play_graph_changes(
         flattened_changes[index] = Some(change);
     }
 
+    add_rule_change_log_header(state, player);
+
     for possible_change in flattened_changes.into_iter() {
         if let Some(change) = possible_change {
             let new_card = change.card();
             let new_edges = change.edges();
 
             //logging
-            add_rule_change_log_header(state, player);
-
             let previous_edges = state.rules.can_play_graph.get_edges(new_card);
             let CardFlagsDelta {
                 additions,
