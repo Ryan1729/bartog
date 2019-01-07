@@ -181,6 +181,10 @@ pub fn do_suit_choice(
     input: Input,
     speaker: &mut Speaker,
 ) {
+    if input.gamepad.contains(Button::B) {
+        return;
+    }
+
     framebuffer.full_window();
     {
         let text = b"choose a suit for the card";

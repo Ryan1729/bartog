@@ -2,8 +2,6 @@
 
 ### planned before release
 
-allow temporarily hiding the wild suit selection menu, so the user can look at their hand.
-
 make cpu players generate special card sets most of the time, but still do "full random" occasionally
 
 ____
