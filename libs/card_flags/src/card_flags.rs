@@ -11,11 +11,21 @@ pub struct CardFlags(u64);
 pub const ONE_PAST_CARD_FLAGS_MAX: u64 = 1 << DECK_SIZE as u64;
 pub const ALL_FLAGS: u64 = ONE_PAST_CARD_FLAGS_MAX - 1;
 
-// TODO make `Standard` generate mostly easy to describe subsets of the cards
-//and add another distribution if needed
+const GENERATION_DECK: [u8; 16] = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 4];
+
 impl Distribution<CardFlags> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> CardFlags {
-        CardFlags(rng.gen_range(0, ONE_PAST_CARD_FLAGS_MAX))
+        let kind = GENERATION_DECK[rng.gen_range(0, GENERATION_DECK.len())];
+        match kind {
+            0 => CardFlags(rng.gen_range(0, ONE_PAST_CARD_FLAGS_MAX)),
+            x => {
+                let mut output = 0;
+                for _ in 0..x {
+                    output |= SPECIAL_FLAGS[rng.gen_range(0, SPECIAL_FLAGS.len())];
+                }
+                CardFlags::new(output)
+            }
+        }
     }
 }
 
@@ -3136,26 +3146,41 @@ mod tests {
 
     #[test]
     fn test_no_card_flags_cause_get_special_subsets_to_return_non_special_subsets() {
-        quickcheck(no_card_flags_cause_get_special_subsets_to_return_non_special_subsets as fn(CardFlags) -> TestResult)
+        quickcheck(
+            no_card_flags_cause_get_special_subsets_to_return_non_special_subsets
+                as fn(CardFlags) -> TestResult,
+        )
     }
-    fn no_card_flags_cause_get_special_subsets_to_return_non_special_subsets(flags: CardFlags) -> TestResult {
+    fn no_card_flags_cause_get_special_subsets_to_return_non_special_subsets(
+        flags: CardFlags,
+    ) -> TestResult {
         let subsets = get_special_subsets(&SPECIAL_FLAGS, flags);
 
-        let non_special_flags: Vec<_> = subsets.iter().filter(|s| !SPECIAL_FLAGS.contains(s)).collect();
+        let non_special_flags: Vec<_> = subsets
+            .iter()
+            .filter(|s| !SPECIAL_FLAGS.contains(s))
+            .collect();
 
         if non_special_flags.len() == 0 {
             TestResult::passed()
         } else {
-            panic!("non_special_flags: {:?}", card_bin_formatted_vec!(non_special_flags));
+            panic!(
+                "non_special_flags: {:?}",
+                card_bin_formatted_vec!(non_special_flags)
+            );
             TestResult::failed()
         }
     }
 
     #[test]
-    fn test_suits_combined_with_rank_does_not_cause_get_special_subsets_to_return_non_special_subsets() {
+    fn test_suits_combined_with_rank_does_not_cause_get_special_subsets_to_return_non_special_subsets(
+    ) {
         let flags = CardFlags::new(rank_pattern!(0) | CLUBS_FLAGS);
 
-        assert!(!no_card_flags_cause_get_special_subsets_to_return_non_special_subsets(flags).is_failure());
+        assert!(
+            !no_card_flags_cause_get_special_subsets_to_return_non_special_subsets(flags)
+                .is_failure()
+        );
     }
 
     impl Arbitrary for CardFlags {
@@ -3410,10 +3435,16 @@ mod tests {
     }
 
     #[test]
-    fn all_but_clubs_number_cards_does_not_cause_get_special_subsets_to_return_non_special_subsets() {
+    fn all_but_clubs_number_cards_does_not_cause_get_special_subsets_to_return_non_special_subsets()
+    {
         let flags = RED_FLAGS | SPADES_FLAGS | CLUBS_FACE_FLAGS | rank_pattern!(0);
 
-        assert!(!no_card_flags_cause_get_special_subsets_to_return_non_special_subsets(CardFlags::new(flags)).is_failure());
+        assert!(
+            !no_card_flags_cause_get_special_subsets_to_return_non_special_subsets(CardFlags::new(
+                flags
+            ))
+            .is_failure()
+        );
     }
 
     #[test]
@@ -3715,116 +3746,260 @@ mod tests {
             &[consecutive_ranks ! ( 1 - 3 clubs )],
             &[CLUBS_FLAGS],
             &[0b0001_0000],
-            &[rank_pattern ! ( 0 )],
+            &[rank_pattern!(0)],
             &[0b0001_0000, 0b0000_0010],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 1 clubs )],
+            &[rank_pattern!(0), consecutive_ranks ! ( 0 - 1 clubs )],
             &[0b0001_0000, 0b0000_0100],
-            &[rank_pattern ! ( 0 ), 0b0000_0100],
+            &[rank_pattern!(0), 0b0000_0100],
             &[consecutive_ranks ! ( 1 - 2 clubs ), 0b0001_0000],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 2 clubs )],
+            &[rank_pattern!(0), consecutive_ranks ! ( 0 - 2 clubs )],
             &[0b0001_0000, 0b0000_1000],
-            &[rank_pattern ! ( 0 ), 0b0000_1000],
+            &[rank_pattern!(0), 0b0000_1000],
             &[0b0001_0000, 0b0000_1000, 0b0000_0010],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 1 clubs ), 0b0000_1000],
+            &[
+                rank_pattern!(0),
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                0b0000_1000,
+            ],
             &[consecutive_ranks ! ( 2 - 3 clubs ), 0b0001_0000],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 2 - 3 clubs )],
+            &[rank_pattern!(0), consecutive_ranks ! ( 2 - 3 clubs )],
             &[consecutive_ranks ! ( 1 - 3 clubs ), 0b0001_0000],
-            &[CLUBS_FLAGS, rank_pattern ! ( 0 )],
+            &[CLUBS_FLAGS, rank_pattern!(0)],
             &[0b0010_0000],
             &[0b0010_0000, 0b0000_0001],
-            &[rank_pattern ! ( 1 )],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 0 - 1 clubs )],
+            &[rank_pattern!(1)],
+            &[rank_pattern!(1), consecutive_ranks ! ( 0 - 1 clubs )],
             &[0b0010_0000, 0b0000_0100],
             &[0b0010_0000, 0b0000_0100, 0b0000_0001],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 1 - 2 clubs )],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 0 - 2 clubs )],
+            &[rank_pattern!(1), consecutive_ranks ! ( 1 - 2 clubs )],
+            &[rank_pattern!(1), consecutive_ranks ! ( 0 - 2 clubs )],
             &[0b0010_0000, 0b0000_1000],
             &[0b0010_0000, 0b0000_1000, 0b0000_0001],
-            &[rank_pattern ! ( 1 ), 0b0000_1000],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 0 - 1 clubs ), 0b0000_1000],
+            &[rank_pattern!(1), 0b0000_1000],
+            &[
+                rank_pattern!(1),
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                0b0000_1000,
+            ],
             &[consecutive_ranks ! ( 2 - 3 clubs ), 0b0010_0000],
-            &[consecutive_ranks ! ( 2 - 3 clubs ), 0b0010_0000, 0b0000_0001],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 1 - 3 clubs )],
-            &[CLUBS_FLAGS, rank_pattern ! ( 1 )],
+            &[
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                0b0010_0000,
+                0b0000_0001,
+            ],
+            &[rank_pattern!(1), consecutive_ranks ! ( 1 - 3 clubs )],
+            &[CLUBS_FLAGS, rank_pattern!(1)],
             &[consecutive_ranks ! ( 0 - 1 diamonds )],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 1 diamonds )],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 0 - 1 diamonds )],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 1 )],
+            &[rank_pattern!(0), consecutive_ranks ! ( 0 - 1 diamonds )],
+            &[rank_pattern!(1), consecutive_ranks ! ( 0 - 1 diamonds )],
+            &[rank_pattern!(0), rank_pattern!(1)],
             &[consecutive_ranks ! ( 0 - 1 diamonds ), 0b0000_0100],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 1 diamonds ), 0b0000_0100],
-            &[consecutive_ranks ! ( 1 - 2 clubs ), consecutive_ranks ! ( 0 - 1 diamonds )],
-            &[consecutive_ranks ! ( 0 - 2 clubs ), consecutive_ranks ! ( 0 - 1 diamonds )],
+            &[
+                rank_pattern!(0),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+                0b0000_0100,
+            ],
+            &[
+                consecutive_ranks ! ( 1 - 2 clubs ),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+            ],
+            &[
+                consecutive_ranks ! ( 0 - 2 clubs ),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+            ],
             &[consecutive_ranks ! ( 0 - 1 diamonds ), 0b0000_1000],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 1 diamonds ), 0b0000_1000],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 0 - 1 diamonds ), 0b0000_1000],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 1 ), 0b0000_1000],
-            &[consecutive_ranks ! ( 2 - 3 clubs ), consecutive_ranks ! ( 0 - 1 diamonds )],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 2 - 3 clubs ), consecutive_ranks ! ( 0 - 1 diamonds )],
-            &[consecutive_ranks ! ( 1 - 3 clubs ), consecutive_ranks ! ( 0 - 1 diamonds )],
+            &[
+                rank_pattern!(0),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+                0b0000_1000,
+            ],
+            &[
+                rank_pattern!(1),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+                0b0000_1000,
+            ],
+            &[rank_pattern!(0), rank_pattern!(1), 0b0000_1000],
+            &[
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+            ],
+            &[
+                rank_pattern!(0),
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+            ],
+            &[
+                consecutive_ranks ! ( 1 - 3 clubs ),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+            ],
             &[CLUBS_FLAGS, consecutive_ranks ! ( 0 - 1 diamonds )],
             &[0b0100_0000],
             &[0b0100_0000, 0b0000_0001],
             &[0b0100_0000, 0b0000_0010],
             &[consecutive_ranks ! ( 0 - 1 clubs ), 0b0100_0000],
-            &[rank_pattern ! ( 2 )],
-            &[rank_pattern ! ( 2 ), 0b0000_0001],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 1 - 2 clubs )],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 0 - 1 clubs )],
+            &[rank_pattern!(2)],
+            &[rank_pattern!(2), 0b0000_0001],
+            &[rank_pattern!(2), consecutive_ranks ! ( 1 - 2 clubs )],
+            &[rank_pattern!(2), consecutive_ranks ! ( 0 - 1 clubs )],
             &[0b0100_0000, 0b0000_1000],
             &[0b0100_0000, 0b0000_1000, 0b0000_0001],
             &[0b0100_0000, 0b0000_1000, 0b0000_0010],
-            &[consecutive_ranks ! ( 0 - 1 clubs ), 0b0100_0000, 0b0000_1000],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 2 - 3 clubs )],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 2 - 3 clubs ), 0b0000_0001],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 1 - 3 clubs )],
-            &[CLUBS_FLAGS, rank_pattern ! ( 2 )],
+            &[
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                0b0100_0000,
+                0b0000_1000,
+            ],
+            &[rank_pattern!(2), consecutive_ranks ! ( 2 - 3 clubs )],
+            &[
+                rank_pattern!(2),
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                0b0000_0001,
+            ],
+            &[rank_pattern!(2), consecutive_ranks ! ( 1 - 3 clubs )],
+            &[CLUBS_FLAGS, rank_pattern!(2)],
             &[0b0100_0000, 0b0001_0000],
-            &[rank_pattern ! ( 0 ), 0b0100_0000],
+            &[rank_pattern!(0), 0b0100_0000],
             &[0b0100_0000, 0b0001_0000, 0b0000_0010],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 1 clubs ), 0b0100_0000],
-            &[rank_pattern ! ( 2 ), 0b0001_0000],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 2 )],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 1 - 2 clubs ), 0b0001_0000],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 2 ), consecutive_ranks ! ( 0 - 1 clubs )],
+            &[
+                rank_pattern!(0),
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                0b0100_0000,
+            ],
+            &[rank_pattern!(2), 0b0001_0000],
+            &[rank_pattern!(0), rank_pattern!(2)],
+            &[
+                rank_pattern!(2),
+                consecutive_ranks ! ( 1 - 2 clubs ),
+                0b0001_0000,
+            ],
+            &[
+                rank_pattern!(0),
+                rank_pattern!(2),
+                consecutive_ranks ! ( 0 - 1 clubs ),
+            ],
             &[0b0100_0000, 0b0001_0000, 0b0000_1000],
-            &[rank_pattern ! ( 0 ), 0b0100_0000, 0b0000_1000],
+            &[rank_pattern!(0), 0b0100_0000, 0b0000_1000],
             &[0b0100_0000, 0b0001_0000, 0b0000_1000, 0b0000_0010],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 1 clubs ), 0b0100_0000, 0b0000_1000],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 2 - 3 clubs ), 0b0001_0000],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 2 ), consecutive_ranks ! ( 2 - 3 clubs )],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 1 - 3 clubs ), 0b0001_0000],
-            &[CLUBS_FLAGS, rank_pattern ! ( 0 ), rank_pattern ! ( 2 )],
+            &[
+                rank_pattern!(0),
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                0b0100_0000,
+                0b0000_1000,
+            ],
+            &[
+                rank_pattern!(2),
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                0b0001_0000,
+            ],
+            &[
+                rank_pattern!(0),
+                rank_pattern!(2),
+                consecutive_ranks ! ( 2 - 3 clubs ),
+            ],
+            &[
+                rank_pattern!(2),
+                consecutive_ranks ! ( 1 - 3 clubs ),
+                0b0001_0000,
+            ],
+            &[CLUBS_FLAGS, rank_pattern!(0), rank_pattern!(2)],
             &[consecutive_ranks ! ( 1 - 2 diamonds )],
             &[consecutive_ranks ! ( 1 - 2 diamonds ), 0b0000_0001],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 1 - 2 diamonds )],
-            &[consecutive_ranks ! ( 0 - 1 clubs ), consecutive_ranks ! ( 1 - 2 diamonds )],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 1 - 2 diamonds )],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 1 - 2 diamonds ), 0b0000_0001],
-            &[rank_pattern ! ( 1 ), rank_pattern ! ( 2 )],
-            &[consecutive_ranks ! ( 0 - 2 clubs ), consecutive_ranks ! ( 1 - 2 diamonds )],
+            &[rank_pattern!(1), consecutive_ranks ! ( 1 - 2 diamonds )],
+            &[
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                consecutive_ranks ! ( 1 - 2 diamonds ),
+            ],
+            &[rank_pattern!(2), consecutive_ranks ! ( 1 - 2 diamonds )],
+            &[
+                rank_pattern!(2),
+                consecutive_ranks ! ( 1 - 2 diamonds ),
+                0b0000_0001,
+            ],
+            &[rank_pattern!(1), rank_pattern!(2)],
+            &[
+                consecutive_ranks ! ( 0 - 2 clubs ),
+                consecutive_ranks ! ( 1 - 2 diamonds ),
+            ],
             &[consecutive_ranks ! ( 1 - 2 diamonds ), 0b0000_1000],
-            &[consecutive_ranks ! ( 1 - 2 diamonds ), 0b0000_1000, 0b0000_0001],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 1 - 2 diamonds ), 0b0000_1000],
-            &[consecutive_ranks ! ( 0 - 1 clubs ), consecutive_ranks ! ( 1 - 2 diamonds ), 0b0000_1000],
-            &[consecutive_ranks ! ( 2 - 3 clubs ), consecutive_ranks ! ( 1 - 2 diamonds )],
-            &[consecutive_ranks ! ( 2 - 3 clubs ), consecutive_ranks ! ( 1 - 2 diamonds ), 0b0000_0001],
-            &[consecutive_ranks ! ( 1 - 3 clubs ), consecutive_ranks ! ( 1 - 2 diamonds )],
+            &[
+                consecutive_ranks ! ( 1 - 2 diamonds ),
+                0b0000_1000,
+                0b0000_0001,
+            ],
+            &[
+                rank_pattern!(1),
+                consecutive_ranks ! ( 1 - 2 diamonds ),
+                0b0000_1000,
+            ],
+            &[
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                consecutive_ranks ! ( 1 - 2 diamonds ),
+                0b0000_1000,
+            ],
+            &[
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                consecutive_ranks ! ( 1 - 2 diamonds ),
+            ],
+            &[
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                consecutive_ranks ! ( 1 - 2 diamonds ),
+                0b0000_0001,
+            ],
+            &[
+                consecutive_ranks ! ( 1 - 3 clubs ),
+                consecutive_ranks ! ( 1 - 2 diamonds ),
+            ],
             &[CLUBS_FLAGS, consecutive_ranks ! ( 1 - 2 diamonds )],
             &[consecutive_ranks ! ( 0 - 2 diamonds )],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 2 diamonds )],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 0 - 2 diamonds )],
-            &[consecutive_ranks ! ( 0 - 1 clubs ), consecutive_ranks ! ( 0 - 2 diamonds )],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 0 - 1 diamonds )],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 2 ), consecutive_ranks ! ( 0 - 1 diamonds )],
-            &[consecutive_ranks ! ( 1 - 2 clubs ), consecutive_ranks ! ( 0 - 2 diamonds )],
-            &[consecutive_ranks ! ( 0 - 2 clubs ), consecutive_ranks ! ( 0 - 2 diamonds )],
+            &[rank_pattern!(0), consecutive_ranks ! ( 0 - 2 diamonds )],
+            &[rank_pattern!(1), consecutive_ranks ! ( 0 - 2 diamonds )],
+            &[
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                consecutive_ranks ! ( 0 - 2 diamonds ),
+            ],
+            &[rank_pattern!(2), consecutive_ranks ! ( 0 - 1 diamonds )],
+            &[
+                rank_pattern!(0),
+                rank_pattern!(2),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+            ],
+            &[
+                consecutive_ranks ! ( 1 - 2 clubs ),
+                consecutive_ranks ! ( 0 - 2 diamonds ),
+            ],
+            &[
+                consecutive_ranks ! ( 0 - 2 clubs ),
+                consecutive_ranks ! ( 0 - 2 diamonds ),
+            ],
             &[consecutive_ranks ! ( 0 - 2 diamonds ), 0b0000_1000],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 2 diamonds ), 0b0000_1000],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 0 - 2 diamonds ), 0b0000_1000],
-            &[consecutive_ranks ! ( 0 - 1 clubs ), consecutive_ranks ! ( 0 - 2 diamonds ), 0b0000_1000],
-            &[consecutive_ranks ! ( 2 - 3 clubs ), consecutive_ranks ! ( 0 - 2 diamonds )],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 2 - 3 clubs ), consecutive_ranks ! ( 0 - 2 diamonds )],
-            &[consecutive_ranks ! ( 1 - 3 clubs ), consecutive_ranks ! ( 0 - 2 diamonds )],
+            &[
+                rank_pattern!(0),
+                consecutive_ranks ! ( 0 - 2 diamonds ),
+                0b0000_1000,
+            ],
+            &[
+                rank_pattern!(1),
+                consecutive_ranks ! ( 0 - 2 diamonds ),
+                0b0000_1000,
+            ],
+            &[
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                consecutive_ranks ! ( 0 - 2 diamonds ),
+                0b0000_1000,
+            ],
+            &[
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                consecutive_ranks ! ( 0 - 2 diamonds ),
+            ],
+            &[
+                rank_pattern!(0),
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                consecutive_ranks ! ( 0 - 2 diamonds ),
+            ],
+            &[
+                consecutive_ranks ! ( 1 - 3 clubs ),
+                consecutive_ranks ! ( 0 - 2 diamonds ),
+            ],
             &[CLUBS_FLAGS, consecutive_ranks ! ( 0 - 2 diamonds )],
             &[0b1000_0000],
             &[0b1000_0000, 0b0000_0001],
@@ -3834,124 +4009,356 @@ mod tests {
             &[0b1000_0000, 0b0000_0100, 0b0000_0001],
             &[consecutive_ranks ! ( 1 - 2 clubs ), 0b1000_0000],
             &[consecutive_ranks ! ( 0 - 2 clubs ), 0b1000_0000],
-            &[rank_pattern ! ( 3 )],
-            &[rank_pattern ! ( 3 ), 0b0000_0001],
-            &[rank_pattern ! ( 3 ), 0b0000_0010],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 0 - 1 clubs )],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 2 - 3 clubs )],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 2 - 3 clubs ), 0b0000_0001],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 1 - 2 clubs )],
-            &[CLUBS_FLAGS, rank_pattern ! ( 3 )],
+            &[rank_pattern!(3)],
+            &[rank_pattern!(3), 0b0000_0001],
+            &[rank_pattern!(3), 0b0000_0010],
+            &[rank_pattern!(3), consecutive_ranks ! ( 0 - 1 clubs )],
+            &[rank_pattern!(3), consecutive_ranks ! ( 2 - 3 clubs )],
+            &[
+                rank_pattern!(3),
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                0b0000_0001,
+            ],
+            &[rank_pattern!(3), consecutive_ranks ! ( 1 - 2 clubs )],
+            &[CLUBS_FLAGS, rank_pattern!(3)],
             &[0b1000_0000, 0b0001_0000],
-            &[rank_pattern ! ( 0 ), 0b1000_0000],
+            &[rank_pattern!(0), 0b1000_0000],
             &[0b1000_0000, 0b0001_0000, 0b0000_0010],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 1 clubs ), 0b1000_0000],
+            &[
+                rank_pattern!(0),
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                0b1000_0000,
+            ],
             &[0b1000_0000, 0b0001_0000, 0b0000_0100],
-            &[rank_pattern ! ( 0 ), 0b1000_0000, 0b0000_0100],
-            &[consecutive_ranks ! ( 1 - 2 clubs ), 0b1000_0000, 0b0001_0000],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 2 clubs ), 0b1000_0000],
-            &[rank_pattern ! ( 3 ), 0b0001_0000],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 3 )],
-            &[rank_pattern ! ( 3 ), 0b0001_0000, 0b0000_0010],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 3 ), consecutive_ranks ! ( 0 - 1 clubs )],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 2 - 3 clubs ), 0b0001_0000],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 3 ), consecutive_ranks ! ( 2 - 3 clubs )],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 1 - 2 clubs ), 0b0001_0000],
-            &[CLUBS_FLAGS, rank_pattern ! ( 0 ), rank_pattern ! ( 3 )],
+            &[rank_pattern!(0), 0b1000_0000, 0b0000_0100],
+            &[
+                consecutive_ranks ! ( 1 - 2 clubs ),
+                0b1000_0000,
+                0b0001_0000,
+            ],
+            &[
+                rank_pattern!(0),
+                consecutive_ranks ! ( 0 - 2 clubs ),
+                0b1000_0000,
+            ],
+            &[rank_pattern!(3), 0b0001_0000],
+            &[rank_pattern!(0), rank_pattern!(3)],
+            &[rank_pattern!(3), 0b0001_0000, 0b0000_0010],
+            &[
+                rank_pattern!(0),
+                rank_pattern!(3),
+                consecutive_ranks ! ( 0 - 1 clubs ),
+            ],
+            &[
+                rank_pattern!(3),
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                0b0001_0000,
+            ],
+            &[
+                rank_pattern!(0),
+                rank_pattern!(3),
+                consecutive_ranks ! ( 2 - 3 clubs ),
+            ],
+            &[
+                rank_pattern!(3),
+                consecutive_ranks ! ( 1 - 2 clubs ),
+                0b0001_0000,
+            ],
+            &[CLUBS_FLAGS, rank_pattern!(0), rank_pattern!(3)],
             &[0b1000_0000, 0b0010_0000],
             &[0b1000_0000, 0b0010_0000, 0b0000_0001],
-            &[rank_pattern ! ( 1 ), 0b1000_0000],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 0 - 1 clubs ), 0b1000_0000],
+            &[rank_pattern!(1), 0b1000_0000],
+            &[
+                rank_pattern!(1),
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                0b1000_0000,
+            ],
             &[0b1000_0000, 0b0010_0000, 0b0000_0100],
             &[0b1000_0000, 0b0010_0000, 0b0000_0100, 0b0000_0001],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 1 - 2 clubs ), 0b1000_0000],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 0 - 2 clubs ), 0b1000_0000],
-            &[rank_pattern ! ( 3 ), 0b0010_0000],
-            &[rank_pattern ! ( 3 ), 0b0010_0000, 0b0000_0001],
-            &[rank_pattern ! ( 1 ), rank_pattern ! ( 3 )],
-            &[rank_pattern ! ( 1 ), rank_pattern ! ( 3 ), consecutive_ranks ! ( 0 - 1 clubs )],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 2 - 3 clubs ), 0b0010_0000],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 2 - 3 clubs ), 0b0010_0000, 0b0000_0001],
-            &[rank_pattern ! ( 1 ), rank_pattern ! ( 3 ), consecutive_ranks ! ( 1 - 2 clubs )],
-            &[CLUBS_FLAGS, rank_pattern ! ( 1 ), rank_pattern ! ( 3 )],
+            &[
+                rank_pattern!(1),
+                consecutive_ranks ! ( 1 - 2 clubs ),
+                0b1000_0000,
+            ],
+            &[
+                rank_pattern!(1),
+                consecutive_ranks ! ( 0 - 2 clubs ),
+                0b1000_0000,
+            ],
+            &[rank_pattern!(3), 0b0010_0000],
+            &[rank_pattern!(3), 0b0010_0000, 0b0000_0001],
+            &[rank_pattern!(1), rank_pattern!(3)],
+            &[
+                rank_pattern!(1),
+                rank_pattern!(3),
+                consecutive_ranks ! ( 0 - 1 clubs ),
+            ],
+            &[
+                rank_pattern!(3),
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                0b0010_0000,
+            ],
+            &[
+                rank_pattern!(3),
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                0b0010_0000,
+                0b0000_0001,
+            ],
+            &[
+                rank_pattern!(1),
+                rank_pattern!(3),
+                consecutive_ranks ! ( 1 - 2 clubs ),
+            ],
+            &[CLUBS_FLAGS, rank_pattern!(1), rank_pattern!(3)],
             &[consecutive_ranks ! ( 0 - 1 diamonds ), 0b1000_0000],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 1 diamonds ), 0b1000_0000],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 0 - 1 diamonds ), 0b1000_0000],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 1 ), 0b1000_0000],
-            &[consecutive_ranks ! ( 0 - 1 diamonds ), 0b1000_0000, 0b0000_0100],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 1 diamonds ), 0b1000_0000, 0b0000_0100],
-            &[consecutive_ranks ! ( 1 - 2 clubs ), consecutive_ranks ! ( 0 - 1 diamonds ), 0b1000_0000],
-            &[consecutive_ranks ! ( 0 - 2 clubs ), consecutive_ranks ! ( 0 - 1 diamonds ), 0b1000_0000],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 0 - 1 diamonds )],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 3 ), consecutive_ranks ! ( 0 - 1 diamonds )],
-            &[rank_pattern ! ( 1 ), rank_pattern ! ( 3 ), consecutive_ranks ! ( 0 - 1 diamonds )],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 1 ), rank_pattern ! ( 3 )],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 2 - 3 clubs ), consecutive_ranks ! ( 0 - 1 diamonds )],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 3 ), consecutive_ranks ! ( 2 - 3 clubs ), consecutive_ranks ! ( 0 - 1 diamonds )],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 1 - 2 clubs ), consecutive_ranks ! ( 0 - 1 diamonds )],
-            &[CLUBS_FLAGS, rank_pattern ! ( 3 ), consecutive_ranks ! ( 0 - 1 diamonds )],
+            &[
+                rank_pattern!(0),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+                0b1000_0000,
+            ],
+            &[
+                rank_pattern!(1),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+                0b1000_0000,
+            ],
+            &[rank_pattern!(0), rank_pattern!(1), 0b1000_0000],
+            &[
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+                0b1000_0000,
+                0b0000_0100,
+            ],
+            &[
+                rank_pattern!(0),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+                0b1000_0000,
+                0b0000_0100,
+            ],
+            &[
+                consecutive_ranks ! ( 1 - 2 clubs ),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+                0b1000_0000,
+            ],
+            &[
+                consecutive_ranks ! ( 0 - 2 clubs ),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+                0b1000_0000,
+            ],
+            &[rank_pattern!(3), consecutive_ranks ! ( 0 - 1 diamonds )],
+            &[
+                rank_pattern!(0),
+                rank_pattern!(3),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+            ],
+            &[
+                rank_pattern!(1),
+                rank_pattern!(3),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+            ],
+            &[rank_pattern!(0), rank_pattern!(1), rank_pattern!(3)],
+            &[
+                rank_pattern!(3),
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+            ],
+            &[
+                rank_pattern!(0),
+                rank_pattern!(3),
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+            ],
+            &[
+                rank_pattern!(3),
+                consecutive_ranks ! ( 1 - 2 clubs ),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+            ],
+            &[
+                CLUBS_FLAGS,
+                rank_pattern!(3),
+                consecutive_ranks ! ( 0 - 1 diamonds ),
+            ],
             &[consecutive_ranks ! ( 2 - 3 diamonds )],
             &[consecutive_ranks ! ( 2 - 3 diamonds ), 0b0000_0001],
             &[consecutive_ranks ! ( 2 - 3 diamonds ), 0b0000_0010],
-            &[consecutive_ranks ! ( 0 - 1 clubs ), consecutive_ranks ! ( 2 - 3 diamonds )],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 2 - 3 diamonds )],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 2 - 3 diamonds ), 0b0000_0001],
-            &[consecutive_ranks ! ( 1 - 2 clubs ), consecutive_ranks ! ( 2 - 3 diamonds )],
-            &[consecutive_ranks ! ( 0 - 2 clubs ), consecutive_ranks ! ( 2 - 3 diamonds )],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 2 - 3 diamonds )],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 2 - 3 diamonds ), 0b0000_0001],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 2 - 3 diamonds ), 0b0000_0010],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 0 - 1 clubs ), consecutive_ranks ! ( 2 - 3 diamonds )],
-            &[rank_pattern ! ( 2 ), rank_pattern ! ( 3 )],
-            &[rank_pattern ! ( 2 ), rank_pattern ! ( 3 ), 0b0000_0001],
-            &[consecutive_ranks ! ( 1 - 3 clubs ), consecutive_ranks ! ( 2 - 3 diamonds )],
+            &[
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+            ],
+            &[rank_pattern!(2), consecutive_ranks ! ( 2 - 3 diamonds )],
+            &[
+                rank_pattern!(2),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+                0b0000_0001,
+            ],
+            &[
+                consecutive_ranks ! ( 1 - 2 clubs ),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+            ],
+            &[
+                consecutive_ranks ! ( 0 - 2 clubs ),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+            ],
+            &[rank_pattern!(3), consecutive_ranks ! ( 2 - 3 diamonds )],
+            &[
+                rank_pattern!(3),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+                0b0000_0001,
+            ],
+            &[
+                rank_pattern!(3),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+                0b0000_0010,
+            ],
+            &[
+                rank_pattern!(3),
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+            ],
+            &[rank_pattern!(2), rank_pattern!(3)],
+            &[rank_pattern!(2), rank_pattern!(3), 0b0000_0001],
+            &[
+                consecutive_ranks ! ( 1 - 3 clubs ),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+            ],
             &[CLUBS_FLAGS, consecutive_ranks ! ( 2 - 3 diamonds )],
             &[consecutive_ranks ! ( 2 - 3 diamonds ), 0b0001_0000],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 2 - 3 diamonds )],
-            &[consecutive_ranks ! ( 2 - 3 diamonds ), 0b0001_0000, 0b0000_0010],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 1 clubs ), consecutive_ranks ! ( 2 - 3 diamonds )],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 2 - 3 diamonds ), 0b0001_0000],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 2 ), consecutive_ranks ! ( 2 - 3 diamonds )],
-            &[consecutive_ranks ! ( 1 - 2 clubs ), consecutive_ranks ! ( 2 - 3 diamonds ), 0b0001_0000],
-            &[rank_pattern ! ( 0 ), consecutive_ranks ! ( 0 - 2 clubs ), consecutive_ranks ! ( 2 - 3 diamonds )],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 2 - 3 diamonds ), 0b0001_0000],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 3 ), consecutive_ranks ! ( 2 - 3 diamonds )],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 2 - 3 diamonds ), 0b0001_0000, 0b0000_0010],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 3 ), consecutive_ranks ! ( 0 - 1 clubs ), consecutive_ranks ! ( 2 - 3 diamonds )],
-            &[rank_pattern ! ( 2 ), rank_pattern ! ( 3 ), 0b0001_0000],
-            &[rank_pattern ! ( 0 ), rank_pattern ! ( 2 ), rank_pattern ! ( 3 )],
-            &[consecutive_ranks ! ( 1 - 3 clubs ), consecutive_ranks ! ( 2 - 3 diamonds ), 0b0001_0000],
-            &[CLUBS_FLAGS, rank_pattern ! ( 0 ), consecutive_ranks ! ( 2 - 3 diamonds )],
+            &[rank_pattern!(0), consecutive_ranks ! ( 2 - 3 diamonds )],
+            &[
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+                0b0001_0000,
+                0b0000_0010,
+            ],
+            &[
+                rank_pattern!(0),
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+            ],
+            &[
+                rank_pattern!(2),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+                0b0001_0000,
+            ],
+            &[
+                rank_pattern!(0),
+                rank_pattern!(2),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+            ],
+            &[
+                consecutive_ranks ! ( 1 - 2 clubs ),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+                0b0001_0000,
+            ],
+            &[
+                rank_pattern!(0),
+                consecutive_ranks ! ( 0 - 2 clubs ),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+            ],
+            &[
+                rank_pattern!(3),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+                0b0001_0000,
+            ],
+            &[
+                rank_pattern!(0),
+                rank_pattern!(3),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+            ],
+            &[
+                rank_pattern!(3),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+                0b0001_0000,
+                0b0000_0010,
+            ],
+            &[
+                rank_pattern!(0),
+                rank_pattern!(3),
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+            ],
+            &[rank_pattern!(2), rank_pattern!(3), 0b0001_0000],
+            &[rank_pattern!(0), rank_pattern!(2), rank_pattern!(3)],
+            &[
+                consecutive_ranks ! ( 1 - 3 clubs ),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+                0b0001_0000,
+            ],
+            &[
+                CLUBS_FLAGS,
+                rank_pattern!(0),
+                consecutive_ranks ! ( 2 - 3 diamonds ),
+            ],
             &[consecutive_ranks ! ( 1 - 3 diamonds )],
             &[consecutive_ranks ! ( 1 - 3 diamonds ), 0b0000_0001],
-            &[rank_pattern ! ( 1 ), consecutive_ranks ! ( 1 - 3 diamonds )],
-            &[consecutive_ranks ! ( 0 - 1 clubs ), consecutive_ranks ! ( 1 - 3 diamonds )],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 1 - 3 diamonds )],
-            &[rank_pattern ! ( 2 ), consecutive_ranks ! ( 1 - 3 diamonds ), 0b0000_0001],
-            &[consecutive_ranks ! ( 1 - 2 clubs ), consecutive_ranks ! ( 1 - 3 diamonds )],
-            &[consecutive_ranks ! ( 0 - 2 clubs ), consecutive_ranks ! ( 1 - 3 diamonds )],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 1 - 2 diamonds )],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 1 - 2 diamonds ), 0b0000_0001],
-            &[rank_pattern ! ( 1 ), rank_pattern ! ( 3 ), consecutive_ranks ! ( 1 - 2 diamonds )],
-            &[rank_pattern ! ( 3 ), consecutive_ranks ! ( 0 - 1 clubs ), consecutive_ranks ! ( 1 - 2 diamonds )],
-            &[consecutive_ranks ! ( 2 - 3 clubs ), consecutive_ranks ! ( 1 - 3 diamonds )],
-            &[consecutive_ranks ! ( 2 - 3 clubs ), consecutive_ranks ! ( 1 - 3 diamonds ), 0b0000_0001],
-            &[consecutive_ranks ! ( 1 - 3 clubs ), consecutive_ranks ! ( 1 - 3 diamonds )],
+            &[rank_pattern!(1), consecutive_ranks ! ( 1 - 3 diamonds )],
+            &[
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                consecutive_ranks ! ( 1 - 3 diamonds ),
+            ],
+            &[rank_pattern!(2), consecutive_ranks ! ( 1 - 3 diamonds )],
+            &[
+                rank_pattern!(2),
+                consecutive_ranks ! ( 1 - 3 diamonds ),
+                0b0000_0001,
+            ],
+            &[
+                consecutive_ranks ! ( 1 - 2 clubs ),
+                consecutive_ranks ! ( 1 - 3 diamonds ),
+            ],
+            &[
+                consecutive_ranks ! ( 0 - 2 clubs ),
+                consecutive_ranks ! ( 1 - 3 diamonds ),
+            ],
+            &[rank_pattern!(3), consecutive_ranks ! ( 1 - 2 diamonds )],
+            &[
+                rank_pattern!(3),
+                consecutive_ranks ! ( 1 - 2 diamonds ),
+                0b0000_0001,
+            ],
+            &[
+                rank_pattern!(1),
+                rank_pattern!(3),
+                consecutive_ranks ! ( 1 - 2 diamonds ),
+            ],
+            &[
+                rank_pattern!(3),
+                consecutive_ranks ! ( 0 - 1 clubs ),
+                consecutive_ranks ! ( 1 - 2 diamonds ),
+            ],
+            &[
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                consecutive_ranks ! ( 1 - 3 diamonds ),
+            ],
+            &[
+                consecutive_ranks ! ( 2 - 3 clubs ),
+                consecutive_ranks ! ( 1 - 3 diamonds ),
+                0b0000_0001,
+            ],
+            &[
+                consecutive_ranks ! ( 1 - 3 clubs ),
+                consecutive_ranks ! ( 1 - 3 diamonds ),
+            ],
             &[CLUBS_FLAGS, consecutive_ranks ! ( 1 - 3 diamonds )],
             &[DIAMONDS_FLAGS],
-            &[DIAMONDS_FLAGS, rank_pattern ! ( 0 )],
-            &[DIAMONDS_FLAGS, rank_pattern ! ( 1 )],
+            &[DIAMONDS_FLAGS, rank_pattern!(0)],
+            &[DIAMONDS_FLAGS, rank_pattern!(1)],
             &[DIAMONDS_FLAGS, consecutive_ranks ! ( 0 - 1 clubs )],
-            &[DIAMONDS_FLAGS, rank_pattern ! ( 2 )],
-            &[DIAMONDS_FLAGS, rank_pattern ! ( 0 ), rank_pattern ! ( 2 )],
+            &[DIAMONDS_FLAGS, rank_pattern!(2)],
+            &[DIAMONDS_FLAGS, rank_pattern!(0), rank_pattern!(2)],
             &[DIAMONDS_FLAGS, consecutive_ranks ! ( 1 - 2 clubs )],
             &[DIAMONDS_FLAGS, consecutive_ranks ! ( 0 - 2 clubs )],
-            &[DIAMONDS_FLAGS, rank_pattern ! ( 3 )],
-            &[DIAMONDS_FLAGS, rank_pattern ! ( 0 ), rank_pattern ! ( 3 )],
-            &[DIAMONDS_FLAGS, rank_pattern ! ( 1 ), rank_pattern ! ( 3 )],
-            &[DIAMONDS_FLAGS, rank_pattern ! ( 3 ), consecutive_ranks ! ( 0 - 1 clubs )],
+            &[DIAMONDS_FLAGS, rank_pattern!(3)],
+            &[DIAMONDS_FLAGS, rank_pattern!(0), rank_pattern!(3)],
+            &[DIAMONDS_FLAGS, rank_pattern!(1), rank_pattern!(3)],
+            &[
+                DIAMONDS_FLAGS,
+                rank_pattern!(3),
+                consecutive_ranks ! ( 0 - 1 clubs ),
+            ],
             &[DIAMONDS_FLAGS, consecutive_ranks ! ( 2 - 3 clubs )],
-            &[DIAMONDS_FLAGS, rank_pattern ! ( 0 ), consecutive_ranks ! ( 2 - 3 clubs )],
+            &[
+                DIAMONDS_FLAGS,
+                rank_pattern!(0),
+                consecutive_ranks ! ( 2 - 3 clubs ),
+            ],
             &[DIAMONDS_FLAGS, consecutive_ranks ! ( 1 - 3 clubs )],
             &[0b1111_1111],
         ];

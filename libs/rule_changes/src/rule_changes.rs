@@ -174,9 +174,7 @@ pub fn apply_when_played_changes(
 }
 
 fn add_cpu_wild_change(state: &mut GameState, player: PlayerID) {
-    let count = state.rng.gen_range(0, 9);
-    let cards = gen_cards(&mut state.rng, count);
-    let new_wild = CardFlags::from_cards(cards);
+    let new_wild: CardFlags = state.rng.gen();
 
     apply_wild_change(state, new_wild, player);
 }
@@ -239,10 +237,9 @@ pub fn apply_wild_change(state: &mut GameState, new_wild: CardFlags, player: Pla
 fn add_cpu_can_play_graph_change(state: &mut GameState, player: PlayerID) {
     //TODO add single-strongly connected component checking and start
     //generating non-additive changes;
-    let count = state.rng.gen_range(5, DECK_SIZE as usize);
-    let cards = gen_cards(&mut state.rng, count);
+    let cards: CardFlags = state.rng.gen();
 
-    let mut changes = Vec::with_capacity(count);
+    let mut changes = Vec::with_capacity(cards.size() as usize);
     for card in cards {
         let old_edges = state.rules.can_play_graph.get_edges(card);
         let edges = state.rng.gen::<CardFlags>() | old_edges;

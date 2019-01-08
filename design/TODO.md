@@ -2,7 +2,6 @@
 
 ### planned before release
 
-make cpu players generate special card sets most of the time, but still do "full random" occasionally
 
 ____
 
