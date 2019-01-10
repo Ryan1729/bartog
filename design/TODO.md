@@ -2,7 +2,21 @@
 
 ### planned before release
 
+decide whether to start using card flags `to_string` in event log or to keep using uncompacted symbol version of it.
+    either way use that one consistently in the event logs.
 
+start respecting length restriction param in `CardFlags` `Display` impl,and use that when we care about space being restricted and avoid it when we want to see all the cards, like in the event log.
+    may not make sense depending in the outcome of the above TODO
+
+don't say "started new round" multiple times if multiple players win.
+
+### as part of release 
+
+rename js file since "`/js/app.js` is deprecated".
+
+randomize starting player.
+
+check all in-code TODOs to see if anything important is left
 ____
 
 ### after release, which means potentially never
