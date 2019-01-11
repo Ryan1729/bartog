@@ -12,8 +12,6 @@ don't say "started new round" multiple times if multiple players win.
 
 ### as part of release 
 
-rename js file since "`/js/app.js` is deprecated".
-
 randomize starting player.
 
 check all in-code TODOs to see if anything important is left
