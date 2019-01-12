@@ -484,7 +484,6 @@ fn update_when_played(state: &mut GameState) {
             ..
         } if changes.len() > 0 => {
             apply_when_played_changes(state, card_set, changes.clone(), PLAYER_ID);
-
             state.start_new_round();
         }
         _ => {
@@ -500,7 +499,6 @@ fn update_wild(state: &mut GameState) {
         }
         Some(wild) => {
             apply_wild_change(state, wild, PLAYER_ID);
-
             state.start_new_round();
         }
     }
@@ -513,7 +511,6 @@ fn update_can_play_graph(state: &mut GameState) {
         }
         changes => {
             apply_can_play_graph_changes(state, changes, PLAYER_ID);
-
             state.start_new_round();
         }
     }
@@ -660,6 +657,11 @@ pub fn update_and_render(
     if state.round_is_over() {
         if let Some(()) = choose_play_again(state) {
             reset(state);
+            //If the status is a rule selection one, then `start_new_round` should be called after
+            //the rule is chosen.
+            if let Status::InGame = state.status {
+                state.start_new_round();
+            }
         }
     }
 

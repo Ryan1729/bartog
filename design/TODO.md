@@ -8,8 +8,6 @@ decide whether to start using card flags `to_string` in event log or to keep usi
 start respecting length restriction param in `CardFlags` `Display` impl,and use that when we care about space being restricted and avoid it when we want to see all the cards, like in the event log.
     may not make sense depending in the outcome of the above TODO
 
-don't say "started new round" multiple times if multiple players win.
-
 ### as part of release 
 
 randomize starting player.
