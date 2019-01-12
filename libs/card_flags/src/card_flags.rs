@@ -91,6 +91,10 @@ impl CardFlags {
     pub fn size(&self) -> u32 {
         self.0.count_ones()
     }
+    #[inline]
+    pub fn len(&self) -> u32 {
+        self.size()
+    }
 }
 
 impl Iterator for CardFlags {

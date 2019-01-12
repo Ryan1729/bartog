@@ -3,14 +3,14 @@ use game_state::{can_play, event_push, in_game, GameState, Status, RULE_TYPES};
 use rand::Rng;
 
 struct CardFlagsDelta {
-    pub additions: Vec<Card>,
-    pub removals: Vec<Card>,
+    pub additions: CardFlags,
+    pub removals: CardFlags,
 }
 
 impl CardFlagsDelta {
     fn new(previous_flags: CardFlags, new_flags: CardFlags) -> Self {
-        let mut additions = Vec::new();
-        let mut removals = Vec::new();
+        let mut additions = CardFlags::new(0);
+        let mut removals = CardFlags::new(0);
 
         for card in 0..DECK_SIZE {
             let mask = 1 << card as usize;
@@ -18,8 +18,8 @@ impl CardFlagsDelta {
             let n_edge = mask & new_flags.get_bits() != 0;
 
             match (p_edge, n_edge) {
-                (true, false) => removals.push(card),
-                (false, true) => additions.push(card),
+                (true, false) => removals.set_card(card),
+                (false, true) => additions.set_card(card),
                 _ => {}
             }
         }
@@ -193,37 +193,33 @@ pub fn apply_wild_change(state: &mut GameState, new_wild: CardFlags, player: Pla
     match (additions.len() > 0, removals.len() > 0) {
         (false, false) => {}
         (true, false) => {
-            let additions_string = get_card_list(&additions);
             event_push!(
                 state.event_log,
                 pronoun.as_bytes(),
                 b" made the following cards wild: ",
-                additions_string.as_bytes(),
+                additions.to_string().as_bytes(),
                 b".",
             );
         }
         (false, true) => {
-            let removals_string = get_card_list(&removals);
             event_push!(
                 state.event_log,
                 pronoun.as_bytes(),
                 b" made these cards not wild: ",
-                removals_string.as_bytes(),
+                removals.to_string().as_bytes(),
                 b".",
             );
         }
         (true, true) => {
-            let additions_string = get_card_list(&additions);
-            let removals_string = get_card_list(&removals);
             event_push!(
                 state.event_log,
                 pronoun.as_bytes(),
                 b" made the following cards wild: ",
-                additions_string.as_bytes(),
+                additions.to_string().as_bytes(),
                 b". but ",
                 pronoun.as_bytes(),
                 b" also made these cards not wild: ",
-                removals_string.as_bytes(),
+                removals.to_string().as_bytes(),
                 b".",
             );
         }
@@ -285,43 +281,39 @@ pub fn apply_can_play_graph_changes(
             match (additions.len() > 0, removals.len() > 0) {
                 (false, false) => {}
                 (true, false) => {
-                    let additions_string = get_suit_rank_pair_list(&additions);
                     event_push!(
                         state.event_log,
                         pronoun.as_bytes(),
                         b" allowed the ",
                         card_string.as_bytes(),
                         b" to be played on the following cards: ",
-                        additions_string.as_bytes(),
+                        additions.to_string().as_bytes(),
                         b".",
                     );
                 }
                 (false, true) => {
-                    let removals_string = get_suit_rank_pair_list(&removals);
                     event_push!(
                         state.event_log,
                         pronoun.as_bytes(),
                         b" prevented the ",
                         card_string.as_bytes(),
                         b" from being played on the following cards: ",
-                        removals_string.as_bytes(),
+                        removals.to_string().as_bytes(),
                         b".",
                     );
                 }
                 (true, true) => {
-                    let additions_string = get_suit_rank_pair_list(&additions);
-                    let removals_string = get_suit_rank_pair_list(&removals);
                     event_push!(
                         state.event_log,
                         pronoun.as_bytes(),
                         b" allowed the ",
                         card_string.as_bytes(),
                         b" to be played on the following cards: ",
-                        additions_string.as_bytes(),
+                        additions.to_string().as_bytes(),
                         b". but ",
                         pronoun.as_bytes(),
                         b" also prevented it from being played on the following cards: ",
-                        removals_string.as_bytes(),
+                        removals.to_string().as_bytes(),
                         b".",
                     );
                 }

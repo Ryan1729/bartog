@@ -2,9 +2,6 @@
 
 ### planned before release
 
-decide whether to start using card flags `to_string` in event log or to keep using uncompacted symbol version of it.
-    either way use that one consistently in the event logs.
-
 start respecting length restriction param in `CardFlags` `Display` impl,and use that when we care about space being restricted and avoid it when we want to see all the cards, like in the event log.
     may not make sense depending in the outcome of the above TODO
 
@@ -16,6 +13,8 @@ check all in-code TODOs to see if anything important is left
 ____
 
 ### after release, which means potentially never
+
+add alternate flag to `CardFlags` `Display` impl that enables using card symbols instead of words. Use it in the event log, which usually the player wants to skim quickly.
 
 Making additional menus is too annoying to hook things up for. Make some usage code that has the interface  I'd actually want, then make it work
     I want something like `choose!(CardFlags, CardFlags, Vec<in_game::change>)`
