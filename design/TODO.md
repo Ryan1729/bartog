@@ -1,13 +1,10 @@
 ## TODO
 
-### planned before release
-
-start respecting length restriction param in `CardFlags` `Display` impl,and use that when we care about space being restricted and avoid it when we want to see all the cards, like in the event log.
-    may not make sense depending in the outcome of the above TODO
-
 ### as part of release 
 
 randomize starting player.
+
+Have a controls screen that appears when you start the game and disappears when you press any button
 
 check all in-code TODOs to see if anything important is left
 ____

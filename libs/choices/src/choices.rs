@@ -380,9 +380,11 @@ fn in_game_changes_choose_changes(
         b" are "
     };
 
+    let card_set_string = format!("{:64}", choice_state.card_set);
+
     let text = bytes_concat!(
         b"choose what will happen when ",
-        choice_state.card_set.to_string().as_bytes(),
+        card_set_string.as_bytes(),
         verb_to_be,
         b"played.",
     );

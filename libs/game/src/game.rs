@@ -1,4 +1,3 @@
-use animations;
 use choices::{
     choose_can_play_graph, choose_in_game_changes, choose_play_again, choose_rule,
     choose_wild_flags, do_choices,

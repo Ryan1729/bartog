@@ -2470,15 +2470,18 @@ impl fmt::Display for CardFlags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = get_card_set_str(*self);
 
-        if s.len() <= MAX_CARD_FLAGS_LENGTH {
-            write!(f, "{}", s)
+        if let Some(width) = f.width() {
+            if s.len() <= width {
+                write!(f, "{}", s)
+            } else {
+                write!(f, "{}", CARD_FLAGS_DISPLAY_FALLBACK)
+            }
         } else {
-            write!(f, "{}", CARD_FLAGS_DISPLAY_FALLBACK)
+            write!(f, "{}", s)
         }
     }
 }
 
-const MAX_CARD_FLAGS_LENGTH: usize = 64;
 const CARD_FLAGS_DISPLAY_FALLBACK: &'static str = "the selected cards";
 
 use std::borrow::Cow;
