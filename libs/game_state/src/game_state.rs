@@ -488,7 +488,7 @@ impl GameState {
         self.status = Status::InGame;
 
         self.event_log.push_hr();
-        //TODO keep track of round count and change to "started round N"
+        
         self.event_log.push(b"started a new round.");
 
         self.event_log.push_hr();

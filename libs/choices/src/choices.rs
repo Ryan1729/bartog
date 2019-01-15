@@ -626,7 +626,6 @@ enum CancelRuleChoice {
     Yes,
 }
 
-//TODO make can_play and when played act on sets of cards. (4s, spades, etc.)
 fn do_card_flags_sub_choice<C: CardFlagsSubChoice>(
     framebuffer: &mut Framebuffer,
     context: &mut UIContext,
@@ -1284,7 +1283,6 @@ pub fn do_choices(
         Choice::OfBool => do_bool_choice(framebuffer, state, input, speaker),
         Choice::OfUnit => do_unit_choice(framebuffer, state, input, speaker),
         Choice::NoChoice => {
-            //TODO should we unify Status and Choice to avoid this code?
             if let Status::InGame = state.status {
             } else {
                 framebuffer.full_window();

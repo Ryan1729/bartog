@@ -246,12 +246,13 @@ impl AllValues for Change {
         .into_iter()
         .map(Change::CurrentPlayer);
 
-        intial.chain(
-            CardMovement::all_values()
-                .into_iter()
-                .map(Change::CardLocation),
-        )
-        .collect()
+        intial
+            .chain(
+                CardMovement::all_values()
+                    .into_iter()
+                    .map(Change::CardLocation),
+            )
+            .collect()
     }
 }
 
@@ -559,7 +560,6 @@ pub struct CardMovement {
 
 impl AllValues for CardMovement {
     fn all_values() -> Vec<CardMovement> {
-        //TODO We will probably want to cache this. Possibly by putting it into a static constant.
         let sets = RelativePlayerSet::all_non_empty_values();
         let hands = RelativeHand::all_values();
         let selections = CardSelection::all_values();
@@ -579,7 +579,7 @@ impl AllValues for CardMovement {
                         if loops_allowed!() {
                             //allow all combinations
                         } else {
-                            if target == RelativeHand::Player(RelativePlayer::Same){
+                            if target == RelativeHand::Player(RelativePlayer::Same) {
                                 continue;
                             }
 
@@ -602,8 +602,6 @@ impl AllValues for CardMovement {
                 }
             }
         }
-
-
 
         output
     }

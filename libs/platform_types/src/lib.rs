@@ -24,9 +24,6 @@ impl Input {
     }
 }
 
-//TODO more meaningful names for these?
-//TODO clear out unused sound effects
-
 #[derive(Clone, Copy, Debug)]
 pub enum SFX {
     CardPlace,

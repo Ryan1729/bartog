@@ -1,17 +1,33 @@
 ## TODO
 
-### as part of release 
+### before release
 
-randomize starting player.
+keep track of round count and change to "started round N"
+
+in `add_cpu_when_played_change`: choose changes that usually contain the previous changes
+
+### as part of release 
 
 Have a controls screen that appears when you start the game and disappears when you press any button
 
-check all in-code TODOs to see if anything important is left
+randomize starting player.
+
+clear out unused sound effects
+
+remove all logs
 ____
 
 ### after release, which means potentially never
 
+allow choosing a set of cards and changing their can play graphs together
+    Potential difficulties: what do we show as the initial screen given the cards may have non-overlapping graphs?
+    Should we just do the union anyway? We should still allow backing out without making changes.
+
 add alternate flag to `CardFlags` `Display` impl that enables using card symbols instead of words. Use it in the event log, which usually the player wants to skim quickly.
+
+add single-strongly connected component checking to cpu and player can-play graph edits.
+
+start generating non-additive cpu can-play graph changes (requires single-strongly connected component checking)
 
 Making additional menus is too annoying to hook things up for. Make some usage code that has the interface  I'd actually want, then make it work
     I want something like `choose!(CardFlags, CardFlags, Vec<in_game::change>)`
