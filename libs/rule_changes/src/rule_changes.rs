@@ -50,7 +50,13 @@ pub fn reset(state: &mut GameState) {
     let old_log = state.event_log.take();
     let old_rules = state.rules.take();
 
-    *state = GameState::new_with_previous(state.rng.gen(), status, old_rules, old_log);
+    *state = GameState::new_with_previous(
+        state.rng.gen(),
+        status,
+        old_rules,
+        old_log,
+        state.round_count,
+    );
 }
 
 fn add_cpu_rule(state: &mut GameState, player: PlayerID) {

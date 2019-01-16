@@ -2,8 +2,6 @@
 
 ### before release
 
-keep track of round count and change to "started round N"
-
 in `add_cpu_when_played_change`: choose changes that usually contain the previous changes
 
 ### as part of release 

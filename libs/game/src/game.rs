@@ -656,11 +656,6 @@ pub fn update_and_render(
     if state.round_is_over() {
         if let Some(()) = choose_play_again(state) {
             reset(state);
-            //If the status is a rule selection one, then `start_new_round` should be called after
-            //the rule is chosen.
-            if let Status::InGame = state.status {
-                state.start_new_round();
-            }
         }
     }
 

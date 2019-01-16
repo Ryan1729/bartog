@@ -445,14 +445,15 @@ pub struct GameState {
     pub context: UIContext,
     pub rng: XorShiftRng,
     pub event_log: EventLog,
-    pub log_height: u8,
     pub log_heading: LogHeading,
+    pub log_height: u8,
+    pub round_count: u32,
 }
 
 impl GameState {
     pub fn new(seed: [u8; 16]) -> GameState {
         let event_log = EventLog::new();
-        GameState::new_with_previous(seed, d!(), d!(), event_log)
+        GameState::new_with_previous(seed, d!(), d!(), event_log, 0)
     }
 
     pub fn new_with_previous(
@@ -460,6 +461,7 @@ impl GameState {
         status: Status,
         rules: Rules,
         event_log: EventLog,
+        round_count: u32,
     ) -> GameState {
         // We always want to log the seed, if there is a logger available, so use the function,
         // not the macro.
@@ -475,8 +477,9 @@ impl GameState {
             context: UIContext::new(),
             rng,
             event_log,
-            log_height: 0,
             log_heading: LogHeading::Up,
+            log_height: 0,
+            round_count,
         }
     }
 
@@ -488,8 +491,11 @@ impl GameState {
         self.status = Status::InGame;
 
         self.event_log.push_hr();
-        
-        self.event_log.push(b"started a new round.");
+
+        self.round_count += 1;
+
+        self.event_log
+            .push(format!("started round {}.", self.round_count).as_bytes());
 
         self.event_log.push_hr();
     }
