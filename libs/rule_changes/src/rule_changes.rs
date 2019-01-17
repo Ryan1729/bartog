@@ -79,10 +79,27 @@ fn add_cpu_rule(state: &mut GameState, player: PlayerID) {
 
 fn add_cpu_when_played_change(state: &mut GameState, player: PlayerID) {
     let card_flags: CardFlags = state.rng.gen();
-    //TODO choose changes that usually contain the previous changes
-    let count = state.rng.gen_range(1, 3);
-    let mut new_card_changes: Vec<in_game::Change> = Vec::with_capacity(count);
-    for _ in 0..count {
+
+    let mut previous_changes: Vec<_> = state
+        .rules
+        .when_played
+        .get_card_flags_changes(card_flags)
+        .collect();
+
+    let remove_count = state.rng.gen_range(0, 5);
+
+    for _ in 0..remove_count {
+        let len = previous_changes.len();
+        if len == 0 {
+            break;
+        }
+        previous_changes.remove(state.rng.gen_range(0, len));
+    }
+
+    let add_count = state.rng.gen_range(1, 3);
+    let mut new_card_changes: Vec<in_game::Change> = previous_changes;
+    new_card_changes.reserve(add_count);
+    for _ in 0..add_count {
         new_card_changes.push(state.rng.gen());
     }
 

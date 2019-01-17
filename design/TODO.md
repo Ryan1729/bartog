@@ -4,7 +4,13 @@
 
 in `add_cpu_when_played_change`: choose changes that usually contain the previous changes
 
-### as part of release 
+make the wild rule change description include a print out of the current wild cards.
+
+Fix upper case T in "The card was"
+
+If multiple Cpus win, only start the round once.
+
+### as part of release
 
 Have a controls screen that appears when you start the game and disappears when you press any button
 
