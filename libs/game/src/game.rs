@@ -483,7 +483,6 @@ fn update_when_played(state: &mut GameState) {
             ..
         } if changes.len() > 0 => {
             apply_when_played_changes(state, card_set, changes.clone(), PLAYER_ID);
-            state.start_new_round();
         }
         _ => {
             //wait until they choose
@@ -498,7 +497,6 @@ fn update_wild(state: &mut GameState) {
         }
         Some(wild) => {
             apply_wild_change(state, wild, PLAYER_ID);
-            state.start_new_round();
         }
     }
 }
@@ -510,7 +508,6 @@ fn update_can_play_graph(state: &mut GameState) {
         }
         changes => {
             apply_can_play_graph_changes(state, changes, PLAYER_ID);
-            state.start_new_round();
         }
     }
 }

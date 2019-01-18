@@ -2,13 +2,9 @@
 
 ### before release
 
-in `add_cpu_when_played_change`: choose changes that usually contain the previous changes
-
 make the wild rule change description include a print out of the current wild cards.
 
 Fix upper case T in "The card was"
-
-If multiple Cpus win, only start the round once.
 
 ### as part of release
 

@@ -57,6 +57,12 @@ pub fn reset(state: &mut GameState) {
         old_log,
         state.round_count,
     );
+
+    //aka if the player did not win.
+    if let Status::InGame = status {
+        state.start_new_round();
+    }
+    //`start_new_round` should also be called after the player makes a rule
 }
 
 fn add_cpu_rule(state: &mut GameState, player: PlayerID) {
