@@ -2,8 +2,6 @@
 
 ### before release
 
-make the wild rule change description include a print out of the current wild cards.
-
 Fix upper case T in "The card was"
 
 ### as part of release
