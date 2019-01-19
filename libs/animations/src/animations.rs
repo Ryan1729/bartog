@@ -92,16 +92,16 @@ impl ApplyToState for CardMovement {
                 {
                     optionally_event_push!(
                         event_log,
-                        b"The card was the ",
+                        b"the card was the ",
                         get_card_string(card.card).as_bytes(),
                         b".",
                     );
                 }
 
-                if self.target == RelativeHand::Discard || (
-                    self.source == RelativeHand::Discard
-                     && self.selection == CardSelection::NthModuloCount(nu8!(1))
-                )  {
+                if self.target == RelativeHand::Discard
+                    || (self.source == RelativeHand::Discard
+                        && self.selection == CardSelection::NthModuloCount(nu8!(1)))
+                {
                     state.top_wild_declared_as = None;
                 }
 
@@ -152,7 +152,7 @@ impl ApplyToState for RelativePlayer {
 
         optionally_event_push!(
             event_log,
-            b"It becomes ",
+            b"it becomes ",
             new_player_str.as_bytes(),
             b"'s turn"
         );

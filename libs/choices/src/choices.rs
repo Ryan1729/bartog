@@ -106,7 +106,7 @@ pub fn do_bool_choice(
     framebuffer.full_window();
 
     {
-        let question = b"Close this window?";
+        let question = b"close this window?";
 
         let (x, y) = center_line_in_rect(
             question.len() as u8,

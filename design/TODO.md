@@ -2,8 +2,6 @@
 
 ### before release
 
-Fix upper case T in "The card was"
-
 ### as part of release
 
 Have a controls screen that appears when you start the game and disappears when you press any button

@@ -256,7 +256,7 @@ pub fn apply_wild_change(state: &mut GameState, new_wild: CardFlags, player: Pla
 
     event_push!(
         state.event_log,
-        b"So the currently wild cards are: ",
+        b"so the currently wild cards are: ",
         new_wild.to_string().as_bytes(),
         b".",
     );
