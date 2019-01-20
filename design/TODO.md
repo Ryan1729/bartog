@@ -4,8 +4,6 @@
 
 ### as part of release
 
-Have a controls screen that appears when you start the game and disappears when you press any button
-
 randomize starting player.
 
 clear out unused sound effects

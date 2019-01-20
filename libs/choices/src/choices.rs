@@ -28,46 +28,76 @@ pub fn choose_play_again(state: &mut GameState) -> Option<()> {
     }
 }
 
+pub fn choose_to_play(state: &mut GameState) -> Option<()> {
+    match state.choice {
+        Choice::NoChoice => {
+            state.choice = Choice::OfPlaying;
+            None
+        }
+        Choice::Already(Chosen::ToPlay(unit)) => {
+            state.choice = Choice::NoChoice;
+            Some(unit)
+        }
+        _ => None,
+    }
+}
+
+enum UnitChoiceScreen {
+    Rules,
+    Winners,
+}
+
 #[inline]
-pub fn do_unit_choice(
+fn do_unit_choice(
     framebuffer: &mut Framebuffer,
     state: &mut GameState,
     input: Input,
     speaker: &mut Speaker,
+    screen: UnitChoiceScreen,
 ) {
     framebuffer.full_window();
 
-    {
-        let winner_text = reflow(
-            &state.in_game.get_winner_text(),
-            NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as usize,
-        );
+    match screen {
+        UnitChoiceScreen::Winners => {
+            {
+                let winner_text = reflow(
+                    &state.in_game.get_winner_text(),
+                    NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as usize,
+                );
 
-        let dimensions = get_text_dimensions(winner_text.as_bytes());
+                let dimensions = get_text_dimensions(winner_text.as_bytes());
 
-        let (x, _) = center_rect_in_rect(
-            dimensions,
-            (
-                (SPRITE_SIZE, SPRITE_SIZE),
-                (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
-            ),
-        );
+                let (x, _) = center_rect_in_rect(
+                    dimensions,
+                    (
+                        (SPRITE_SIZE, SPRITE_SIZE),
+                        (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+                    ),
+                );
 
-        framebuffer.print(winner_text.as_bytes(), x, SPRITE_SIZE, 6);
-    }
+                framebuffer.print(winner_text.as_bytes(), x, SPRITE_SIZE, 6);
+            }
 
-    {
-        let question = b"would you like to play again?";
+            {
+                let question = b"would you like to play again?";
 
-        let (x, y) = center_line_in_rect(
-            question.len() as u8,
-            (
-                (SPRITE_SIZE, SPRITE_SIZE),
-                (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
-            ),
-        );
+                let (x, y) = center_line_in_rect(
+                    question.len() as u8,
+                    (
+                        (SPRITE_SIZE, SPRITE_SIZE),
+                        (NINE_SLICE_MAX_INTERIOR_SIZE, NINE_SLICE_MAX_INTERIOR_SIZE),
+                    ),
+                );
 
-        framebuffer.print(question, x, y, WHITE_INDEX);
+                framebuffer.print(question, x, y, WHITE_INDEX);
+            }
+        }
+        UnitChoiceScreen::Rules => {
+            print_choice_header(
+                framebuffer,
+                b"use z, x, enter, shift and the arrow keys to play.",
+            );
+        }
     }
 
     let w = SPRITE_SIZE * 5;
@@ -88,7 +118,10 @@ pub fn do_unit_choice(
     };
 
     if do_button(framebuffer, &mut state.context, input, speaker, &spec1) {
-        state.choice = Choice::Already(Chosen::Unit(()));
+        match screen {
+            UnitChoiceScreen::Winners => state.choice = Choice::Already(Chosen::Unit(())),
+            UnitChoiceScreen::Rules => state.choice = Choice::Already(Chosen::ToPlay(())),
+        }
     }
 
     if state.context.hot != 1 {
@@ -333,7 +366,7 @@ pub fn do_in_game_changes_choice(
     }
 }
 
-fn print_choice_header(framebuffer: &mut Framebuffer, text: &[u8]) -> u8 {
+pub fn print_choice_header(framebuffer: &mut Framebuffer, text: &[u8]) -> u8 {
     let mut max_heading_y = heading_y(-1);
 
     let reflowed = bytes_reflow(text, NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS as _);
@@ -1281,7 +1314,16 @@ pub fn do_choices(
         Choice::OfStatus => do_status_choice(framebuffer, state, input, speaker),
         Choice::OfSuit => do_suit_choice(framebuffer, state, input, speaker),
         Choice::OfBool => do_bool_choice(framebuffer, state, input, speaker),
-        Choice::OfUnit => do_unit_choice(framebuffer, state, input, speaker),
+        Choice::OfUnit => do_unit_choice(
+            framebuffer,
+            state,
+            input,
+            speaker,
+            UnitChoiceScreen::Winners,
+        ),
+        Choice::OfPlaying => {
+            do_unit_choice(framebuffer, state, input, speaker, UnitChoiceScreen::Rules)
+        }
         Choice::NoChoice => {
             if let Status::InGame = state.status {
             } else {

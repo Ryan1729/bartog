@@ -56,6 +56,7 @@ pub fn reset(state: &mut GameState) {
         old_rules,
         old_log,
         state.round_count,
+        state.show_rules,
     );
 
     //aka if the player did not win.

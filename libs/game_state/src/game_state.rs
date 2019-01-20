@@ -203,6 +203,7 @@ pub enum Choice {
     OfSuit,
     OfBool,
     OfUnit,
+    OfPlaying,
 }
 
 impl Choice {
@@ -235,6 +236,7 @@ pub enum Chosen {
     Suit(Suit),
     Bool(bool),
     Unit(()),
+    ToPlay(()),
 }
 
 pub enum LogHeading {
@@ -448,12 +450,13 @@ pub struct GameState {
     pub log_heading: LogHeading,
     pub log_height: u8,
     pub round_count: u32,
+    pub show_rules: bool,
 }
 
 impl GameState {
     pub fn new(seed: [u8; 16]) -> GameState {
         let event_log = EventLog::new();
-        GameState::new_with_previous(seed, d!(), d!(), event_log, 0)
+        GameState::new_with_previous(seed, d!(), d!(), event_log, 0, true)
     }
 
     pub fn new_with_previous(
@@ -462,6 +465,7 @@ impl GameState {
         rules: Rules,
         event_log: EventLog,
         round_count: u32,
+        show_rules: bool,
     ) -> GameState {
         // We always want to log the seed, if there is a logger available, so use the function,
         // not the macro.
@@ -480,6 +484,7 @@ impl GameState {
             log_heading: LogHeading::Up,
             log_height: 0,
             round_count,
+            show_rules,
         }
     }
 

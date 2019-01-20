@@ -1,5 +1,5 @@
 use choices::{
-    choose_can_play_graph, choose_in_game_changes, choose_play_again, choose_rule,
+    choose_can_play_graph, choose_in_game_changes, choose_play_again, choose_rule, choose_to_play,
     choose_wild_flags, do_choices,
 };
 use common::{GLOBAL_ERROR_LOGGER, GLOBAL_LOGGER, *};
@@ -642,13 +642,19 @@ pub fn update_and_render(
 ) {
     state.context.frame_init();
 
-    update(state, input, speaker);
-
     invariant_assert_eq!(state.in_game.missing_cards(), vec![0; 0]);
 
     framebuffer.clearTo(GREEN);
 
-    render_in_game(framebuffer, &state.in_game);
+    if state.show_rules {
+        if choose_to_play(state).is_some() {
+            state.show_rules = false;
+        }
+    } else {
+        update(state, input, speaker);
+
+        render_in_game(framebuffer, &state.in_game);
+    }
 
     if state.round_is_over() {
         if let Some(()) = choose_play_again(state) {
