@@ -28,20 +28,6 @@ pub fn choose_play_again(state: &mut GameState) -> Option<()> {
     }
 }
 
-pub fn choose_to_play(state: &mut GameState) -> Option<()> {
-    match state.choice {
-        Choice::NoChoice => {
-            state.choice = Choice::OfPlaying;
-            None
-        }
-        Choice::Already(Chosen::ToPlay(unit)) => {
-            state.choice = Choice::NoChoice;
-            Some(unit)
-        }
-        _ => None,
-    }
-}
-
 enum UnitChoiceScreen {
     Rules,
     Winners,
@@ -120,7 +106,7 @@ fn do_unit_choice(
     if do_button(framebuffer, &mut state.context, input, speaker, &spec1) {
         match screen {
             UnitChoiceScreen::Winners => state.choice = Choice::Already(Chosen::Unit(())),
-            UnitChoiceScreen::Rules => state.choice = Choice::Already(Chosen::ToPlay(())),
+            UnitChoiceScreen::Rules => state.show_rules = false,
         }
     }
 
@@ -129,8 +115,17 @@ fn do_unit_choice(
     }
 }
 
+pub fn show_rules_screen(
+    framebuffer: &mut Framebuffer,
+    state: &mut GameState,
+    input: Input,
+    speaker: &mut Speaker,
+) {
+    do_unit_choice(framebuffer, state, input, speaker, UnitChoiceScreen::Rules)
+}
+
 #[inline]
-pub fn do_bool_choice(
+fn do_bool_choice(
     framebuffer: &mut Framebuffer,
     state: &mut GameState,
     input: Input,
@@ -1321,9 +1316,6 @@ pub fn do_choices(
             speaker,
             UnitChoiceScreen::Winners,
         ),
-        Choice::OfPlaying => {
-            do_unit_choice(framebuffer, state, input, speaker, UnitChoiceScreen::Rules)
-        }
         Choice::NoChoice => {
             if let Status::InGame = state.status {
             } else {

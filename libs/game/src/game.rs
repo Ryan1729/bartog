@@ -1,6 +1,6 @@
 use choices::{
-    choose_can_play_graph, choose_in_game_changes, choose_play_again, choose_rule, choose_to_play,
-    choose_wild_flags, do_choices,
+    choose_can_play_graph, choose_in_game_changes, choose_play_again, choose_rule,
+    choose_wild_flags, do_choices, show_rules_screen,
 };
 use common::{GLOBAL_ERROR_LOGGER, GLOBAL_LOGGER, *};
 use game_state::{in_game, GameState, LogHeading, Rules, Status};
@@ -483,6 +483,7 @@ fn update_when_played(state: &mut GameState) {
             ..
         } if changes.len() > 0 => {
             apply_when_played_changes(state, card_set, changes.clone(), PLAYER_ID);
+            state.start_new_round();
         }
         _ => {
             //wait until they choose
@@ -497,6 +498,7 @@ fn update_wild(state: &mut GameState) {
         }
         Some(wild) => {
             apply_wild_change(state, wild, PLAYER_ID);
+            state.start_new_round();
         }
     }
 }
@@ -508,6 +510,7 @@ fn update_can_play_graph(state: &mut GameState) {
         }
         changes => {
             apply_can_play_graph_changes(state, changes, PLAYER_ID);
+            state.start_new_round();
         }
     }
 }
@@ -646,10 +649,10 @@ pub fn update_and_render(
 
     framebuffer.clearTo(GREEN);
 
-    if state.show_rules {
-        if choose_to_play(state).is_some() {
-            state.show_rules = false;
-        }
+    if state.show_rules || input.pressed_this_frame(Button::Select) {
+        state.show_rules = true;
+        show_rules_screen(framebuffer, state, input, speaker);
+        return;
     } else {
         update(state, input, speaker);
 

@@ -80,8 +80,6 @@ fn add_cpu_rule(state: &mut GameState, player: PlayerID) {
             invariant_violation!("add_cpu_rule generated a non-rule type status");
         }
     }
-
-    state.start_new_round();
 }
 
 fn add_cpu_when_played_change(state: &mut GameState, player: PlayerID) {

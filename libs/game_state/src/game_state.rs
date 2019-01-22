@@ -203,7 +203,6 @@ pub enum Choice {
     OfSuit,
     OfBool,
     OfUnit,
-    OfPlaying,
 }
 
 impl Choice {
@@ -236,7 +235,6 @@ pub enum Chosen {
     Suit(Suit),
     Bool(bool),
     Unit(()),
-    ToPlay(()),
 }
 
 pub enum LogHeading {
