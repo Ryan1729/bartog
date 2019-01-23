@@ -154,12 +154,6 @@
     <audio id="cardSlide1" src="sounds/cardSlide1.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
     <audio id="cardSlide2" src="sounds/cardSlide2.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
     <audio id="cardSlide3" src="sounds/cardSlide3.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
-    <audio id="chipsCollide1" src="sounds/chipsCollide1.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
-    <audio id="chipsCollide2" src="sounds/chipsCollide2.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
-    <audio id="chipsCollide3" src="sounds/chipsCollide3.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
-    <audio id="dieShuffle1" src="sounds/dieShuffle1.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
-    <audio id="dieThrow1" src="sounds/dieThrow1.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
-    <audio id="dieThrow2" src="sounds/dieThrow2.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
     <audio id="spare" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
     <audio id="spare2" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
   <script>
@@ -168,9 +162,6 @@
         buttonPress: [gEBI("buttonPress1"), gEBI("buttonPress2"), gEBI("buttonPress3")],
         cardPlace: [gEBI("cardPlace1"), gEBI("cardPlace2"), gEBI("cardPlace3")],
         cardSlide: [gEBI("cardSlide1"), gEBI("cardSlide2"), gEBI("cardSlide3")],
-        chipsCollide: [gEBI("chipsCollide1"), gEBI("chipsCollide2"), gEBI("chipsCollide3")],
-        dieShuffle: [gEBI("dieShuffle1")],
-        dieThrow: [gEBI("dieThrow1"), gEBI("dieThrow1")],
         spares: [gEBI("spare"), gEBI("spare2")],
     }
     Object.values(sounds).forEach((arr) => arr.forEach(audio => audio.volume = 0.375))

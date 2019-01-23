@@ -28,9 +28,6 @@ impl Input {
 pub enum SFX {
     CardPlace,
     CardSlide,
-    ChipsCollide,
-    DieShuffle,
-    DieThrow,
     ButtonPress,
 }
 
@@ -39,9 +36,6 @@ impl SFX {
         match *self {
             SFX::CardPlace => "cardPlace",
             SFX::CardSlide => "cardSlide",
-            SFX::ChipsCollide => "chipsCollide",
-            SFX::DieShuffle => "dieShuffle",
-            SFX::DieThrow => "dieThrow",
             SFX::ButtonPress => "buttonPress",
         }
     }
