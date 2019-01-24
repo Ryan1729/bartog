@@ -566,7 +566,7 @@ fn update_in_game(state: &mut GameState, input: Input, speaker: &mut Speaker) {
                 take_turn(state, input, speaker);
             }
         } else {
-            animations::advance(state);
+            animations::advance(state, speaker);
 
             move_cursor(&mut state.in_game, input, speaker);
         }

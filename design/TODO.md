@@ -2,8 +2,6 @@
 
 ### before release
 
-Add card slide and card place SFX in appropriate places.
-
 ### as part of release
 
 randomize starting player.

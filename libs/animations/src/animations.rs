@@ -5,6 +5,7 @@ use game_state::{
     in_game::{self, CardMovement, Change, RelativeHand, RelativePlayer},
     optionally_event_push, EventLog, GameState, Rules,
 };
+use platform_types::{Speaker, SFX};
 
 use rand::Rng;
 
@@ -211,7 +212,7 @@ fn log_wild_selection(state: &mut GameState, player: PlayerID) {
     }
 }
 
-pub fn advance(state: &mut GameState) {
+pub fn advance(state: &mut GameState, speaker: &mut Speaker) {
     // I should really be able to use `Vec::retain` here,
     // but that passes a `&T` insteead of a `&mut T`.
 
@@ -235,6 +236,7 @@ pub fn advance(state: &mut GameState) {
             match animation.completion_action {
                 Action::PlayToDiscard => {
                     play_to_discard(state, card);
+                    speaker.request_sfx(SFX::CardPlace);
                 }
                 Action::SelectWild(player_id) => {
                     if is_cpu_player(player_id) {
@@ -259,12 +261,15 @@ pub fn advance(state: &mut GameState) {
                 }
                 Action::MoveToDeck => {
                     state.in_game.deck.push(card);
+                    speaker.request_sfx(SFX::CardSlide);
                 }
                 Action::MoveToDiscard => {
                     state.in_game.discard.push(card);
+                    speaker.request_sfx(SFX::CardPlace);
                 }
                 Action::MoveToHand(player_id) => {
                     state.in_game.get_hand_mut(player_id).push(card);
+                    speaker.request_sfx(SFX::CardSlide);
                 }
             }
         }
