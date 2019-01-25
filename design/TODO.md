@@ -4,8 +4,6 @@
 
 ### as part of release
 
-randomize starting player.
-
 remove all logs
 ____
 

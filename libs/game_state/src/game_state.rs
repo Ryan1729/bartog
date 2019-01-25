@@ -253,9 +253,7 @@ pub enum Status {
 
 impl Default for Status {
     fn default() -> Self {
-        //Status::InGame
-        //For testing
-        Status::RuleSelection
+        Status::InGame
     }
 }
 

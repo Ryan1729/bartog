@@ -61,7 +61,7 @@ impl State {
         ];
 
         //The player whose turn comes after this player will go first.
-        let current_player = cpu_hands.len() as u8 - 1; //rng.gen_range(0, cpu_hands.len() as u8 + 1);
+        let current_player = rng.gen_range(0, cpu_hands.len() as u8 + 1);
 
         invariant_assert!(current_player <= cpu_hands.len() as u8);
 

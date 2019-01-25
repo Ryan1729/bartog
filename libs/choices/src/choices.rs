@@ -81,7 +81,7 @@ fn do_unit_choice(
         UnitChoiceScreen::Rules => {
             print_choice_header(
                 framebuffer,
-                b"use z, x, enter, shift and the arrow keys to play.",
+                b"use z, x, enter, shift and the arrow keys to play. press shift to show this menu again. press enter to show the event log. z and x quickly scroll through the log. use arrows and z to navigate menus and play cards. press x to draw a card. ready to play?",
             );
         }
     }
