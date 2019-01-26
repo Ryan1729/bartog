@@ -567,7 +567,6 @@ impl AllValues for CardMovement {
         let mut output =
             Vec::with_capacity(sets.len() * hands.len() * hands.len() * selections.len());
 
-        log!(sets);
         for selection in selections {
             for &affected in sets.iter() {
                 for &source in hands.iter() {

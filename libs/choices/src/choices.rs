@@ -614,8 +614,6 @@ fn in_game_changes_choose_changes(
     {
         choice_state.marker_y = context.next_hot - right_id_range.start + 1;
     }
-
-    log!(context);
 }
 
 fn inside_range<Idx>(range: &Range<Idx>, x: Idx) -> bool
@@ -1093,7 +1091,6 @@ fn do_scrolling_card_checkbox(
                 },
             );
         }
-        log!(context);
     }
 }
 

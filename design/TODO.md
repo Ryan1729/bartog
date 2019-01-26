@@ -4,7 +4,7 @@
 
 ### as part of release
 
-remove all logs
+make release build and put it in the docs folder and test it works locally
 ____
 
 ### after release, which means potentially never
