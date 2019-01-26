@@ -4,9 +4,11 @@ This is a single player only implementation of Bartog, A.K.A. Bartok, A.K.A. War
 
 See [the included rules folder](./design/rules/README.md) for more info on the game, but essentially it's Crazy Eights but if you win a round, you get to pick a new rule that applies to future rounds.
 
-Because of the extremely flexible nature of Bartog, in some sense this project may never be truly complete. It is presented here in it's current form, and I make no promises about where it will eventually get.
+Because of the extremely flexible nature of Bartog, in some sense this project may never be truly complete. It is presented here in its current form, and I make no promises about where it will eventually get.
 
-I have more or less finished a version of "plain" Crazy Eights, the live version of which can be played [here](https://ryan1729.github.io/bartog/crazy-eights/).
+You can play the live version of the latest release build [here](https://ryan1729.github.io/bartog/bartog/).
+
+I have also made a version of "plain" Crazy Eights, the live version of which can be played [here](https://ryan1729.github.io/bartog/crazy-eights/).
 
 ### Building (using Rust's native WebAssembly backend)
 
