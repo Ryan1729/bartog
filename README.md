@@ -12,9 +12,7 @@ I have also made a version of "plain" Crazy Eights, the live version of which ca
 
 ### Building (using Rust's native WebAssembly backend)
 
-1. Install newest nightly Rust:
-
-       $ curl https://sh.rustup.rs -sSf | sh
+1. Install Rust via [rustup.rs](https://rustup.rs).
 
 2. Install WebAssembly target:
 
@@ -27,6 +25,8 @@ I have also made a version of "plain" Crazy Eights, the live version of which ca
 4. Build it:
 
        $ cargo web start --target=wasm32-unknown-unknown --release
+    Note: As of this writing, a nightly version from 2019 is required. This should be automatically downloaded because of the included `rust-toolchain.toml` file. See [here](https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file) for more details on that file.
+    
 
 5. Visit `http://localhost:8000` with your browser.
 
