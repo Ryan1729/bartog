@@ -13,7 +13,8 @@ path = "libs/web"
 path = "libs/game"
 
 [features]
-default = []
+stdweb_version = ["web/stdweb_version"]
+web_sys_version = ["web/web_sys_version"]
 invariant-checking = ["game/invariant-checking"]
 logging = ["game/logging"]
 

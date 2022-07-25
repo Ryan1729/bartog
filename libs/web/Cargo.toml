@@ -5,14 +5,14 @@ authors = ["Ryan1729 <Ryan1729@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-serde = "1"
-serde_derive = "1"
-bitflags = "0.7"
-stdweb = "0.4"
+stdweb = { version = "0.4", optional = true }
 
 [dependencies.platform_types]
 path = "../platform_types"
 
+[features]
+stdweb_version = ["stdweb"]
+web_sys_version = []
 
 [profile.dev]
 opt-level = 2

@@ -24,7 +24,7 @@ I have also made a version of "plain" Crazy Eights, the live version of which ca
 
 4. Build it:
 
-       $ cargo web start --target=wasm32-unknown-unknown --release
+       $ cargo web start --target=wasm32-unknown-unknown --release --features="stdweb_version"
     Note: As of this writing, a nightly version from 2019 is required. This should be automatically downloaded because of the included `rust-toolchain.toml` file. See [here](https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file) for more details on that file.
     
 
