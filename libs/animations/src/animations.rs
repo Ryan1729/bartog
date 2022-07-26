@@ -7,22 +7,20 @@ use game_state::{
 };
 use platform_types::{Speaker, SFX};
 
-use rand::Rng;
-
 pub trait ApplyToState {
-    fn apply_to_state<R: Rng>(
+    fn apply_to_state(
         &self,
         s: &mut in_game::State,
-        rng: &mut R,
+        rng: &mut Xs,
         e: &mut Option<&mut EventLog>,
     );
 }
 
 impl ApplyToState for Change {
-    fn apply_to_state<R: Rng>(
+    fn apply_to_state(
         &self,
         state: &mut in_game::State,
-        rng: &mut R,
+        rng: &mut Xs,
         event_log: &mut Option<&mut EventLog>,
     ) {
         change_match! {*self, {
@@ -32,10 +30,10 @@ impl ApplyToState for Change {
 }
 
 impl ApplyToState for CardMovement {
-    fn apply_to_state<R: Rng>(
+    fn apply_to_state(
         &self,
         state: &mut in_game::State,
-        rng: &mut R,
+        rng: &mut Xs,
         event_log: &mut Option<&mut EventLog>,
     ) {
         if self.source == self.target {
@@ -142,10 +140,10 @@ fn get_move_action(hand: RelativeHand, player: PlayerID) -> Action {
 }
 
 impl ApplyToState for RelativePlayer {
-    fn apply_to_state<R: Rng>(
+    fn apply_to_state(
         &self,
         state: &mut in_game::State,
-        _rng: &mut R,
+        _rng: &mut Xs,
         event_log: &mut Option<&mut EventLog>,
     ) {
         let new_player = self.apply(state.current_player);
@@ -173,10 +171,10 @@ pub fn play_to_discard(state: &mut GameState, card: Card) {
         card,
     )
 }
-pub fn play_to_discard_parts<R: Rng>(
+pub fn play_to_discard_parts(
     in_game: &mut in_game::State,
     rules: &Rules,
-    rng: &mut R,
+    rng: &mut Xs,
     event_log: &mut Option<&mut EventLog>,
     card: Card,
 ) {
@@ -317,10 +315,10 @@ pub fn add_discard_animation(
     }
 }
 
-pub fn add_draw_animation<R: Rng>(
+pub fn add_draw_animation(
     state: &mut in_game::State,
     event_log: &mut EventLog,
-    rng: &mut R,
+    rng: &mut Xs,
 ) {
     let player = state.current_player;
     if let Some(animation) = get_draw_animation(state, player, event_log, rng) {
@@ -328,11 +326,11 @@ pub fn add_draw_animation<R: Rng>(
     }
 }
 
-fn get_draw_animation<R: Rng>(
+fn get_draw_animation(
     state: &mut in_game::State,
     player: PlayerID,
     event_log: &mut EventLog,
-    rng: &mut R,
+    rng: &mut Xs,
 ) -> Option<CardAnimation> {
     let (spread, len) = {
         let hand = state.get_hand(player);

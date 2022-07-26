@@ -4,9 +4,6 @@ use inner_common::*;
 use std::cmp::{max, min};
 use std::fmt;
 
-use rand::distributions::{Distribution, Standard};
-use rand::Rng;
-
 #[derive(Clone, Copy, Debug)]
 pub enum Spread {
     LTR((u8, u8), u8),
@@ -74,10 +71,10 @@ impl Hand {
         }
     }
 
-    pub fn new_shuffled_deck<R: Rng>(rng: &mut R) -> Self {
+    pub fn new_shuffled_deck(rng: &mut Xs) -> Self {
         let mut deck = fresh_deck();
 
-        rng.shuffle(&mut deck);
+        xs_shuffle(rng, &mut deck);
 
         Hand {
             cards: deck,
@@ -113,16 +110,16 @@ impl Hand {
         }
     }
 
-    pub fn discard_randomly_to<R: Rng>(&mut self, other: &mut Hand, rng: &mut R) {
+    pub fn discard_randomly_to(&mut self, other: &mut Hand, rng: &mut Xs) {
         let len = self.cards.len();
         if len > 0 {
-            let index = rng.gen_range(0, len);
+            let index = xs_range(rng, 0..len as _) as usize;
             other.cards.push(self.cards.remove(index));
         }
     }
 
-    pub fn shuffle<R: Rng>(&mut self, rng: &mut R) {
-        rng.shuffle(&mut self.cards);
+    pub fn shuffle(&mut self, rng: &mut Xs) {
+        xs_shuffle(rng, &mut self.cards);
     }
 
     pub fn len(&self) -> u8 {
@@ -262,7 +259,7 @@ impl AllValues for CardSelection {
     }
 }
 
-implement!(
-        Distribution<CardSelection> for Standard
-        by picking from CardSelection::all_values()
-    );
+//implement!(
+        //Distribution<CardSelection> for Standard
+        //by picking from CardSelection::all_values()
+    //);

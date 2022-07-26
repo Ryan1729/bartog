@@ -1,4 +1,7 @@
 #![allow(dead_code)]
+
+use crate::xs::*;
+
 //in pixels
 pub const SCREEN_WIDTH: usize = 128;
 pub const SCREEN_HEIGHT: usize = 128;
@@ -114,8 +117,7 @@ pub const DECK_SIZE: u8 = RANK_COUNT * SUIT_COUNT;
 
 pub type Card = u8;
 
-use rand::Rng;
-pub fn gen_cards<R: Rng>(rng: &mut R, count: usize) -> Vec<Card> {
+pub fn gen_cards(rng: &mut Xs, count: usize) -> Vec<Card> {
     let mut cards = Vec::with_capacity(count);
     for _ in 0..count {
         cards.push(gen_card(rng));
@@ -123,8 +125,8 @@ pub fn gen_cards<R: Rng>(rng: &mut R, count: usize) -> Vec<Card> {
     cards
 }
 
-pub fn gen_card<R: Rng>(rng: &mut R) -> Card {
-    rng.gen_range(0, DECK_SIZE)
+pub fn gen_card(rng: &mut Xs) -> Card {
+    xs_range(rng, 0..DECK_SIZE as _) as Card
 }
 
 pub fn get_card_string(card: Card) -> String {

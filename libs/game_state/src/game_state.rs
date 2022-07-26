@@ -1,11 +1,10 @@
-use crate::can_play;
-use crate::in_game;
+use crate::{
+    can_play,
+    in_game,
+};
 use common::{bytes_lines, bytes_reflow, slice_until_first_0, CardFlags, UIContext, RANK_FLAGS, *};
 
 use std::collections::VecDeque;
-
-use rand::{SeedableRng, XorShiftRng};
-
 use std::cmp::min;
 
 #[derive(Debug)]
@@ -441,7 +440,7 @@ pub struct GameState {
     pub rules: Rules,
     pub status: Status,
     pub context: UIContext,
-    pub rng: XorShiftRng,
+    pub rng: Xs,
     pub event_log: EventLog,
     pub log_heading: LogHeading,
     pub log_height: u8,
@@ -450,13 +449,13 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new(seed: [u8; 16]) -> GameState {
+    pub fn new(seed: Seed) -> GameState {
         let event_log = EventLog::new();
         GameState::new_with_previous(seed, d!(), d!(), event_log, 0, true)
     }
 
     pub fn new_with_previous(
-        seed: [u8; 16],
+        seed: Seed,
         status: Status,
         rules: Rules,
         event_log: EventLog,
@@ -467,7 +466,7 @@ impl GameState {
         // not the macro.
         log(&format!("{:?}", seed));
 
-        let mut rng = XorShiftRng::from_seed(seed);
+        let mut rng = xs_from_seed(seed);
 
         GameState {
             in_game: in_game::State::new(&mut rng),

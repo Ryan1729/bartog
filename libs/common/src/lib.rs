@@ -85,12 +85,11 @@ macro_rules! implement {
             }
         }
     };
-    (Distribution<$type:ty> for Standard by picking from $all:expr) => {
-        impl Distribution<$type> for Standard {
-            #[inline]
-            fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> $type {
+    (from_rng for $type:ty, by picking from $all:expr) => {
+        impl $type {
+            pub fn from_rng(rng: &mut Xs) -> $type {
                 let all = $all;
-                let i = rng.gen_range(0, all.len());
+                let i = xs_range(rng, 0..all.len() as _) as usize;
                 all[i]
             }
         }
@@ -111,8 +110,6 @@ pub use card_flags::*;
 extern crate features;
 pub use features::*;
 
-extern crate rand;
-
 mod rendering;
 pub use self::rendering::*;
 
@@ -130,3 +127,4 @@ pub use self::hand::*;
 
 mod traits;
 pub use self::traits::*;
+

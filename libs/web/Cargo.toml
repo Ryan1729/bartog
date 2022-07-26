@@ -15,7 +15,11 @@ path = "../platform_types"
 
 [features]
 stdweb_version = ["stdweb"]
-web_sys_version = ["wasm-bindgen", "web-sys", "winit"]
+web_sys_version = [
+    "wasm-bindgen",
+    "web-sys",
+#    "winit"
+]
 
 [profile.dev]
 opt-level = 2

@@ -9,8 +9,6 @@ use rule_changes::{
     apply_can_play_graph_changes, apply_when_played_changes, apply_wild_change, reset,
 };
 
-use rand::Rng;
-
 pub struct BartogState {
     pub game_state: GameState,
     pub framebuffer: Framebuffer,
@@ -251,9 +249,9 @@ fn can_play(state: &in_game::State, rules: &Rules, &card: &Card) -> bool {
 }
 
 //Since this uses rng, calling this in response to repeatable user input allows rng manipulation.
-fn cpu_would_play<R: Rng>(
+fn cpu_would_play(
     state: &mut in_game::State,
-    rng: &mut R,
+    rng: &mut Xs,
     rules: &Rules,
     player_id: PlayerID,
 ) -> Option<u8> {
@@ -277,7 +275,7 @@ fn cpu_would_play<R: Rng>(
     }
 
     //if we make repeated decisions with equal weight, sometimes choose differently.
-    rng.shuffle(&mut indexes_and_hand_deltas);
+    xs_shuffle(rng, &mut indexes_and_hand_deltas);
 
     indexes_and_hand_deltas.sort_by_key(
         |&(_, delta)| -delta, //highest negative delta to end
@@ -286,10 +284,10 @@ fn cpu_would_play<R: Rng>(
     indexes_and_hand_deltas.pop().map(|(i, _)| i as u8)
 }
 
-fn get_hand_delta<R: Rng>(
+fn get_hand_delta(
     state: &in_game::State,
     rules: &Rules,
-    rng: &mut R,
+    rng: &mut Xs,
     player_id: PlayerID,
     card: Card,
 ) -> i8 {
@@ -303,9 +301,9 @@ fn get_hand_delta<R: Rng>(
     new - original
 }
 
-fn get_sim_state<R: Rng>(
+fn get_sim_state(
     state: &in_game::State,
-    rng: &mut R,
+    rng: &mut Xs,
     player_id: PlayerID,
 ) -> in_game::State {
     // We don't want the cpu to cheat, so don't let them see what is really on top of the deck.
@@ -346,7 +344,7 @@ fn get_sim_state<R: Rng>(
         _ => invariant_violation!({}, "get_sim_state called with bad PlayerID"),
     }
 
-    rng.shuffle(&mut pile);
+    xs_shuffle(rng, &mut pile);
 
     let mut output = in_game::State {
         current_player: state.current_player,

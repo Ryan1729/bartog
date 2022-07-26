@@ -2,8 +2,6 @@ use crate::game_state::Rules;
 use common::{ByteStrRowDisplay, RowDisplay, *};
 
 use lazy_static::lazy_static;
-use rand::distributions::{Distribution, Standard};
-use rand::Rng;
 use std::fmt;
 
 #[derive(Clone, Default)]
@@ -35,7 +33,7 @@ macro_rules! dealt_hand {
 }
 
 impl State {
-    pub fn new<R: Rng>(rng: &mut R) -> Self {
+    pub fn new(rng: &mut Xs) -> Self {
         let mut deck = Hand::new_shuffled_deck(rng);
 
         let discard = Hand::new(Spread::stack(DISCARD_X, DISCARD_Y));
@@ -61,7 +59,7 @@ impl State {
         ];
 
         //The player whose turn comes after this player will go first.
-        let current_player = rng.gen_range(0, cpu_hands.len() as u8 + 1);
+        let current_player = xs_range(rng, 0..cpu_hands.len() as u32 + 1) as u8;
 
         invariant_assert!(current_player <= cpu_hands.len() as u8);
 
@@ -83,7 +81,7 @@ impl State {
         }
     }
 
-    pub fn reshuffle_discard<R: Rng>(&mut self, rng: &mut R) -> Option<()> {
+    pub fn reshuffle_discard(&mut self, rng: &mut Xs) -> Option<()> {
         let top_card = self.discard.draw()?;
 
         self.deck.fill(self.discard.drain());
@@ -261,7 +259,7 @@ lazy_static! {
 }
 
 implement!(
-    Distribution<Change> for Standard
+    from_rng for Change,
     by picking from &ALL_CHANGES
 );
 
@@ -381,9 +379,9 @@ impl<'a> ByteStrRowDisplay<'a> for RelativePlayer {
 }
 
 implement!(
-        Distribution<RelativePlayer> for Standard
-        by picking from RelativePlayer::all_values()
-    );
+    from_rng for RelativePlayer,
+    by picking from RelativePlayer::all_values()
+);
 
 //This relies on MAX_PLAYER_ID being 3, and will require structural changes if it changes!
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -546,9 +544,9 @@ fn set_display(player: RelativePlayer, f: &mut fmt::Formatter<'_>) -> fmt::Resul
 }
 
 implement!(
-        Distribution<RelativePlayerSet> for Standard
-        by picking from RelativePlayerSet::all_values()
-    );
+    from_rng for RelativePlayerSet,
+    by picking from RelativePlayerSet::all_values()
+);
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct CardMovement {
@@ -628,17 +626,17 @@ impl fmt::Display for CardMovement {
     }
 }
 
-impl Distribution<CardMovement> for Standard {
-    #[inline]
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> CardMovement {
-        CardMovement {
-            affected: rng.gen(),
-            source: rng.gen(),
-            target: rng.gen(),
-            selection: rng.gen(),
-        }
-    }
-}
+//impl Distribution<CardMovement> for Standard {
+    //#[inline]
+    //fn sample(&self, rng: &mut Xs) -> CardMovement {
+        //CardMovement {
+            //affected: rng.gen(),
+            //source: rng.gen(),
+            //target: rng.gen(),
+            //selection: rng.gen(),
+        //}
+    //}
+//}
 
 #[allow(dead_code)]
 enum RefsMut<'a, T> {
@@ -711,9 +709,9 @@ impl AllValues for RelativeHand {
 }
 
 implement!(
-        Distribution<RelativeHand> for Standard
-        by picking from RelativeHand::all_values()
-    );
+    from_rng for RelativeHand,
+    by picking from RelativeHand::all_values()
+);
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum AbsoluteHand {

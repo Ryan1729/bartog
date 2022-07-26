@@ -1,5 +1,3 @@
-extern crate rand;
-
 extern crate choices;
 
 extern crate common;

@@ -1,6 +1,5 @@
 use common::*;
 use game_state::{can_play, event_push, in_game, GameState, Status, RULE_TYPES};
-use rand::Rng;
 
 struct CardFlagsDelta {
     pub additions: CardFlags,
@@ -51,7 +50,7 @@ pub fn reset(state: &mut GameState) {
     let old_rules = state.rules.take();
 
     *state = GameState::new_with_previous(
-        state.rng.gen(),
+        new_seed(&mut state.rng),
         status,
         old_rules,
         old_log,
@@ -68,7 +67,7 @@ pub fn reset(state: &mut GameState) {
 
 fn add_cpu_rule(state: &mut GameState, player: PlayerID) {
     let rule_type = {
-        let index = state.rng.gen_range(0, RULE_TYPES.len());
+        let index = xs_range(&mut state.rng, 0..RULE_TYPES.len() as _) as usize;
         RULE_TYPES[index]
     };
 
@@ -83,7 +82,7 @@ fn add_cpu_rule(state: &mut GameState, player: PlayerID) {
 }
 
 fn add_cpu_when_played_change(state: &mut GameState, player: PlayerID) {
-    let card_flags: CardFlags = state.rng.gen();
+    let card_flags: CardFlags = CardFlags::from_rng(&mut state.rng);
 
     let mut previous_changes: Vec<_> = state
         .rules
@@ -91,21 +90,23 @@ fn add_cpu_when_played_change(state: &mut GameState, player: PlayerID) {
         .get_card_flags_changes(card_flags)
         .collect();
 
-    let remove_count = state.rng.gen_range(0, 5);
+    let remove_count = xs_range(&mut state.rng, 0..5);
 
     for _ in 0..remove_count {
         let len = previous_changes.len();
         if len == 0 {
             break;
         }
-        previous_changes.remove(state.rng.gen_range(0, len));
+        previous_changes.remove(
+            xs_range(&mut state.rng, 0..len as _) as usize
+        );
     }
 
-    let add_count = state.rng.gen_range(1, 3);
+    let add_count = xs_range(&mut state.rng, 1..3) as usize;
     let mut new_card_changes: Vec<in_game::Change> = previous_changes;
     new_card_changes.reserve(add_count);
     for _ in 0..add_count {
-        new_card_changes.push(state.rng.gen());
+        new_card_changes.push(in_game::Change::from_rng(&mut state.rng));
     }
 
     apply_when_played_changes(state, card_flags, new_card_changes, player);
@@ -202,7 +203,7 @@ pub fn apply_when_played_changes(
 }
 
 fn add_cpu_wild_change(state: &mut GameState, player: PlayerID) {
-    let new_wild: CardFlags = state.rng.gen();
+    let new_wild: CardFlags = CardFlags::from_rng(&mut state.rng);
 
     apply_wild_change(state, new_wild, player);
 }
@@ -268,12 +269,12 @@ pub fn apply_wild_change(state: &mut GameState, new_wild: CardFlags, player: Pla
 fn add_cpu_can_play_graph_change(state: &mut GameState, player: PlayerID) {
     //TODO add single-strongly connected component checking and start
     //generating non-additive changes;
-    let cards: CardFlags = state.rng.gen();
+    let cards: CardFlags = CardFlags::from_rng(&mut state.rng);
 
     let mut changes = Vec::with_capacity(cards.size() as usize);
     for card in cards {
         let old_edges = state.rules.can_play_graph.get_edges(card);
-        let edges = state.rng.gen::<CardFlags>() | old_edges;
+        let edges = CardFlags::from_rng(&mut state.rng) | old_edges;
 
         changes.push(can_play::Change::new(edges, card));
     }
