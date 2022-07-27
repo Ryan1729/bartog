@@ -2,7 +2,7 @@ use platform_types::{State, StateParams};
 
 use winit::{
     event::{Event, WindowEvent},
-    event_loop::EventLoop,
+    event_loop::{EventLoop, ControlFlow},
     window::WindowBuilder,
 };
 
@@ -18,7 +18,7 @@ pub fn run<S: State + 'static>(state: S) {
     let log_list = wasm::create_log_list(&window);
 
     event_loop.run(move |event, _, control_flow| {
-        control_flow.set_wait();
+        *control_flow = ControlFlow::Wait;
 
         #[cfg(target_arch = "wasm32")]
         wasm::log_event(&log_list, &event);
@@ -27,7 +27,7 @@ pub fn run<S: State + 'static>(state: S) {
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 window_id,
-            } if window_id == window.id() => control_flow.set_exit(),
+            } if window_id == window.id() => *control_flow = ControlFlow::Exit,
             Event::MainEventsCleared => {
                 window.request_redraw();
             }
@@ -38,15 +38,7 @@ pub fn run<S: State + 'static>(state: S) {
 
 #[cfg(target_arch = "wasm32")]
 mod wasm {
-    use wasm_bindgen::prelude::*;
     use winit::{event::Event, window::Window};
-
-    #[wasm_bindgen(start)]
-    pub fn run() {
-        console_log::init_with_level(log::Level::Debug).expect("error initializing logger");
-
-        super::run();
-    }
 
     pub fn create_log_list(window: &Window) -> web_sys::Element {
         use winit::platform::web::WindowExtWebSys;
@@ -71,7 +63,7 @@ mod wasm {
     }
 
     pub fn log_event(log_list: &web_sys::Element, event: &Event<()>) {
-        log::debug!("{:?}", event);
+        //log::debug!("{:?}", event);
 
         // Getting access to browser logs requires a lot of setup on mobile devices.
         // So we implement this basic logging system into the page to give developers an easy alternative.
