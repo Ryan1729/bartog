@@ -13,7 +13,8 @@ name = "bartog-stdweb"
 version = "1.0.0"
 dependencies = [
  "game 0.1.0",
- "web 0.1.0",
+ "platform_types 0.1.0",
+ "stdweb 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -245,14 +246,6 @@ dependencies = [
 name = "unicode-xid"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "web"
-version = "0.1.0"
-dependencies = [
- "platform_types 0.1.0",
- "stdweb 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
 [metadata]
 "checksum base-x 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "5cda5d0f5584d129112ad8bf4775b9fd2b9f1e30738c7b1a25314ba2244d6a51"

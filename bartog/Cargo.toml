@@ -16,6 +16,5 @@ path = "../libs/web"
 path = "../libs/game"
 
 [features]
-default = ["web/web_sys_version"]
 invariant-checking = ["game/invariant-checking"]
 logging = ["game/logging"]
