@@ -1,0 +1,21 @@
+[package]
+name = "bartog"
+version = "0.2.0"
+authors = ["Ryan Wiedemann <Ryan1729@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+
+[dependencies.wasm-bindgen]
+version = "0.2.45"
+
+[dependencies.web]
+path = "../libs/web"
+
+[dependencies.game]
+path = "../libs/game"
+
+[features]
+default = ["web/web_sys_version"]
+invariant-checking = ["game/invariant-checking"]
+logging = ["game/logging"]

@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "bartog",
+    "run-wasm"
+]
+exclude = [
+    "bartog-stdweb"
+]

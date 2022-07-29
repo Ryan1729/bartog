@@ -6,10 +6,6 @@ edition = "2018"
 
 [dependencies]
 
-#[dependencies.wasm-bindgen]
-#version = "0.2.45"
-#optional = true
-
 [dependencies.web]
 path = "../libs/web"
 
@@ -18,7 +14,6 @@ path = "../libs/game"
 
 [features]
 stdweb_version = ["web/stdweb_version"]
-#web_sys_version = ["web/web_sys_version", "wasm-bindgen"]
 invariant-checking = ["game/invariant-checking"]
 logging = ["game/logging"]
 
