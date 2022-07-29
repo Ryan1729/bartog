@@ -1,5 +1,5 @@
 [package]
-name = "bartog"
+name = "bartog-stdweb"
 version = "1.0.0"
 authors = ["Ryan Wiedemann <Ryan1729@gmail.com>"]
 edition = "2018"
@@ -11,10 +11,10 @@ edition = "2018"
 #optional = true
 
 [dependencies.web]
-path = "libs/web"
+path = "../libs/web"
 
 [dependencies.game]
-path = "libs/game"
+path = "../libs/game"
 
 [features]
 stdweb_version = ["web/stdweb_version"]

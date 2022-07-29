@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bartog"
+name = "bartog-stdweb"
 version = "1.0.0"
 dependencies = [
  "game 0.1.0",
