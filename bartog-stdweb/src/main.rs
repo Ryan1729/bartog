@@ -295,16 +295,13 @@ impl<S: State> PinkyWeb<S> {
             _ => return false,
         };
 
-        PinkyWeb::set_button_state(self, button, is_pressed);
-        return true;
-    }
-
-    fn set_button_state(&mut self, button: Button::Ty, is_pressed: bool) {
         if is_pressed {
             self.state.press(button);
         } else {
             self.state.release(button);
         }
+
+        true
     }
 }
 
