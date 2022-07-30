@@ -35,6 +35,185 @@ macro_rules! enclose {
     };
 }
 
+fn handle_sound(request: SFX) {
+    let request_string = request.to_sound_key();
+
+    js! {
+        if (soundHandler) {
+            soundHandler(@{request_string});
+        }
+    };
+}
+
+struct PinkyWeb<S: State> {
+    js_ctx: Value,
+    state: S,
+}
+
+impl<S: State> PinkyWeb<S> {
+    fn draw(&mut self) {
+        js! {
+            var h = @{&self.js_ctx};
+            var framebuffer = @{unsafe {
+                UnsafeTypedArray::new( self.state.get_frame_buffer() )
+             }};
+            if( h.gl ) {
+                var data = new Uint8Array(
+                    framebuffer.buffer,
+                    framebuffer.byteOffset,
+                    framebuffer.byteLength
+                );
+                h.gl.texSubImage2D( h.gl.TEXTURE_2D,
+                     0, 0, 0, 128, 128, h.gl.RGBA, h.gl.UNSIGNED_BYTE, data );
+                h.gl.drawElements( h.gl.TRIANGLES, 6, h.gl.UNSIGNED_SHORT, 0 );
+            } else {
+                h.buffer.set( framebuffer );
+                h.ctx.putImageData( h.img, 0, 0 );
+            }
+        }
+    }
+
+    fn on_key(&mut self, key: &str, location: KeyboardLocation, is_pressed: bool) -> bool {
+        let button = match (key, location) {
+            ("Enter", _) => Button::Start,
+            ("Shift", KeyboardLocation::Right) => Button::Select,
+            ("ArrowUp", _) => Button::Up,
+            ("ArrowLeft", _) => Button::Left,
+            ("ArrowRight", _) => Button::Right,
+            ("ArrowDown", _) => Button::Down,
+
+            // On Edge the arrows have different names
+            // for some reason.
+            ("Up", _) => Button::Up,
+            ("Left", _) => Button::Left,
+            ("Right", _) => Button::Right,
+            ("Down", _) => Button::Down,
+
+            ("z", _) => Button::A,
+            ("x", _) => Button::B,
+
+            // For those using the Dvorak layout.
+            (";", _) => Button::A,
+            ("q", _) => Button::B,
+
+            // For those using the Dvorak layout **and** Microsoft Edge.
+            //
+            // On `keydown` we get ";" as we should, but on `keyup`
+            // we get "Unidentified". Seriously Microsoft, how buggy can
+            // your browser be?
+            ("Unidentified", _) if is_pressed == false => Button::A,
+
+            _ => return false,
+        };
+
+        if is_pressed {
+            self.state.press(button);
+        } else {
+            self.state.release(button);
+        }
+
+        true
+    }
+}
+
+#[inline]
+fn logger(s: &str) {
+    console!(log, s);
+}
+
+#[inline]
+fn error_logger(s: &str) {
+    console!(error, s);
+}
+
+fn main_loop<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>>) {
+    web::set_timeout(
+        enclose!( [pinky] move || {
+            let mut pinky = pinky.borrow_mut();
+            pinky.state.frame(handle_sound);
+        }),
+        0,
+    );
+
+    pinky.borrow_mut().draw();
+    web::window().request_animation_frame(move |_| {
+        main_loop(pinky);
+    });
+}
+
+pub fn run<S: State + 'static>(state: S) {
+    let pinky = setup(state);
+
+    web::window().request_animation_frame(move |_| {
+        main_loop(pinky);
+    });
+
+    stdweb::event_loop();
+}
+
+pub fn get_state_params() -> StateParams {
+    let seed = unsafe {
+        let time = Date::new().get_time();
+
+        mem::transmute::<[f64; 2], [u8; 16]>([time, 1.0 / time])
+    };
+    (seed, Some(logger), Some(error_logger))
+}
+
+fn setup<S: State + 'static>(state: S) -> Rc<RefCell<PinkyWeb<S>>> {
+    stdweb::initialize();
+
+    let canvas = web::document().get_element_by_id("viewport").unwrap();
+
+    let gl = setup_webgl(&canvas);
+
+    let js_ctx = js!(
+        var h = {};
+        var canvas = @{canvas};
+
+        h.gl = @{gl};
+
+        if( !h.gl ) {
+            console.log( "No WebGL; using Canvas API" );
+
+            // If the WebGL **is** supported but something else
+            // went wrong the web browser won't let us create
+            // a normal canvas context on a WebGL-ified canvas,
+            // so we recreate a new canvas here to work around that.
+            var new_canvas = canvas.cloneNode( true );
+            canvas.parentNode.replaceChild( new_canvas, canvas );
+            canvas = new_canvas;
+
+            h.ctx = canvas.getContext( "2d" );
+            h.img = h.ctx.createImageData( 128, 128 );
+            h.buffer = new Uint32Array( h.img.data.buffer );
+        }
+
+        return h;
+    );
+
+    let pinky = Rc::new(RefCell::new(PinkyWeb {
+        state,
+        js_ctx,
+    }));
+
+    web::window().add_event_listener(enclose!( [pinky] move |event: KeyDownEvent| {
+        let handled = pinky.borrow_mut().on_key( &event.key(), event.location(), true );
+        if handled {
+            event.prevent_default();
+        }
+    }));
+
+    web::window().add_event_listener(enclose!( [pinky] move |event: KeyUpEvent| {
+        let handled = pinky.borrow_mut().on_key( &event.key(), event.location(), false );
+        if handled {
+            event.prevent_default();
+        }
+    }));
+
+    pinky
+}
+
 // This creates a really basic WebGL context for blitting a single texture.
 // On some web browsers this is faster than using a 2d canvas.
 fn setup_webgl(canvas: &Element) -> Value {
@@ -188,185 +367,4 @@ fn setup_webgl(canvas: &Element) -> Value {
 
         return gl;
     )
-}
-
-fn handle_sound(request: SFX) {
-    let request_string = request.to_sound_key();
-
-    js! {
-        if (soundHandler) {
-            soundHandler(@{request_string});
-        }
-    };
-}
-
-struct PinkyWeb<S: State> {
-    js_ctx: Value,
-    state: S,
-}
-
-impl<S: State> PinkyWeb<S> {
-    fn new(canvas: &Element, state: S) -> Self {
-        let gl = setup_webgl(&canvas);
-
-        let js_ctx = js!(
-            var h = {};
-            var canvas = @{canvas};
-
-            h.gl = @{gl};
-
-            if( !h.gl ) {
-                console.log( "No WebGL; using Canvas API" );
-
-                // If the WebGL **is** supported but something else
-                // went wrong the web browser won't let us create
-                // a normal canvas context on a WebGL-ified canvas,
-                // so we recreate a new canvas here to work around that.
-                var new_canvas = canvas.cloneNode( true );
-                canvas.parentNode.replaceChild( new_canvas, canvas );
-                canvas = new_canvas;
-
-                h.ctx = canvas.getContext( "2d" );
-                h.img = h.ctx.createImageData( 128, 128 );
-                h.buffer = new Uint32Array( h.img.data.buffer );
-            }
-
-            return h;
-        );
-
-        PinkyWeb {
-            state,
-            js_ctx,
-        }
-    }
-
-    fn draw(&mut self) {
-        js! {
-            var h = @{&self.js_ctx};
-            var framebuffer = @{unsafe {
-                UnsafeTypedArray::new( self.state.get_frame_buffer() )
-             }};
-            if( h.gl ) {
-                var data = new Uint8Array(
-                    framebuffer.buffer,
-                    framebuffer.byteOffset,
-                    framebuffer.byteLength
-                );
-                h.gl.texSubImage2D( h.gl.TEXTURE_2D,
-                     0, 0, 0, 128, 128, h.gl.RGBA, h.gl.UNSIGNED_BYTE, data );
-                h.gl.drawElements( h.gl.TRIANGLES, 6, h.gl.UNSIGNED_SHORT, 0 );
-            } else {
-                h.buffer.set( framebuffer );
-                h.ctx.putImageData( h.img, 0, 0 );
-            }
-        }
-    }
-
-    fn on_key(&mut self, key: &str, location: KeyboardLocation, is_pressed: bool) -> bool {
-        let button = match (key, location) {
-            ("Enter", _) => Button::Start,
-            ("Shift", KeyboardLocation::Right) => Button::Select,
-            ("ArrowUp", _) => Button::Up,
-            ("ArrowLeft", _) => Button::Left,
-            ("ArrowRight", _) => Button::Right,
-            ("ArrowDown", _) => Button::Down,
-
-            // On Edge the arrows have different names
-            // for some reason.
-            ("Up", _) => Button::Up,
-            ("Left", _) => Button::Left,
-            ("Right", _) => Button::Right,
-            ("Down", _) => Button::Down,
-
-            ("z", _) => Button::A,
-            ("x", _) => Button::B,
-
-            // For those using the Dvorak layout.
-            (";", _) => Button::A,
-            ("q", _) => Button::B,
-
-            // For those using the Dvorak layout **and** Microsoft Edge.
-            //
-            // On `keydown` we get ";" as we should, but on `keyup`
-            // we get "Unidentified". Seriously Microsoft, how buggy can
-            // your browser be?
-            ("Unidentified", _) if is_pressed == false => Button::A,
-
-            _ => return false,
-        };
-
-        if is_pressed {
-            self.state.press(button);
-        } else {
-            self.state.release(button);
-        }
-
-        true
-    }
-}
-
-#[inline]
-fn logger(s: &str) {
-    console!(log, s);
-}
-
-#[inline]
-fn error_logger(s: &str) {
-    console!(error, s);
-}
-
-fn main_loop<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>>) {
-    web::set_timeout(
-        enclose!( [pinky] move || {
-            let mut pinky = pinky.borrow_mut();
-            pinky.state.frame(handle_sound);
-        }),
-        0,
-    );
-
-    pinky.borrow_mut().draw();
-    web::window().request_animation_frame(move |_| {
-        main_loop(pinky);
-    });
-}
-
-fn support_input<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>>) {
-    web::window().add_event_listener(enclose!( [pinky] move |event: KeyDownEvent| {
-        let handled = pinky.borrow_mut().on_key( &event.key(), event.location(), true );
-        if handled {
-            event.prevent_default();
-        }
-    }));
-
-    web::window().add_event_listener(enclose!( [pinky] move |event: KeyUpEvent| {
-        let handled = pinky.borrow_mut().on_key( &event.key(), event.location(), false );
-        if handled {
-            event.prevent_default();
-        }
-    }));
-}
-
-pub fn run<S: State + 'static>(state: S) {
-    stdweb::initialize();
-
-    let canvas = web::document().get_element_by_id("viewport").unwrap();
-
-    let pinky = Rc::new(RefCell::new(PinkyWeb::new(&canvas, state)));
-
-    support_input(pinky.clone());
-
-    web::window().request_animation_frame(move |_| {
-        main_loop(pinky);
-    });
-
-    stdweb::event_loop();
-}
-
-pub fn get_state_params() -> StateParams {
-    let seed = unsafe {
-        let time = Date::new().get_time();
-
-        mem::transmute::<[f64; 2], [u8; 16]>([time, 1.0 / time])
-    };
-    (seed, Some(logger), Some(error_logger))
 }
