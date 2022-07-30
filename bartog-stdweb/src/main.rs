@@ -330,15 +330,6 @@ fn main_loop<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>>) {
     });
 }
 
-fn show(id: &str) {
-    web::document()
-        .get_element_by_id(id)
-        .unwrap()
-        .class_list()
-        .remove("hidden")
-        .unwrap();
-}
-
 fn hide(id: &str) {
     web::document()
         .get_element_by_id(id)
@@ -375,8 +366,6 @@ pub fn run<S: State + 'static>(state: S) {
 
     hide("loading");
     hide("error");
-
-    show("viewport");
 
     web::window().request_animation_frame(move |_| {
         main_loop(pinky);
