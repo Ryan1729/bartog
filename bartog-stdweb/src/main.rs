@@ -201,7 +201,6 @@ fn handle_sound(request: SFX) {
 }
 
 struct PinkyWeb<S: State> {
-    paused: bool,
     busy: bool,
     js_ctx: Value,
     state: S,
@@ -238,45 +237,33 @@ impl<S: State> PinkyWeb<S> {
 
         PinkyWeb {
             state,
-            paused: true,
             busy: false,
             js_ctx,
         }
     }
 
     fn unpause(&mut self) {
-        self.paused = false;
         self.busy = false;
     }
 
-    fn run_a_bit(&mut self) {
-        if self.paused {
-            return
-        }
-
-        self.state.frame(handle_sound);
-    }
-
     fn draw(&mut self) {
-        if !self.paused {
-            js! {
-                var h = @{&self.js_ctx};
-                var framebuffer = @{unsafe {
-                    UnsafeTypedArray::new( self.state.get_frame_buffer() )
-                 }};
-                if( h.gl ) {
-                    var data = new Uint8Array(
-                        framebuffer.buffer,
-                        framebuffer.byteOffset,
-                        framebuffer.byteLength
-                    );
-                    h.gl.texSubImage2D( h.gl.TEXTURE_2D,
-                         0, 0, 0, 128, 128, h.gl.RGBA, h.gl.UNSIGNED_BYTE, data );
-                    h.gl.drawElements( h.gl.TRIANGLES, 6, h.gl.UNSIGNED_SHORT, 0 );
-                } else {
-                    h.buffer.set( framebuffer );
-                    h.ctx.putImageData( h.img, 0, 0 );
-                }
+        js! {
+            var h = @{&self.js_ctx};
+            var framebuffer = @{unsafe {
+                UnsafeTypedArray::new( self.state.get_frame_buffer() )
+             }};
+            if( h.gl ) {
+                var data = new Uint8Array(
+                    framebuffer.buffer,
+                    framebuffer.byteOffset,
+                    framebuffer.byteLength
+                );
+                h.gl.texSubImage2D( h.gl.TEXTURE_2D,
+                     0, 0, 0, 128, 128, h.gl.RGBA, h.gl.UNSIGNED_BYTE, data );
+                h.gl.drawElements( h.gl.TRIANGLES, 6, h.gl.UNSIGNED_SHORT, 0 );
+            } else {
+                h.buffer.set( framebuffer );
+                h.ctx.putImageData( h.img, 0, 0 );
             }
         }
     }
@@ -343,7 +330,7 @@ fn emulate_for_a_single_frame<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>
     web::set_timeout(
         enclose!( [pinky] move || {
             let mut pinky = pinky.borrow_mut();
-            pinky.run_a_bit();
+            pinky.state.frame(handle_sound);
             pinky.busy = false;
         }),
         0,
