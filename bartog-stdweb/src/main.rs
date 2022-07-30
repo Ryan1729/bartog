@@ -19,7 +19,7 @@ use std::mem;
 extern crate stdweb;
 
 use stdweb::web::event::{IEvent, IKeyboardEvent, KeyDownEvent, KeyUpEvent, KeyboardLocation};
-use stdweb::web::{self, Element, IElement, IEventTarget, INonElementParentNode};
+use stdweb::web::{self, Element, IEventTarget, INonElementParentNode};
 use stdweb::web::Date;
 
 use stdweb::{UnsafeTypedArray, Value};
@@ -330,15 +330,6 @@ fn main_loop<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>>) {
     });
 }
 
-fn hide(id: &str) {
-    web::document()
-        .get_element_by_id(id)
-        .unwrap()
-        .class_list()
-        .add("hidden")
-        .unwrap();
-}
-
 fn support_input<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>>) {
     web::window().add_event_listener(enclose!( [pinky] move |event: KeyDownEvent| {
         let handled = pinky.borrow_mut().on_key( &event.key(), event.location(), true );
@@ -363,9 +354,6 @@ pub fn run<S: State + 'static>(state: S) {
     let pinky = Rc::new(RefCell::new(PinkyWeb::new(&canvas, state)));
 
     support_input(pinky.clone());
-
-    hide("loading");
-    hide("error");
 
     web::window().request_animation_frame(move |_| {
         main_loop(pinky);
