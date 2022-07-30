@@ -201,7 +201,6 @@ fn handle_sound(request: SFX) {
 }
 
 struct PinkyWeb<S: State> {
-    busy: bool,
     js_ctx: Value,
     state: S,
 }
@@ -237,13 +236,8 @@ impl<S: State> PinkyWeb<S> {
 
         PinkyWeb {
             state,
-            busy: false,
             js_ctx,
         }
-    }
-
-    fn unpause(&mut self) {
-        self.busy = false;
     }
 
     fn draw(&mut self) {
@@ -324,25 +318,14 @@ fn error_logger(s: &str) {
     console!(error, s);
 }
 
-fn emulate_for_a_single_frame<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>>) {
-    pinky.borrow_mut().busy = true;
-
+fn main_loop<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>>) {
     web::set_timeout(
         enclose!( [pinky] move || {
             let mut pinky = pinky.borrow_mut();
             pinky.state.frame(handle_sound);
-            pinky.busy = false;
         }),
         0,
     );
-}
-
-fn main_loop<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>>) {
-    // If we're running too slowly there is no point
-    // in queueing up even more work.
-    if !pinky.borrow_mut().busy {
-        emulate_for_a_single_frame(pinky.clone());
-    }
 
     pinky.borrow_mut().draw();
     web::window().request_animation_frame(move |_| {
@@ -395,8 +378,6 @@ pub fn run<S: State + 'static>(state: S) {
 
     hide("loading");
     hide("error");
-
-    pinky.borrow_mut().unpause();
 
     show("viewport");
 
