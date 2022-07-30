@@ -12,7 +12,6 @@ fn main() {
 }
 
 use std::cell::RefCell;
-use std::error::Error;
 use std::rc::Rc;
 use std::mem;
 
@@ -20,7 +19,7 @@ use std::mem;
 extern crate stdweb;
 
 use stdweb::web::event::{IEvent, IKeyboardEvent, KeyDownEvent, KeyUpEvent, KeyboardLocation};
-use stdweb::web::{self, Element, IElement, IEventTarget, INode, INonElementParentNode};
+use stdweb::web::{self, Element, IElement, IEventTarget, INonElementParentNode};
 use stdweb::web::Date;
 
 use stdweb::{UnsafeTypedArray, Value};
@@ -245,42 +244,17 @@ impl<S: State> PinkyWeb<S> {
         }
     }
 
-    fn pause(&mut self) {
-        self.paused = true;
-    }
-
     fn unpause(&mut self) {
         self.paused = false;
         self.busy = false;
     }
 
-    fn execute_cycle(&mut self) -> Result<bool, Box<dyn Error>> {
-        self.state.frame(handle_sound);
-
-        Ok(true)
-    }
-
-    fn run_a_bit(&mut self) -> Result<bool, Box<dyn Error>> {
+    fn run_a_bit(&mut self) {
         if self.paused {
-            return Ok(true);
+            return
         }
 
-        loop {
-            let result = self.execute_cycle();
-            match result {
-                Ok(processed_whole_frame) => {
-                    if processed_whole_frame {
-                        return Ok(true);
-                    }
-                }
-                Err(error) => {
-                    js!( console.error( "Execution error:", @{format!( "{}", error )} ); );
-                    self.pause();
-
-                    return Err(error);
-                }
-            }
-        }
+        self.state.frame(handle_sound);
     }
 
     fn draw(&mut self) {
@@ -368,21 +342,10 @@ fn emulate_for_a_single_frame<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>
 
     web::set_timeout(
         enclose!( [pinky] move || {
-        let finished_frame = match pinky.borrow_mut().run_a_bit() {
-            Ok( result ) => result,
-            Err( error ) => {
-                handle_error( error );
-                return;
-            }
-        };
-
-        if !finished_frame {
-            web::set_timeout( move || { emulate_for_a_single_frame( pinky ); }, 0 );
-        } else {
             let mut pinky = pinky.borrow_mut();
+            pinky.run_a_bit();
             pinky.busy = false;
-        }
-    }),
+        }),
         0,
     );
 }
@@ -432,17 +395,6 @@ fn support_input<S: State + 'static>(pinky: Rc<RefCell<PinkyWeb<S>>>) {
             event.prevent_default();
         }
     }));
-}
-
-fn handle_error<E: Into<Box<dyn Error>>>(error: E) {
-    let error_message = format!("{}", error.into());
-    web::document()
-        .get_element_by_id("error-description")
-        .unwrap()
-        .set_text_content(&error_message);
-
-    hide("viewport");
-    show("error");
 }
 
 pub fn run<S: State + 'static>(state: S) {
