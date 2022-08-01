@@ -10,7 +10,7 @@ pub fn run<S: State + 'static>(state: S) {
     let event_loop = EventLoop::new();
 
     let window = WindowBuilder::new()
-        .with_title("A fantastic window!")
+        .with_title("bartog")
         .build(&event_loop)
         .unwrap();
 

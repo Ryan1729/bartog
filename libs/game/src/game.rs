@@ -4,7 +4,8 @@ use choices::{
 };
 use common::{GLOBAL_ERROR_LOGGER, GLOBAL_LOGGER, *};
 use game_state::{in_game, GameState, LogHeading, Rules, Status};
-use platform_types::{Button, Input, Speaker, State, StateParams, SFX};
+use platform_types::{Button, Input, Speaker, State, SFX};
+pub use platform_types::StateParams;
 use rule_changes::{
     apply_can_play_graph_changes, apply_when_played_changes, apply_wild_change, reset,
 };
@@ -24,6 +25,8 @@ impl BartogState {
             GLOBAL_LOGGER = logger;
             GLOBAL_ERROR_LOGGER = error_logger;
         }
+
+        features::log!(seed);
 
         BartogState {
             game_state: GameState::new(seed),
