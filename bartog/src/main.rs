@@ -23,9 +23,9 @@ fn main() {
     run(params);
 }
 
-#[cfg(feature = "wasm32")]
+#[cfg(target_arch = "wasm32")]
 mod wasm {
-    use wasm_bindgen::wasm_bindgen;
+    use wasm_bindgen::prelude::wasm_bindgen;
 
     #[wasm_bindgen(start)]
     pub fn run() {

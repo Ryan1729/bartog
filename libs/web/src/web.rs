@@ -81,5 +81,22 @@ mod wasm {
 }
 
 pub fn get_state_params() -> StateParams {
-    StateParams::default()
+    use web_sys::console;
+
+    fn logger(s: &str) {
+        console::log_1(&s.into());
+    }
+
+    fn error_logger(s: &str) {
+        console::error_1(&s.into());
+    }
+
+    // TODO actual random seed.
+    let seed = <_>::default();
+
+    (
+        seed,
+        Some(logger),
+        Some(error_logger),
+    )
 }
