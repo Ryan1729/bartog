@@ -80,6 +80,7 @@ mod wasm {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
 pub fn get_state_params() -> StateParams {
     use web_sys::console;
 
@@ -89,6 +90,26 @@ pub fn get_state_params() -> StateParams {
 
     fn error_logger(s: &str) {
         console::error_1(&s.into());
+    }
+
+    // TODO actual random seed.
+    let seed = <_>::default();
+
+    (
+        seed,
+        Some(logger),
+        Some(error_logger),
+    )
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn get_state_params() -> StateParams {
+    fn logger(s: &str) {
+        println!("{}", s);
+    }
+
+    fn error_logger(s: &str) {
+        eprintln!("{}", s);
     }
 
     // TODO actual random seed.
