@@ -10,7 +10,11 @@ You can play the live version of the latest release build [here](https://ryan172
 
 I have also made a version of "plain" Crazy Eights, the live version of which can be played [here](https://ryan1729.github.io/bartog/crazy-eights/).
 
-### Building (using Rust's native WebAssembly backend)
+### Lecacy version
+
+Note: As of this writing, the legacy version is the only one that has full (any) game functionality. The full functionality is expected to be added to the new version soon, and when that happens, the legacy version is expected to be removed, making the "Running locally" version the only way.
+
+#### Building (using Rust's native WebAssembly backend)
 
 1. Install Rust via [rustup.rs](https://rustup.rs).
 
@@ -32,18 +36,33 @@ I have also made a version of "plain" Crazy Eights, the live version of which ca
 
 [cargo-web]: https://github.com/koute/cargo-web
 
-### Building for other backends
+#### Building for other backends
 
 Replace `--target=wasm32-unknown-unknown` with `--target=wasm32-unknown-emscripten` or `--target=asmjs-unknown-emscripten`
 if you want to build it using another backend. You will also have to install the
 corresponding targets with `rustup` - `wasm32-unknown-emscripten` and `asmjs-unknown-emscripten`
 respectively.
 
+
+### Running locally
+
+1. Install Rust via [rustup.rs](https://rustup.rs).
+
+2. Install WebAssembly target:
+```
+rustup target add wasm32-unknown-unknown
+```
+3. Start dev server:
+```
+cargo run-wasm bartog
+```
+4. Visit `http://localhost:8000` with your browser.
+
 ### Extra build options
 
-These extra features can be adding then to the cargo `features` flag. For instance to activate `invariant-checking` and `logging` you can run:
+These extra features can be adding then to the run-wasm `features` flag. Note that these are comma separated. For instance to activate `invariant-checking` and `logging` you can run:
 ```
-       $ cargo web start --target=wasm32-unknown-unknown --release --features="invariant-checking logging"
+cargo run-wasm bartog --features invariant-checking,logging
 ```
 
 ##### invariant-checking
@@ -53,6 +72,7 @@ With this enabled violations of certain invariants will result in a panic. These
 ##### logging
 
 Enables additional generic logging. With this feature disabled, the logs will be compiled out, leaving no appreciable run-time overhead.
+
 ___
 
 licensed under Apache or MIT, at your option.
