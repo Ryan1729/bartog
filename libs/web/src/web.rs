@@ -23,6 +23,9 @@ pub fn run<S: State + 'static>(state: S) {
     #[cfg(target_arch = "wasm32")]
     let log_list = wasm::create_log_list(&window);
 
+    #[cfg(target_arch = "wasm32")]
+    wasm::style_canvas();
+
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
 
@@ -50,22 +53,41 @@ mod wasm {
         platform::web::WindowBuilderExtWebSys,
     };
     use wasm_bindgen::JsCast;
+    use web_sys::HtmlCanvasElement;
 
-    pub fn set_canvas(builder: WindowBuilder) -> WindowBuilder {
+    pub fn set_canvas(mut builder: WindowBuilder) -> WindowBuilder {
+        let canvas = get_canvas();
+
+        let size = winit::dpi::Size::Physical(
+            winit::dpi::PhysicalSize::new(128, 128),
+        );
+
+        builder
+            .with_canvas(Some(canvas))
+            .with_inner_size(size)
+    }
+
+    pub fn style_canvas() {
+        let style = get_canvas().style();
+
+        // Set a background color for the canvas to make it easier to tell
+        // where the canvas is for debugging purposes.
+        style.set_css_text("background-color: crimson;");
+
+        // Remove the winit default applied CSS properties.
+        style.remove_property("width").unwrap();
+        style.remove_property("height").unwrap();
+    }
+
+    fn get_canvas() -> HtmlCanvasElement {
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
-        let canvas = document.get_element_by_id("viewport").unwrap();
 
-        let canvas: web_sys::HtmlCanvasElement = canvas
+        document.get_element_by_id("viewport")
+            .unwrap()
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .map_err(|_| ())
-            .unwrap();
-
-        // Set a background color for the canvas to make it easier to tell 
-        // where the canvas is for debugging purposes.
-        canvas.style().set_css_text("background-color: crimson;");
-
-        builder.with_canvas(Some(canvas))
+            .unwrap()
     }
 
     pub fn create_log_list(window: &Window) -> web_sys::Element {
