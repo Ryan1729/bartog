@@ -58,8 +58,14 @@ mod wasm {
     pub fn set_canvas(mut builder: WindowBuilder) -> WindowBuilder {
         let canvas = get_canvas();
 
+        // Use the width and height specifed in the HTML as the single source of 
+        // truth.
+
         let size = winit::dpi::Size::Physical(
-            winit::dpi::PhysicalSize::new(128, 128),
+            winit::dpi::PhysicalSize::new(
+                canvas.width(),
+                canvas.height(),
+            ),
         );
 
         builder
