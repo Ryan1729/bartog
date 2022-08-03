@@ -1619,6 +1619,7 @@ name = "web"
 version = "0.1.0"
 dependencies = [
  "platform_types",
+ "wasm-bindgen",
  "web-sys",
  "winit",
 ]

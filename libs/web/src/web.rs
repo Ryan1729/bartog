@@ -7,10 +7,16 @@ use winit::{
 };
 
 pub fn run<S: State + 'static>(state: S) {
+
     let event_loop = EventLoop::new();
 
-    let window = WindowBuilder::new()
-        .with_title("bartog")
+    let builder = WindowBuilder::new()
+        .with_title("bartog");
+
+    #[cfg(target_arch = "wasm32")]
+    let builder = wasm::set_canvas(builder);
+
+    let window = builder
         .build(&event_loop)
         .unwrap();
 
@@ -38,20 +44,34 @@ pub fn run<S: State + 'static>(state: S) {
 
 #[cfg(target_arch = "wasm32")]
 mod wasm {
-    use winit::{event::Event, window::Window};
+    use winit::{
+        event::Event,
+        window::{Window, WindowBuilder},
+        platform::web::WindowBuilderExtWebSys,
+    };
+    use wasm_bindgen::JsCast;
+
+    pub fn set_canvas(builder: WindowBuilder) -> WindowBuilder {
+        let window = web_sys::window().unwrap();
+        let document = window.document().unwrap();
+        let canvas = document.get_element_by_id("viewport").unwrap();
+
+        let canvas: web_sys::HtmlCanvasElement = canvas
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .map_err(|_| ())
+            .unwrap();
+
+        // Set a background color for the canvas to make it easier to tell 
+        // where the canvas is for debugging purposes.
+        canvas.style().set_css_text("background-color: crimson;");
+
+        builder.with_canvas(Some(canvas))
+    }
 
     pub fn create_log_list(window: &Window) -> web_sys::Element {
-        use winit::platform::web::WindowExtWebSys;
-
-        let canvas = window.canvas();
-
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
         let body = document.body().unwrap();
-
-        // Set a background color for the canvas to make it easier to tell the where the canvas is for debugging purposes.
-        canvas.style().set_css_text("background-color: crimson;");
-        body.append_child(&canvas).unwrap();
 
         let log_header = document.create_element("h2").unwrap();
         log_header.set_text_content(Some("Event Log"));
