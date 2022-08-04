@@ -153,6 +153,7 @@ mod wasm {
 
 #[cfg(target_arch = "wasm32")]
 pub fn get_state_params() -> StateParams {
+    use js_sys::Date;
     use web_sys::console;
 
     fn logger(s: &str) {
@@ -163,8 +164,11 @@ pub fn get_state_params() -> StateParams {
         console::error_1(&s.into());
     }
 
-    // TODO actual random seed.
-    let seed = <_>::default();
+    let time = Date::new_0().get_time();
+
+    let seed = unsafe {
+        core::mem::transmute::<[f64; 2], [u8; 16]>([time, 1.0 / time])
+    };
 
     (
         seed,
@@ -183,8 +187,14 @@ pub fn get_state_params() -> StateParams {
         eprintln!("{}", s);
     }
 
-    // TODO actual random seed.
-    let seed = <_>::default();
+    let time = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+    let time = time.as_secs_f64();
+
+    let seed = unsafe {
+        core::mem::transmute::<[f64; 2], [u8; 16]>([time, 1.0 / time])
+    };
 
     (
         seed,
