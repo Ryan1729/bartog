@@ -1,5 +1,7 @@
 use platform_types::{State, StateParams};
 
+use softbuffer::GraphicsContext;
+
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{EventLoop, ControlFlow},
@@ -26,13 +28,38 @@ pub fn run<S: State + 'static>(state: S) {
     #[cfg(target_arch = "wasm32")]
     wasm::style_canvas();
 
+    let mut graphics_context = unsafe { GraphicsContext::new(window) }.unwrap();
+
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
 
         #[cfg(target_arch = "wasm32")]
         wasm::log_event(&log_list, &event);
 
+        let window = graphics_context.window();
+
         match event {
+            Event::RedrawRequested(window_id) if window_id == window.id() => {
+                let (width, height) = {
+                    let size = window.inner_size();
+                    (size.width, size.height)
+                };
+                let buffer = (0..((width * height) as usize))
+                    .map(|index| {
+                        let y = index / (width as usize);
+                        let x = index % (width as usize);
+                        let red = x % 255;
+                        let green = y % 255;
+                        let blue = (x * y) % 255;
+
+                        let color = blue | (green << 8) | (red << 16);
+
+                        color as u32
+                    })
+                    .collect::<Vec<_>>();
+
+                graphics_context.set_buffer(&buffer, width as u16, height as u16);
+            }
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 window_id,
@@ -55,7 +82,7 @@ mod wasm {
     use wasm_bindgen::JsCast;
     use web_sys::HtmlCanvasElement;
 
-    pub fn set_canvas(mut builder: WindowBuilder) -> WindowBuilder {
+    pub fn set_canvas(builder: WindowBuilder) -> WindowBuilder {
         let canvas = get_canvas();
 
         // Use the width and height specifed in the HTML as the single source of 
@@ -75,10 +102,6 @@ mod wasm {
 
     pub fn style_canvas() {
         let style = get_canvas().style();
-
-        // Set a background color for the canvas to make it easier to tell
-        // where the canvas is for debugging purposes.
-        style.set_css_text("background-color: crimson;");
 
         // Remove the winit default applied CSS properties.
         style.remove_property("width").unwrap();

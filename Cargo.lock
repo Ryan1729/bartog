@@ -1241,6 +1241,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "softbuffer"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d1cda310762a78016e0bcb9f21b9f6c288858941eab798443c19d8f77cde68a"
+dependencies = [
+ "cocoa",
+ "core-graphics 0.22.3",
+ "foreign-types",
+ "objc",
+ "raw-window-handle",
+ "tempfile",
+ "thiserror",
+ "wasm-bindgen",
+ "wayland-client",
+ "web-sys",
+ "winapi",
+ "x11-dl",
+]
+
+[[package]]
 name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1619,6 +1639,7 @@ name = "web"
 version = "0.1.0"
 dependencies = [
  "platform_types",
+ "softbuffer",
  "wasm-bindgen",
  "web-sys",
  "winit",
