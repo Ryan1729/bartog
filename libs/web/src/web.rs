@@ -1,4 +1,4 @@
-use platform_types::{State, StateParams};
+use platform_types::{State, StateParams, SFX};
 
 use softbuffer::GraphicsContext;
 
@@ -64,6 +64,12 @@ pub fn run<S: State + 'static>(state: S) {
                 event: WindowEvent::CloseRequested,
                 window_id,
             } if window_id == window.id() => *control_flow = ControlFlow::Exit,
+            Event::WindowEvent {
+                event: WindowEvent::KeyboardInput{ .. },
+                window_id,
+            } if window_id == window.id() => {
+                handle_sound(SFX::ButtonPress);
+            }
             Event::MainEventsCleared => {
                 window.request_redraw();
             }
@@ -201,4 +207,32 @@ pub fn get_state_params() -> StateParams {
         Some(logger),
         Some(error_logger),
     )
+}
+
+#[cfg(target_arch = "wasm32")]
+fn handle_sound(request: SFX) {
+    fn inner(request: SFX) -> Option<()> {
+        use js_sys::{Function, Reflect};
+        use wasm_bindgen::{JsCast, JsValue};
+
+        let window = web_sys::window()?;
+    
+        let handler = Reflect::get(
+            &window,
+            &JsValue::from_str("soundHandler")
+        ).ok()?.dyn_into::<Function>().ok()?;
+
+        let request_string = request.to_sound_key();
+
+        handler.call1(&JsValue::undefined(), &request_string.into());
+
+        Some(())
+    }
+
+    let _ignored = inner(request);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn handle_sound(request: SFX) {
+    // TODO actually handle sound
 }
