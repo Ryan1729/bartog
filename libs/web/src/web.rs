@@ -224,7 +224,7 @@ fn handle_sound(request: SFX) {
 
         let request_string = request.to_sound_key();
 
-        handler.call1(&JsValue::undefined(), &request_string.into());
+        handler.call1(&JsValue::undefined(), &request_string.into()).ok()?;
 
         Some(())
     }
