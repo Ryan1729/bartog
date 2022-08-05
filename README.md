@@ -54,7 +54,7 @@ rustup target add wasm32-unknown-unknown
 ```
 3. Start dev server:
 ```
-cargo run-wasm bartog
+cargo run-wasm bartog --release
 ```
 4. Visit `http://localhost:8000` with your browser.
 
@@ -62,7 +62,7 @@ cargo run-wasm bartog
 
 These extra features can be adding then to the run-wasm `features` flag. Note that these are comma separated. For instance to activate `invariant-checking` and `logging` you can run:
 ```
-cargo run-wasm bartog --features invariant-checking,logging
+cargo run-wasm bartog --release --features invariant-checking,logging
 ```
 
 ##### invariant-checking

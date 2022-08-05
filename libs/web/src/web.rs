@@ -8,7 +8,7 @@ use winit::{
     window::WindowBuilder,
 };
 
-pub fn run<S: State + 'static>(state: S) {
+pub fn run<S: State + 'static>(mut state: S) {
 
     let event_loop = EventLoop::new();
 
@@ -40,25 +40,20 @@ pub fn run<S: State + 'static>(state: S) {
 
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
+                state.frame(handle_sound);
+
+                let frame_buffer = state.get_frame_buffer();
+
                 let (width, height) = {
                     let size = window.inner_size();
                     (size.width, size.height)
                 };
-                let buffer = (0..((width * height) as usize))
-                    .map(|index| {
-                        let y = index / (width as usize);
-                        let x = index % (width as usize);
-                        let red = x % 255;
-                        let green = y % 255;
-                        let blue = (x * y) % 255;
 
-                        let color = blue | (green << 8) | (red << 16);
-
-                        color as u32
-                    })
-                    .collect::<Vec<_>>();
-
-                graphics_context.set_buffer(&buffer, width as u16, height as u16);
+                graphics_context.set_buffer(
+                    frame_buffer,
+                    128,//width as u16,
+                    128,//height as u16
+                );
             }
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
