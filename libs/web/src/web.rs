@@ -9,7 +9,6 @@ use winit::{
 };
 
 pub fn run<S: State + 'static>(mut state: S) {
-
     let event_loop = EventLoop::new();
 
     let builder = WindowBuilder::new()
@@ -60,10 +59,43 @@ pub fn run<S: State + 'static>(mut state: S) {
                 window_id,
             } if window_id == window.id() => *control_flow = ControlFlow::Exit,
             Event::WindowEvent {
-                event: WindowEvent::KeyboardInput{ .. },
+                event: WindowEvent::KeyboardInput{
+                    input: winit::event::KeyboardInput {
+                        state: element_state,
+                        virtual_keycode: Some(keycode),
+                        ..
+                    },
+                    ..
+                },
                 window_id,
             } if window_id == window.id() => {
+                use winit::event::{ElementState, VirtualKeyCode as VK};
+                use platform_types::Button;
+
                 handle_sound(SFX::ButtonPress);
+
+                let button = match keycode {
+                    VK::Return => Button::Start,
+                    VK::RShift => Button::Select,
+                    VK::Up => Button::Up,
+                    VK::Left => Button::Left,
+                    VK::Right => Button::Right,
+                    VK::Down => Button::Down,
+
+                    VK::Z => Button::A,
+                    VK::X => Button::B,
+
+                    // For those using the Dvorak layout.
+                    VK::Semicolon => Button::A,
+                    VK::Q => Button::B,
+
+                    _ => return,
+                };
+
+                match element_state {
+                    ElementState::Pressed => state.press(button),
+                    ElementState::Released => state.release(button),
+                }
             }
             Event::MainEventsCleared => {
                 window.request_redraw();
@@ -86,7 +118,7 @@ mod wasm {
     pub fn set_canvas(builder: WindowBuilder) -> WindowBuilder {
         let canvas = get_canvas();
 
-        // Use the width and height specifed in the HTML as the single source of 
+        // Use the width and height specifed in the HTML as the single source of
         // truth.
 
         let size = winit::dpi::Size::Physical(
@@ -211,7 +243,7 @@ fn handle_sound(request: SFX) {
         use wasm_bindgen::{JsCast, JsValue};
 
         let window = web_sys::window()?;
-    
+
         let handler = Reflect::get(
             &window,
             &JsValue::from_str("soundHandler")
