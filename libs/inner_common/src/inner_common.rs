@@ -9,6 +9,8 @@ pub const SCREEN_LENGTH: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
 
 // reportedly colourblind friendly colours
 // https://twitter.com/ea_accessible/status/968595073184092160
+
+#[cfg(feature = "abgr")]
 pub mod colours {
     pub const BLUE: u32 = 0xFFE15233;
     pub const GREEN: u32 = 0xFF6EB030;
@@ -19,8 +21,86 @@ pub mod colours {
     pub const GRAY: u32 = GREY;
     pub const WHITE: u32 = 0xFFEEEEEE;
     pub const BLACK: u32 = 0xFF222222;
+
+    pub const R_FLAG: u32 = 0x000000FF;
+    pub const G_FLAG: u32 = 0x0000FF00;
+    pub const B_FLAG: u32 = 0x00FF0000;
+
+    pub const R_SHIFT: u32 = 0;
+    pub const G_SHIFT: u32 = 8;
+    pub const B_SHIFT: u32 = 16;
 }
+
+#[cfg(feature = "argb")]
+pub mod colours {
+    pub const BLUE: u32 = 0xFF3352E1;
+    pub const GREEN: u32 = 0xFF30B06E;
+    pub const RED: u32 = 0xFFDE4949;
+    pub const YELLOW: u32 = 0xFFFFB937;
+    pub const PURPLE: u32 = 0xFF533354;
+    pub const GREY: u32 = 0xFF5A7D8B;
+    pub const GRAY: u32 = GREY;
+    pub const WHITE: u32 = 0xFFEEEEEE;
+    pub const BLACK: u32 = 0xFF222222;
+
+    pub const R_FLAG: u32 = 0x00FF0000;
+    pub const G_FLAG: u32 = 0x0000FF00;
+    pub const B_FLAG: u32 = 0x000000FF;
+
+    pub const R_SHIFT: u32 = 16;
+    pub const G_SHIFT: u32 = 8;
+    pub const B_SHIFT: u32 = 0;
+}
+
+#[cfg(any(
+    not(any(feature = "abgr", feature = "argb")),
+    all(feature = "abgr", feature = "argb")
+))]
+compile_error!{"Exactly one of \"abgr\" or \"argb\" must be selected!"}
+
 pub use crate::inner_common::colours::*;
+
+#[macro_export]
+macro_rules! red {
+    ($colour:expr) => {
+        ($colour & R_FLAG) >> R_SHIFT
+    };
+}
+
+#[macro_export]
+macro_rules! green {
+    ($colour:expr) => {
+        ($colour & G_FLAG) >> G_SHIFT
+    };
+}
+
+#[macro_export]
+macro_rules! blue {
+    ($colour:expr) => {
+        ($colour & B_FLAG) >> B_SHIFT
+    };
+}
+
+#[macro_export]
+macro_rules! alpha {
+    ($colour:expr) => {
+        ($colour & 0xFF_00_00_00) >> 24
+    };
+}
+
+#[macro_export]
+macro_rules! colour {
+    ($red:expr, $green:expr, $blue:expr, $alpha:expr) => {
+        ($red << R_SHIFT) | ($green << G_SHIFT) | ($blue << B_SHIFT) | $alpha << 24
+    };
+}
+
+#[macro_export]
+macro_rules! set_alpha {
+    ($colour:expr, $alpha:expr) => {
+        ($colour & 0x00_FF_FF_FF) | $alpha << 24
+    };
+}
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub const PALETTE: [u32; 8] = [

@@ -11,3 +11,8 @@ path = "../features"
 
 [dev-dependencies]
 quickcheck = "0.6"
+
+[features]
+abgr = []
+argb = []
+

@@ -22,6 +22,10 @@ path = "../inner_common"
 quickcheck = "0.6"
 criterion = "0.2"
 
+[features]
+abgr = ["inner_common/abgr"]
+argb = ["inner_common/argb"]
+
 [[bench]]
 name = "text_benchmark"
 harness = false

@@ -29,5 +29,7 @@ path = "../rule_changes"
 
 [features]
 default = []
+abgr = ["common/abgr"]
+argb = ["common/argb"]
 invariant-checking = ["features/invariant-checking"]
 logging = ["features/logging"]

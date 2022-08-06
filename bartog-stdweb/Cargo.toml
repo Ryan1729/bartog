@@ -16,6 +16,7 @@ path = "../libs/game"
 path = "../libs/platform_types"
 
 [features]
+default = ["game/abgr"]
 invariant-checking = ["game/invariant-checking"]
 logging = ["game/logging"]
 

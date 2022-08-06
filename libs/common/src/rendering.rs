@@ -14,42 +14,6 @@ impl PartialEq for Framebuffer {
 
 impl Eq for Framebuffer {}
 
-macro_rules! red {
-    ($colour:expr) => {
-        $colour & 0xFF
-    };
-}
-
-macro_rules! green {
-    ($colour:expr) => {
-        ($colour & 0xFF_00) >> 8
-    };
-}
-
-macro_rules! blue {
-    ($colour:expr) => {
-        ($colour & 0xFF_00_00) >> 16
-    };
-}
-
-macro_rules! alpha {
-    ($colour:expr) => {
-        ($colour & 0xFF_00_00_00) >> 24
-    };
-}
-
-macro_rules! colour {
-    ($red:expr, $green:expr, $blue:expr, $alpha:expr) => {
-        $red | $green << 8 | $blue << 16 | $alpha << 24
-    };
-}
-
-macro_rules! set_alpha {
-    ($colour:expr, $alpha:expr) => {
-        ($colour & 0x00_FF_FF_FF) | $alpha << 24
-    };
-}
-
 #[allow(dead_code)]
 impl Framebuffer {
     pub fn new() -> Framebuffer {
