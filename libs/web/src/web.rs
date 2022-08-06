@@ -30,8 +30,6 @@ pub fn run<S: State + 'static>(mut state: S) {
     let mut graphics_context = unsafe { GraphicsContext::new(window) }.unwrap();
 
     event_loop.run(move |event, _, control_flow| {
-        *control_flow = ControlFlow::Wait;
-
         #[cfg(target_arch = "wasm32")]
         wasm::log_event(&log_list, &event);
 
@@ -71,8 +69,6 @@ pub fn run<S: State + 'static>(mut state: S) {
             } if window_id == window.id() => {
                 use winit::event::{ElementState, VirtualKeyCode as VK};
                 use platform_types::Button;
-
-                handle_sound(SFX::ButtonPress);
 
                 let button = match keycode {
                     VK::Return => Button::Start,
