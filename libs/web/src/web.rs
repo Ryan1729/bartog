@@ -71,12 +71,12 @@ pub fn run<S: State + 'static>(mut state: S) {
                 use platform_types::Button;
 
                 let button = match keycode {
-                    VK::Return => Button::Start,
-                    VK::RShift => Button::Select,
-                    VK::Up => Button::Up,
-                    VK::Left => Button::Left,
-                    VK::Right => Button::Right,
-                    VK::Down => Button::Down,
+                    VK::Return => Button::START,
+                    VK::RShift => Button::SELECT,
+                    VK::Up => Button::UP,
+                    VK::Left => Button::LEFT,
+                    VK::Right => Button::RIGHT,
+                    VK::Down => Button::DOWN,
 
                     VK::Z => Button::A,
                     VK::X => Button::B,

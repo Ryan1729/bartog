@@ -179,7 +179,7 @@ fn do_bool_choice(
 
     if state.context.hot != 1 && state.context.hot != 2 {
         state.context.set_next_hot(1);
-    } else if input.pressed_this_frame(Button::Left) || input.pressed_this_frame(Button::Right) {
+    } else if input.pressed_this_frame(Button::LEFT) || input.pressed_this_frame(Button::RIGHT) {
         if state.context.hot == 1 {
             state.context.set_next_hot(2);
         } else {
@@ -256,10 +256,10 @@ pub fn do_suit_choice(
 
     if state.context.hot == 0 || state.context.hot > 4 {
         state.context.set_next_hot(1);
-    } else if input.pressed_this_frame(Button::Up) {
+    } else if input.pressed_this_frame(Button::UP) {
         let next = dice_mod(state.context.hot - 1, 4);
         state.context.set_next_hot(next);
-    } else if input.pressed_this_frame(Button::Down) {
+    } else if input.pressed_this_frame(Button::DOWN) {
         let next = dice_mod(state.context.hot + 1, 4);
         state.context.set_next_hot(next);
     }
@@ -551,23 +551,23 @@ fn in_game_changes_choose_changes(
     if context.hot < FIRST_SCROLL_START_ID as _ {
         if context.hot == 0 {
             context.set_next_hot(1);
-        } else if input.pressed_this_frame(Button::Up) {
+        } else if input.pressed_this_frame(Button::UP) {
             context.set_next_hot(SECOND_SCROLL_START_ID + SCROLL_ROW_COUNT - 1);
-        } else if input.pressed_this_frame(Button::Down) {
+        } else if input.pressed_this_frame(Button::DOWN) {
             context.set_next_hot(SECOND_SCROLL_START_ID);
-        } else if input.pressed_this_frame(Button::Right) || input.pressed_this_frame(Button::Left)
+        } else if input.pressed_this_frame(Button::RIGHT) || input.pressed_this_frame(Button::LEFT)
         {
             context.set_next_hot(FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT - 1);
         }
     } else {
-        if input.pressed_this_frame(Button::Right) {
+        if input.pressed_this_frame(Button::RIGHT) {
             let next = if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
                 context.hot + SCROLL_ROW_COUNT
             } else {
                 1
             };
             context.set_next_hot(next);
-        } else if input.pressed_this_frame(Button::Left) {
+        } else if input.pressed_this_frame(Button::LEFT) {
             let next = if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
                 1
             } else {
@@ -588,9 +588,9 @@ fn in_game_changes_choose_changes(
                     },
                 );
             } else {
-                if input.pressed_this_frame(Button::Up) {
+                if input.pressed_this_frame(Button::UP) {
                     choice_state.marker_y = choice_state.marker_y.saturating_sub(1);
-                } else if input.pressed_this_frame(Button::Down) {
+                } else if input.pressed_this_frame(Button::DOWN) {
                     choice_state.marker_y = min(choice_state.marker_y + 1, SCROLL_ROW_COUNT);
                 }
 
@@ -892,19 +892,19 @@ fn do_card_sub_choice<C: CardSubChoice>(
     if context.hot < FIRST_SCROLL_ID as _ {
         if context.hot == 0 {
             context.set_next_hot(1);
-        } else if input.pressed_this_frame(Button::Up) {
+        } else if input.pressed_this_frame(Button::UP) {
             let next = dice_mod(context.hot - 1, 3);
             context.set_next_hot(next);
-        } else if input.pressed_this_frame(Button::Down) {
+        } else if input.pressed_this_frame(Button::DOWN) {
             let next = dice_mod(context.hot + 1, 3);
             context.set_next_hot(next);
-        } else if input.pressed_this_frame(Button::Right) || input.pressed_this_frame(Button::Left)
+        } else if input.pressed_this_frame(Button::RIGHT) || input.pressed_this_frame(Button::LEFT)
         {
             let next = (FIRST_SCROLL_ID - 1) + context.hot;
             context.set_next_hot(next);
         }
     } else {
-        if input.pressed_this_frame(Button::Right) || input.pressed_this_frame(Button::Left) {
+        if input.pressed_this_frame(Button::RIGHT) || input.pressed_this_frame(Button::LEFT) {
             let next = min(
                 context.hot.saturating_sub(FIRST_SCROLL_ID) + 1,
                 FIRST_SCROLL_ID - 1,
@@ -964,13 +964,13 @@ where
     invariant_assert!(column_count != 0);
     invariant_assert_eq!(mod_offset.modulus % column_count.into(), 0u8.into());
 
-    if input.pressed_this_frame(Button::Up) {
+    if input.pressed_this_frame(Button::UP) {
         if unoffset < column_count {
             output = previous_mod(mod_offset);
         } else {
             unoffset -= column_count;
         }
-    } else if input.pressed_this_frame(Button::Down) {
+    } else if input.pressed_this_frame(Button::DOWN) {
         if unoffset / column_count >= (visible_rows / column_count) - 1 {
             output = next_mod(mod_offset);
         } else {
@@ -1037,19 +1037,19 @@ fn do_scrolling_card_checkbox(
     if context.hot < first_checkbox_id as _ {
         if context.hot == 0 {
             context.set_next_hot(1);
-        } else if input.pressed_this_frame(Button::Up) {
+        } else if input.pressed_this_frame(Button::UP) {
             let next = dice_mod(context.hot - 1, first_checkbox_id - 1);
             context.set_next_hot(next);
-        } else if input.pressed_this_frame(Button::Down) {
+        } else if input.pressed_this_frame(Button::DOWN) {
             let next = dice_mod(context.hot + 1, first_checkbox_id - 1);
             context.set_next_hot(next);
-        } else if input.pressed_this_frame(Button::Right) {
+        } else if input.pressed_this_frame(Button::RIGHT) {
             if context.hot == 1 {
                 context.set_next_hot(first_checkbox_id);
             } else {
                 context.set_next_hot(first_checkbox_id + 3 * SCROLL_COLS_COUNT);
             }
-        } else if input.pressed_this_frame(Button::Left) {
+        } else if input.pressed_this_frame(Button::LEFT) {
             if context.hot == 1 {
                 context.set_next_hot(first_checkbox_id + 1);
             } else {
@@ -1057,7 +1057,7 @@ fn do_scrolling_card_checkbox(
             }
         }
     } else {
-        if input.pressed_this_frame(Button::Left) {
+        if input.pressed_this_frame(Button::LEFT) {
             if context.hot & 1 == first_checkbox_id & 1 {
                 if context.hot > first_checkbox_id + 3 * SCROLL_COLS_COUNT {
                     context.set_next_hot(first_checkbox_id - 1);
@@ -1068,7 +1068,7 @@ fn do_scrolling_card_checkbox(
                 let next = context.hot - 1;
                 context.set_next_hot(next);
             }
-        } else if input.pressed_this_frame(Button::Right) {
+        } else if input.pressed_this_frame(Button::RIGHT) {
             if context.hot & 1 == first_checkbox_id & 1 {
                 let next = context.hot + 1;
                 context.set_next_hot(next);
@@ -1284,10 +1284,10 @@ pub fn do_status_choice(
 
     if state.context.hot == 0 || state.context.hot > MAX_ID {
         state.context.set_next_hot(1);
-    } else if input.pressed_this_frame(Button::Up) {
+    } else if input.pressed_this_frame(Button::UP) {
         let next = dice_mod(state.context.hot - 1, MAX_ID);
         state.context.set_next_hot(next);
-    } else if input.pressed_this_frame(Button::Down) {
+    } else if input.pressed_this_frame(Button::DOWN) {
         let next = dice_mod(state.context.hot + 1, MAX_ID);
         state.context.set_next_hot(next);
     }

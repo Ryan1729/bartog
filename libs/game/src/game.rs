@@ -53,7 +53,7 @@ impl State for BartogState {
         }
     }
 
-    fn press(&mut self, button: Button::Ty) {
+    fn press(&mut self, button: Button) {
         if self.input.previous_gamepad.contains(button) {
             //This is meant to pass along the key repeat, if any.
             //Not sure if rewriting history is the best way to do this.
@@ -63,7 +63,7 @@ impl State for BartogState {
         self.input.gamepad.insert(button);
     }
 
-    fn release(&mut self, button: Button::Ty) {
+    fn release(&mut self, button: Button) {
         self.input.gamepad.remove(button);
     }
 
@@ -219,13 +219,13 @@ fn draw_event_log(framebuffer: &mut Framebuffer, state: &GameState) {
 }
 
 fn move_cursor(state: &mut in_game::State, input: Input, speaker: &mut Speaker) -> bool {
-    if input.pressed_this_frame(Button::Right) {
+    if input.pressed_this_frame(Button::RIGHT) {
         if state.hand_index < state.hand.len().saturating_sub(1) {
             state.hand_index = state.hand_index.saturating_add(1);
         }
         speaker.request_sfx(SFX::CardSlide);
         true
-    } else if input.pressed_this_frame(Button::Left) {
+    } else if input.pressed_this_frame(Button::LEFT) {
         state.hand_index = state.hand_index.saturating_sub(1);
         speaker.request_sfx(SFX::CardSlide);
         true
@@ -539,7 +539,7 @@ fn update_in_game(state: &mut GameState, input: Input, speaker: &mut Speaker) {
         }
     }
 
-    if input.pressed_this_frame(Button::Start) {
+    if input.pressed_this_frame(Button::START) {
         state.log_heading = match state.log_heading {
             LogHeading::Up => LogHeading::Down,
             LogHeading::Down => LogHeading::Up,
@@ -547,10 +547,10 @@ fn update_in_game(state: &mut GameState, input: Input, speaker: &mut Speaker) {
     }
 
     if state.log_height > 0 {
-        if input.pressed_this_frame(Button::Up) {
+        if input.pressed_this_frame(Button::UP) {
             state.event_log.top_index = state.event_log.top_index.saturating_sub(1);
         //TODO feedback when you hit the top edge
-        } else if input.pressed_this_frame(Button::Down) {
+        } else if input.pressed_this_frame(Button::DOWN) {
             if state.event_log.top_index < state.event_log.len() {
                 state.event_log.top_index += 1;
             } else {
@@ -650,7 +650,7 @@ pub fn update_and_render(
 
     framebuffer.clearTo(GREEN);
 
-    if state.show_rules || input.pressed_this_frame(Button::Select) {
+    if state.show_rules || input.pressed_this_frame(Button::SELECT) {
         state.show_rules = true;
         show_rules_screen(framebuffer, state, input, speaker);
         return;
