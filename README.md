@@ -10,40 +10,6 @@ You can play the live version of the latest release build [here](https://ryan172
 
 I have also made a version of "plain" Crazy Eights, the live version of which can be played [here](https://ryan1729.github.io/bartog/crazy-eights/).
 
-### Lecacy version
-
-Note: As of this writing, the legacy version is the only one that has full (any) game functionality. The full functionality is expected to be added to the new version soon, and when that happens, the legacy version is expected to be removed, making the "Running locally" version the only way.
-
-#### Building (using Rust's native WebAssembly backend)
-
-1. Install Rust via [rustup.rs](https://rustup.rs).
-
-2. Install WebAssembly target:
-
-       $ rustup target add wasm32-unknown-unknown
-
-3. Install [cargo-web]:
-
-       $ cargo install -f cargo-web
-
-4. Run it:
-
-       $ ./run-stdweb
-    Note: As of this writing, a nightly version from 2019 is required. This should be automatically downloaded because of the included `rust-toolchain.toml` file. See [here](https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file) for more details on that file.
-    
-
-5. Visit `http://localhost:8000` with your browser.
-
-[cargo-web]: https://github.com/koute/cargo-web
-
-#### Building for other backends
-
-Replace `--target=wasm32-unknown-unknown` with `--target=wasm32-unknown-emscripten` or `--target=asmjs-unknown-emscripten`
-if you want to build it using another backend. You will also have to install the
-corresponding targets with `rustup` - `wasm32-unknown-emscripten` and `asmjs-unknown-emscripten`
-respectively.
-
-
 ### Running locally
 
 1. Install Rust via [rustup.rs](https://rustup.rs).
