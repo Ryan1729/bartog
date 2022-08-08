@@ -43,8 +43,8 @@ pub fn run<S: State + 'static>(mut state: S) {
 
                 graphics_context.set_buffer(
                     frame_buffer,
-                    128,//width as u16,
-                    128,//height as u16
+                    screen::WIDTH.into(),//width as u16,
+                    screen::HEIGHT.into(),//height as u16
                 );
             }
             Event::WindowEvent {

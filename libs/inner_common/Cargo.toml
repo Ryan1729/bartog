@@ -9,6 +9,9 @@ edition = "2018"
 [dependencies.features]
 path = "../features"
 
+[dependencies.screen]
+path = "../screen"
+
 [dev-dependencies]
 quickcheck = "0.6"
 

@@ -3,9 +3,9 @@
 use crate::xs::*;
 
 //in pixels
-pub const SCREEN_WIDTH: usize = 128;
-pub const SCREEN_HEIGHT: usize = 128;
-pub const SCREEN_LENGTH: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
+pub const SCREEN_WIDTH: usize = screen::WIDTH as _;
+pub const SCREEN_HEIGHT: usize = screen::HEIGHT as _;
+pub const SCREEN_LENGTH: usize = screen::LENGTH;
 
 // reportedly colourblind friendly colours
 // https://twitter.com/ea_accessible/status/968595073184092160

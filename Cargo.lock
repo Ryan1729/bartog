@@ -601,6 +601,7 @@ version = "0.1.0"
 dependencies = [
  "features",
  "quickcheck",
+ "screen",
 ]
 
 [[package]]
@@ -1176,6 +1177,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
+name = "screen"
+version = "0.1.0"
+
+[[package]]
 name = "semver"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1634,6 +1639,7 @@ version = "0.1.0"
 dependencies = [
  "js-sys",
  "platform_types",
+ "screen",
  "softbuffer",
  "wasm-bindgen",
  "web-sys",

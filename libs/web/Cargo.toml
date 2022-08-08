@@ -19,6 +19,9 @@ web-sys = { version = "0.3.22", features = ["HtmlCanvasElement"] }
 [dependencies.platform_types]
 path = "../platform_types"
 
+[dependencies.screen]
+path = "../screen"
+
 [profile.dev]
 opt-level = 2
 debug = true
