@@ -109,13 +109,12 @@ mod wasm {
     pub fn set_canvas(builder: WindowBuilder) -> WindowBuilder {
         let canvas = get_canvas();
 
-        // Use the width and height specifed in the HTML as the single source of
-        // truth.
+        // Use the size of the frambuffer, since the browser will stretch it for us.
 
         let size = winit::dpi::Size::Physical(
             winit::dpi::PhysicalSize::new(
-                canvas.width(),
-                canvas.height(),
+                screen::WIDTH.into(),
+                screen::HEIGHT.into(),
             ),
         );
 
