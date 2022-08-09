@@ -363,4 +363,22 @@ mod add_bars_if_needed_returns_then_expected_result {
             ]
         )
     }
+
+    #[test]
+    fn on_this_small_odd_height_example() {
+        let actual = add_bars_if_needed(
+            &[R, G, B, C],
+            (2, 2),
+            (6, 3),
+        );
+
+        a!(
+            actual,
+            [
+                0, R, R, G, G, 0,
+                0, R, R, G, G, 0,
+                0, B, B, C, C, 0,
+            ]
+        )
+    }
 }
