@@ -246,6 +246,9 @@ fn add_bars_if_needed<'buffer>(
         let width_multiple = dst_w / src_w;
         let height_multiple = dst_h / src_h;
         let multiple = core::cmp::min(width_multiple, height_multiple);
+        if multiple == 0 {
+            return Cow::Borrowed(frame_buffer);
+        }
 
         let vertical_bar_width = (
             (dst_w - (multiple * src_w)) / 2
@@ -255,20 +258,32 @@ fn add_bars_if_needed<'buffer>(
             (dst_h - (multiple * src_h)) / 2
         ) as usize;
 
-        dbg!(multiple, vertical_bar_width, horizontal_bar_height);
-
         // Hopefully this compiles to something not inefficent
         for i in 0..expected_length {
             frame_vec.push(0);
         }
 
         let mut src_i = 0;
+        let mut y_remaining = multiple;
         for y in horizontal_bar_height..(dst_h - horizontal_bar_height) {
+            let mut x_remaining = multiple;
             for x in vertical_bar_width..(dst_w - vertical_bar_width) {
                 let dst_i = y * dst_w + x;
                 frame_vec[dst_i as usize] = frame_buffer[src_i];
-                // This will need to change.
-                src_i += 1;
+
+                x_remaining -= 1;
+                if x_remaining == 0 {
+                    src_i += 1;
+                    x_remaining = multiple;
+                }
+            }
+
+            y_remaining -= 1;
+            if y_remaining == 0 {
+                y_remaining = multiple;
+            } else {
+                // Go back to the beginning of the row.
+                src_i -= src_w;
             }
         }
 
