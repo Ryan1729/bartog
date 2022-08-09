@@ -262,10 +262,13 @@ fn add_bars_if_needed<'buffer>(
             frame_vec.push(0);
         }
 
+        let mut src_i = 0;
         for y in horizontal_bar_height..(dst_h - horizontal_bar_height) {
             for x in vertical_bar_width..(dst_w - vertical_bar_width) {
                 let dst_i = y * dst_w + x;
-                frame_vec[dst_i as usize] = 0xFFFFFFFF;
+                frame_vec[dst_i as usize] = frame_buffer[src_i];
+                // This will need to change.
+                src_i += 1;
             }
         }
 
@@ -302,7 +305,7 @@ mod add_bars_if_needed_returns_then_expected_result {
         );
 
         a!(
-            actual, 
+            actual,
             [
                 R, G,
                 B, C
@@ -319,10 +322,29 @@ mod add_bars_if_needed_returns_then_expected_result {
         );
 
         a!(
-            actual, 
+            actual,
             [
-                0, R, G, 0, 
+                0, R, G, 0,
                 0, B, C, 0,
+            ]
+        )
+    }
+
+    #[test]
+    fn on_this_small_size_doubling_example() {
+        let actual = add_bars_if_needed(
+            &[R, G, B, C],
+            (2, 2),
+            (6, 4),
+        );
+
+        a!(
+            actual,
+            [
+                0, R, R, G, G, 0,
+                0, R, R, G, G, 0,
+                0, B, B, C, C, 0,
+                0, B, B, C, C, 0,
             ]
         )
     }
