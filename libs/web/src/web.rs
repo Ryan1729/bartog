@@ -235,23 +235,31 @@ fn add_bars_if_needed<'buffer>(
     (src_w, src_h): (u16, u16),
     (dst_w, dst_h): (u16, u16),
 ) -> Cow<'buffer, [u32]> {
-    let expected_length = (dst_w as usize) * (dst_h as usize);
+    let src_w = src_w as usize;
+    let src_h = src_h as usize;
+    let dst_w = dst_w as usize;
+    let dst_h = dst_h as usize;
+    let expected_length = dst_w * dst_h;
     if frame_buffer.len() < expected_length {
         let mut frame_vec = Vec::with_capacity(expected_length);
 
-        let width_multiple = dst_w / src_w as u16;
-        let height_multiple = dst_h / src_h as u16;
+        let width_multiple = dst_w / src_w;
+        let height_multiple = dst_h / src_h;
         let multiple = core::cmp::min(width_multiple, height_multiple);
 
-        let vertical_bar_width = 
-            (dst_w - (multiple * src_w as u16))
-            / 2;
+        let vertical_bar_width = (
+            (dst_w - (multiple * src_w))
+            / 2
+        ) as usize;
 
-        let horizontal_bar_height = 
-            (dst_h - (multiple * src_h as u16))
-            / 2;
+        let horizontal_bar_height = (
+            (dst_h - (multiple * src_h))
+            / 2
+        ) as usize;
 
         let stride = dst_w;
+
+        dbg!(multiple, vertical_bar_width, horizontal_bar_height, stride);
 
         // Hopefully this compiles to something not inefficent
         for i in 0..expected_length {
@@ -260,9 +268,10 @@ fn add_bars_if_needed<'buffer>(
 
         for y in horizontal_bar_height..(dst_h - horizontal_bar_height) {
             for x in vertical_bar_width..(dst_w - vertical_bar_width) {
-                let i = (horizontal_bar_height * dst_w)
-                + (y * dst_w + x);
-                frame_vec[i as usize] = 0xFFFFFFFF;
+                let dst_i =
+                    (horizontal_bar_height * dst_w)
+                    + (y * dst_w + x);
+                frame_vec[dst_i as usize] = 0xFFFFFFFF;
             }
         }
 
@@ -311,8 +320,8 @@ mod add_bars_if_needed_returns_then_expected_result {
     fn on_this_small_non_trival_example() {
         let actual = add_bars_if_needed(
             &[R, G, B, C],
-            (4, 2),
             (2, 2),
+            (4, 2),
         );
 
         a!(
