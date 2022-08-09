@@ -3174,10 +3174,10 @@ mod tests {
         if non_special_flags.len() == 0 {
             TestResult::passed()
         } else {
-            panic!(
-                "non_special_flags: {:?}",
-                card_bin_formatted_vec!(non_special_flags)
-            );
+            //panic!(
+                //"non_special_flags: {:?}",
+                //card_bin_formatted_vec!(non_special_flags)
+            //);
             TestResult::failed()
         }
     }
@@ -3430,7 +3430,7 @@ mod tests {
     fn flag_string_is_not_too_long(flags: CardFlags) -> bool {
         let string = flags.to_string();
         test_println!("{}", string);
-        string.len() <= MAX_CARD_FLAGS_LENGTH
+        string.len() <= ONE_PAST_CARD_FLAGS_MAX as usize
     }
 
     #[test]

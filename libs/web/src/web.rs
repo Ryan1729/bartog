@@ -34,17 +34,23 @@ pub fn run<S: State + 'static>(mut state: S) {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
                 state.frame(handle_sound);
 
-                let frame_buffer = state.get_frame_buffer();
+                let frame_buffer: &[u32] = state.get_frame_buffer();
 
                 let (width, height) = {
                     let size = window.inner_size();
-                    (size.width, size.height)
+                    (size.width as u16, size.height as u16)
                 };
 
-                graphics_context.set_buffer(
+                let frame_cow = add_bars_if_needed(
                     frame_buffer,
-                    screen::WIDTH.into(),//width as u16,
-                    screen::HEIGHT.into(),//height as u16
+                    (screen::WIDTH.into(), screen::HEIGHT.into()),
+                    (width, height),
+                );
+
+                graphics_context.set_buffer(
+                    &frame_cow,
+                    width,
+                    height
                 );
             }
             Event::WindowEvent {
@@ -221,4 +227,100 @@ fn handle_sound(request: SFX) {
 #[cfg(not(target_arch = "wasm32"))]
 fn handle_sound(request: SFX) {
     // TODO actually handle sound
+}
+
+use std::borrow::Cow;
+fn add_bars_if_needed<'buffer>(
+    frame_buffer: &'buffer [u32],
+    (src_w, src_h): (u16, u16),
+    (dst_w, dst_h): (u16, u16),
+) -> Cow<'buffer, [u32]> {
+    let expected_length = (dst_w as usize) * (dst_h as usize);
+    if frame_buffer.len() < expected_length {
+        let mut frame_vec = Vec::with_capacity(expected_length);
+
+        let width_multiple = dst_w / src_w as u16;
+        let height_multiple = dst_h / src_h as u16;
+        let multiple = core::cmp::min(width_multiple, height_multiple);
+
+        let vertical_bar_width = 
+            (dst_w - (multiple * src_w as u16))
+            / 2;
+
+        let horizontal_bar_height = 
+            (dst_h - (multiple * src_h as u16))
+            / 2;
+
+        let stride = dst_w;
+
+        // Hopefully this compiles to something not inefficent
+        for i in 0..expected_length {
+            frame_vec.push(0);
+        }
+
+        for y in horizontal_bar_height..(dst_h - horizontal_bar_height) {
+            for x in vertical_bar_width..(dst_w - vertical_bar_width) {
+                let i = (horizontal_bar_height * dst_w)
+                + (y * dst_w + x);
+                frame_vec[i as usize] = 0xFFFFFFFF;
+            }
+        }
+
+        Cow::Owned(frame_vec)
+    } else {
+        Cow::Borrowed(frame_buffer)
+    }
+}
+
+#[cfg(test)]
+mod add_bars_if_needed_returns_then_expected_result {
+    use super::add_bars_if_needed;
+
+    const R: u32 = 0xFFFF0000;
+    const G: u32 = 0xFF00FF00;
+    const B: u32 = 0xFF0000FF;
+    const C: u32 = 0xFF00FFFF;
+
+    macro_rules! a {
+        ($actual: expr, $expected: expr) => {
+            assert_eq!(<&[u32] as From<_>>::from(&$actual), &$expected)
+        }
+    }
+
+    #[test]
+    fn on_this_trival_example() {
+        let actual = add_bars_if_needed(
+            &[
+                R, G,
+                B, C
+            ],
+            (2, 2),
+            (2, 2),
+        );
+
+        a!(
+            actual, 
+            [
+                R, G,
+                B, C
+            ]
+        )
+    }
+
+    #[test]
+    fn on_this_small_non_trival_example() {
+        let actual = add_bars_if_needed(
+            &[R, G, B, C],
+            (4, 2),
+            (2, 2),
+        );
+
+        a!(
+            actual, 
+            [
+                0, R, G, 0, 
+                0, B, C, 0,
+            ]
+        )
+    }
 }

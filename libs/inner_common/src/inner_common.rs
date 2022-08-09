@@ -228,23 +228,6 @@ pub fn get_suit_rank_pair(card: Card) -> String {
     output
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_get_suit_rank_pair_list_retains_layout_char() {
-        let v = vec![9];
-        let list = get_suit_rank_pair_list(&v);
-        assert!(list.contains(RANK_SUIT_PAIR_LAYOUT_CHAR as char));
-        assert!(list.as_bytes().contains(&RANK_SUIT_PAIR_LAYOUT_CHAR));
-
-        let s = format!("{:?}", list.as_bytes());
-        assert!(s.contains(&RANK_SUIT_PAIR_LAYOUT_CHAR.to_string()));
-        assert_eq!(s, "[26, 27, 31, 7]");
-    }
-}
-
 pub fn get_short_card_string_and_colour(card: Card) -> (String, u8) {
     let (colour, ch) = get_suit_colour_and_char(get_suit(card));
 
