@@ -248,18 +248,14 @@ fn add_bars_if_needed<'buffer>(
         let multiple = core::cmp::min(width_multiple, height_multiple);
 
         let vertical_bar_width = (
-            (dst_w - (multiple * src_w))
-            / 2
+            (dst_w - (multiple * src_w)) / 2
         ) as usize;
 
         let horizontal_bar_height = (
-            (dst_h - (multiple * src_h))
-            / 2
+            (dst_h - (multiple * src_h)) / 2
         ) as usize;
 
-        let stride = dst_w;
-
-        dbg!(multiple, vertical_bar_width, horizontal_bar_height, stride);
+        dbg!(multiple, vertical_bar_width, horizontal_bar_height);
 
         // Hopefully this compiles to something not inefficent
         for i in 0..expected_length {
@@ -268,9 +264,7 @@ fn add_bars_if_needed<'buffer>(
 
         for y in horizontal_bar_height..(dst_h - horizontal_bar_height) {
             for x in vertical_bar_width..(dst_w - vertical_bar_width) {
-                let dst_i =
-                    (horizontal_bar_height * dst_w)
-                    + (y * dst_w + x);
+                let dst_i = y * dst_w + x;
                 frame_vec[dst_i as usize] = 0xFFFFFFFF;
             }
         }
