@@ -36,21 +36,32 @@ pub fn run<S: State + 'static>(mut state: S) {
 
                 let frame_buffer: &[u32] = state.get_frame_buffer();
 
-                let (width, height) = {
+                let (mut width, mut height) = {
                     let size = window.inner_size();
                     (size.width as u16, size.height as u16)
                 };
 
-                let frame_cow = add_bars_if_needed(
-                    frame_buffer,
-                    (screen::WIDTH.into(), screen::HEIGHT.into()),
-                    (width, height),
-                );
+                let screen_width = screen::WIDTH.into();
+                let screen_height = screen::HEIGHT.into();
+
+                let frame_cow =
+                    if width < screen::WIDTH.into()
+                    || height < screen::HEIGHT.into() {
+                        width = screen_width;
+                        height = screen_height;
+                        Cow::Borrowed(frame_buffer)
+                    } else {
+                        add_bars_if_needed(
+                            frame_buffer,
+                            (screen_width, screen_height),
+                            (width, height),
+                        )
+                    };
 
                 graphics_context.set_buffer(
                     &frame_cow,
                     width,
-                    height
+                    height,
                 );
             }
             Event::WindowEvent {
