@@ -250,12 +250,24 @@ fn add_bars_if_needed<'buffer>(
             return Cow::Borrowed(frame_buffer);
         }
 
-        let vertical_bar_width = (
-            (dst_w - (multiple * src_w)) / 2
+        let vertical_bars_width = dst_w - (multiple * src_w);
+
+        let left_bar_width = (
+            (vertical_bars_width + 1) / 2
         ) as usize;
 
-        let horizontal_bar_height = (
-            (dst_h - (multiple * src_h)) / 2
+        let right_bar_width = (
+            vertical_bars_width / 2
+        ) as usize;
+
+        let horizontal_bars_height = dst_h - (multiple * src_h);
+
+        let top_bar_height = (
+            (horizontal_bars_height + 1) / 2
+        ) as usize;
+
+        let bottom_bar_height = (
+            horizontal_bars_height / 2
         ) as usize;
 
         // Hopefully this compiles to something not inefficent
@@ -265,9 +277,9 @@ fn add_bars_if_needed<'buffer>(
 
         let mut src_i = 0;
         let mut y_remaining = multiple;
-        for y in horizontal_bar_height..(dst_h - horizontal_bar_height) {
+        for y in top_bar_height..(dst_h - bottom_bar_height) {
             let mut x_remaining = multiple;
-            for x in vertical_bar_width..(dst_w - vertical_bar_width) {
+            for x in left_bar_width..(dst_w - right_bar_width) {
                 let dst_i = y * dst_w + x;
                 frame_vec[dst_i as usize] = frame_buffer[src_i];
 
@@ -375,9 +387,9 @@ mod add_bars_if_needed_returns_then_expected_result {
         a!(
             actual,
             [
-                0, R, R, G, G, 0,
-                0, R, R, G, G, 0,
-                0, B, B, C, C, 0,
+                0, 0, 0, 0, 0, 0,
+                0, 0, R, G, 0, 0,
+                0, 0, B, C, 0, 0,
             ]
         )
     }
