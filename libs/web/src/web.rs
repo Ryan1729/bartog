@@ -252,8 +252,6 @@ fn add_bars_if_needed<'buffer>(
     let dst_h = dst_h as usize;
     let expected_length = dst_w * dst_h;
     if frame_buffer.len() < expected_length {
-        let mut frame_vec = Vec::with_capacity(expected_length);
-
         let width_multiple = dst_w / src_w;
         let height_multiple = dst_h / src_h;
         let multiple = core::cmp::min(width_multiple, height_multiple);
@@ -280,6 +278,8 @@ fn add_bars_if_needed<'buffer>(
         let bottom_bar_height = (
             horizontal_bars_height / 2
         ) as usize;
+
+        let mut frame_vec = Vec::with_capacity(expected_length);
 
         // Hopefully this compiles to something not inefficent
         for i in 0..expected_length {
