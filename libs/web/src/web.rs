@@ -1,4 +1,4 @@
-use platform_types::{State, StateParams, SFX};
+use platform_types::{State, StateParams};
 
 use softbuffer::GraphicsContext;
 
@@ -21,7 +21,7 @@ pub fn run<S: State + 'static>(mut state: S) {
         .build(&event_loop)
         .unwrap();
 
-    // This must happen after the `build` call, or the stle gets overridden.
+    // This must happen after the `build` call, or the style gets overridden.
     #[cfg(target_arch = "wasm32")]
     wasm::style_canvas();
 
@@ -31,39 +31,6 @@ pub fn run<S: State + 'static>(mut state: S) {
         let window = graphics_context.window();
 
         match event {
-            Event::RedrawRequested(window_id) if window_id == window.id() => {
-                state.frame(handle_sound);
-
-                let frame_buffer: &[u32] = state.get_frame_buffer();
-
-                let (mut width, mut height) = {
-                    let size = window.inner_size();
-                    (size.width as u16, size.height as u16)
-                };
-
-                let screen_width = screen::WIDTH.into();
-                let screen_height = screen::HEIGHT.into();
-
-                let frame_cow =
-                    if width < screen::WIDTH.into()
-                    || height < screen::HEIGHT.into() {
-                        width = screen_width;
-                        height = screen_height;
-                        Cow::Borrowed(frame_buffer)
-                    } else {
-                        add_bars_if_needed(
-                            frame_buffer,
-                            (screen_width, screen_height),
-                            (width, height),
-                        )
-                    };
-
-                graphics_context.set_buffer(
-                    &frame_cow,
-                    width,
-                    height,
-                );
-            }
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 window_id,
@@ -106,7 +73,37 @@ pub fn run<S: State + 'static>(mut state: S) {
                 }
             }
             Event::MainEventsCleared => {
-                window.request_redraw();
+                state.frame(handle_sound);
+
+                let frame_buffer: &[u32] = state.get_frame_buffer();
+
+                let (mut width, mut height) = {
+                    let size = window.inner_size();
+                    (size.width as u16, size.height as u16)
+                };
+
+                let screen_width = screen::WIDTH.into();
+                let screen_height = screen::HEIGHT.into();
+
+                let frame_cow =
+                    if width < screen::WIDTH.into()
+                    || height < screen::HEIGHT.into() {
+                        width = screen_width;
+                        height = screen_height;
+                        Cow::Borrowed(frame_buffer)
+                    } else {
+                        add_bars_if_needed(
+                            frame_buffer,
+                            (screen_width, screen_height),
+                            (width, height),
+                        )
+                    };
+
+                graphics_context.set_buffer(
+                    &frame_cow,
+                    width,
+                    height,
+                );
             }
             _ => (),
         }
@@ -122,6 +119,7 @@ mod wasm {
     };
     use wasm_bindgen::JsCast;
     use web_sys::HtmlCanvasElement;
+    use platform_types::SFX;
 
     pub fn set_canvas(builder: WindowBuilder) -> WindowBuilder {
         let canvas = get_canvas();
@@ -157,6 +155,28 @@ mod wasm {
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .map_err(|_| ())
             .unwrap()
+    }
+
+    pub(super) fn handle_sound(request: SFX) {
+        fn inner(request: SFX) -> Option<()> {
+            use js_sys::{Function, Reflect};
+            use wasm_bindgen::JsValue;
+    
+            let window = web_sys::window()?;
+    
+            let handler = Reflect::get(
+                &window,
+                &JsValue::from_str("soundHandler")
+            ).ok()?.dyn_into::<Function>().ok()?;
+    
+            let request_string = request.to_sound_key();
+    
+            handler.call1(&JsValue::undefined(), &request_string.into()).ok()?;
+    
+            Some(())
+        }
+    
+        let _ignored = inner(request);
     }
 }
 
@@ -213,31 +233,50 @@ pub fn get_state_params() -> StateParams {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn handle_sound(request: SFX) {
-    fn inner(request: SFX) -> Option<()> {
-        use js_sys::{Function, Reflect};
-        use wasm_bindgen::{JsCast, JsValue};
-
-        let window = web_sys::window()?;
-
-        let handler = Reflect::get(
-            &window,
-            &JsValue::from_str("soundHandler")
-        ).ok()?.dyn_into::<Function>().ok()?;
-
-        let request_string = request.to_sound_key();
-
-        handler.call1(&JsValue::undefined(), &request_string.into()).ok()?;
-
-        Some(())
-    }
-
-    let _ignored = inner(request);
-}
+use wasm::handle_sound;
 
 #[cfg(not(target_arch = "wasm32"))]
-fn handle_sound(request: SFX) {
-    // TODO actually handle sound
+use not_wasm::handle_sound;
+
+#[cfg(not(target_arch = "wasm32"))]
+mod not_wasm {
+    use platform_types::SFX;
+
+    use once_cell::sync::OnceCell;
+    use rodio::{
+        decoder::Decoder,
+        OutputStream,
+        Source,
+    };
+
+    pub(super) fn handle_sound(request: SFX) {
+        fn inner(request: SFX) -> Option<()> {
+            let output = OutputStream::try_default().ok()?;
+
+            let data: &[u8] = match request {
+                // TODO choose appropriate sound randomly
+                _ => include_bytes!("../../../static/sounds/buttonPress2.ogg"),
+            };
+
+            dbg!(output.1.play_raw(
+                Decoder::new_vorbis(std::io::Cursor::new(data))
+                    .ok()?
+                    .convert_samples()
+            ));
+
+            // Can't drop the `output`, or the sound stops.
+            // TODO:
+            // FIXME:
+            // XXX:
+            // This is obviously awful, so we need to do something different ASAP!
+            std::thread::sleep(std::time::Duration::from_millis(500));
+
+            Some(())
+        }
+
+        // Sound is inessential, so ignore errors.
+        let _ = inner(request);
+    }
 }
 
 use std::borrow::Cow;
