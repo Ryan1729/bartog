@@ -52,12 +52,16 @@ impl Speaker {
         }
     }
 
+    pub fn clear(&mut self) {
+        self.requests.clear();
+    }
+
     pub fn request_sfx(&mut self, sfx: SFX) {
         self.requests.push(sfx);
     }
 
-    pub fn drain<'a>(&'a mut self) -> impl Iterator<Item = SFX> + 'a {
-        self.requests.drain(..)
+    pub fn slice(&self) -> &[SFX] {
+        &self.requests
     }
 }
 
@@ -81,11 +85,9 @@ pub type Logger = Option<fn(&str) -> ()>;
 pub type StateParams = ([u8; 16], Logger, Logger);
 
 pub trait State {
-    fn frame(&mut self, handle_sound: fn(SFX));
+    fn frame(&mut self) -> (&[u32], &[SFX]);
 
     fn press(&mut self, button: Button);
 
     fn release(&mut self, button: Button);
-
-    fn get_frame_buffer(&self) -> &[u32];
 }

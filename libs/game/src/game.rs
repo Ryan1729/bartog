@@ -38,7 +38,8 @@ impl BartogState {
 }
 
 impl State for BartogState {
-    fn frame(&mut self, handle_sound: fn(SFX)) {
+    fn frame(&mut self) -> (&[u32], &[SFX]) {
+        self.speaker.clear();
         update_and_render(
             &mut self.framebuffer,
             &mut self.game_state,
@@ -48,9 +49,7 @@ impl State for BartogState {
 
         self.input.previous_gamepad = self.input.gamepad;
 
-        for request in self.speaker.drain() {
-            handle_sound(request);
-        }
+        (&self.framebuffer.buffer, self.speaker.slice())
     }
 
     fn press(&mut self, button: Button) {
@@ -65,10 +64,6 @@ impl State for BartogState {
 
     fn release(&mut self, button: Button) {
         self.input.gamepad.remove(button);
-    }
-
-    fn get_frame_buffer(&self) -> &[u32] {
-        &self.framebuffer.buffer
     }
 }
 

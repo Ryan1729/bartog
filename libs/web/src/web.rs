@@ -27,6 +27,8 @@ pub fn run<S: State + 'static>(mut state: S) {
 
     let mut graphics_context = unsafe { GraphicsContext::new(window) }.unwrap();
 
+    let mut sound_handler = init_sound_handler();
+
     event_loop.run(move |event, _, control_flow| {
         let window = graphics_context.window();
 
@@ -73,9 +75,9 @@ pub fn run<S: State + 'static>(mut state: S) {
                 }
             }
             Event::MainEventsCleared => {
-                state.frame(handle_sound);
+                let (frame_buffer, sounds) = state.frame();
 
-                let frame_buffer: &[u32] = state.get_frame_buffer();
+                handle_sounds(&mut sound_handler, sounds);
 
                 let (mut width, mut height) = {
                     let size = window.inner_size();
@@ -157,7 +159,13 @@ mod wasm {
             .unwrap()
     }
 
-    pub(super) fn handle_sound(request: SFX) {
+    pub type SoundHandler = ();
+
+    pub fn init_sound_handler() -> SoundHandler {
+        ()
+    }
+
+    pub(super) fn handle_sounds(_: &mut SoundHandler, requests: &[SFX]) {
         fn inner(request: SFX) -> Option<()> {
             use js_sys::{Function, Reflect};
             use wasm_bindgen::JsValue;
@@ -176,7 +184,10 @@ mod wasm {
             Some(())
         }
     
-        let _ignored = inner(request);
+        for &request in requests {
+            // Sound is inessential, so ignore errors.
+            let _ = inner(request);
+        }
     }
 }
 
@@ -233,49 +244,63 @@ pub fn get_state_params() -> StateParams {
 }
 
 #[cfg(target_arch = "wasm32")]
-use wasm::handle_sound;
+use wasm::{init_sound_handler, handle_sounds};
 
 #[cfg(not(target_arch = "wasm32"))]
-use not_wasm::handle_sound;
+use not_wasm::{init_sound_handler, handle_sounds};
 
 #[cfg(not(target_arch = "wasm32"))]
 mod not_wasm {
     use platform_types::SFX;
 
-    use once_cell::sync::OnceCell;
     use rodio::{
         decoder::Decoder,
         OutputStream,
         Source,
     };
+    use std::sync::mpsc::{channel, Sender};
 
-    pub(super) fn handle_sound(request: SFX) {
-        fn inner(request: SFX) -> Option<()> {
-            let output = OutputStream::try_default().ok()?;
+    pub struct SoundHandler {
+        sender: Sender<SFX>
+    }
 
-            let data: &[u8] = match request {
-                // TODO choose appropriate sound randomly
-                _ => include_bytes!("../../../static/sounds/buttonPress2.ogg"),
+    pub fn init_sound_handler() -> SoundHandler {
+        let (sender, receiver) = channel();
+
+        std::thread::spawn(move || {            
+            let output = match OutputStream::try_default() {
+                Ok(output) => output,
+                // No point in leaving this thread running if we can't play sounds.
+                Err(_) => return,
             };
 
-            dbg!(output.1.play_raw(
-                Decoder::new_vorbis(std::io::Cursor::new(data))
-                    .ok()?
-                    .convert_samples()
-            ));
+            while let Ok(request) = receiver.recv() {
+                let data: &[u8] = match request {
+                    // TODO choose appropriate sound randomly
+                    _ => include_bytes!("../../../static/sounds/buttonPress2.ogg"),
+                };
 
-            // Can't drop the `output`, or the sound stops.
-            // TODO:
-            // FIXME:
-            // XXX:
-            // This is obviously awful, so we need to do something different ASAP!
-            std::thread::sleep(std::time::Duration::from_millis(500));
+                // If one sound file is messed up, don't break all the sounds.    
+                if let Ok(decoder) = Decoder::new_vorbis(
+                    std::io::Cursor::new(data)
+                ) {
+                    let _ = output.1.play_raw(
+                        decoder.convert_samples()
+                    );
+                }
+            }
+        });
 
-            Some(())
+        SoundHandler {
+            sender,
         }
+    }
 
-        // Sound is inessential, so ignore errors.
-        let _ = inner(request);
+    pub(super) fn handle_sounds(handler: &mut SoundHandler, requests: &[SFX]) {
+        for &request in requests {
+            // Sound is inessential, so ignore errors.
+            let _ = handler.sender.send(request);
+        }
     }
 }
 

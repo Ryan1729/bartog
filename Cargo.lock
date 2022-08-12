@@ -2011,7 +2011,6 @@ name = "web"
 version = "0.1.0"
 dependencies = [
  "js-sys",
- "once_cell",
  "platform_types",
  "rodio",
  "screen",
