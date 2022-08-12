@@ -29,6 +29,18 @@ pub fn run<S: State + 'static>(mut state: S) {
 
     let mut sound_handler = init_sound_handler();
 
+    let mut loop_helper;
+    
+    #[cfg(target_arch = "wasm32")] 
+    {
+        loop_helper = ();
+    }
+    #[cfg(not(target_arch = "wasm32"))] 
+    {
+        loop_helper = spin_sleep::LoopHelper::builder()
+            .build_with_target_rate(60.0)
+    }
+
     event_loop.run(move |event, _, control_flow| {
         let window = graphics_context.window();
 
@@ -106,6 +118,12 @@ pub fn run<S: State + 'static>(mut state: S) {
                     width,
                     height,
                 );
+
+                #[cfg(not(target_arch = "wasm32"))] 
+                {
+                    loop_helper.loop_sleep();
+                    loop_helper.loop_start();
+                }
             }
             _ => (),
         }
