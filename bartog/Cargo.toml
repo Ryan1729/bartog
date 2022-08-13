@@ -16,6 +16,6 @@ path = "../libs/web"
 path = "../libs/game"
 
 [features]
-default = ["game/argb"]
+default = ["game/argb", "web/non-web-sound"]
 invariant-checking = ["game/invariant-checking"]
 logging = ["game/logging"]

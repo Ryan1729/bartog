@@ -267,7 +267,10 @@ use wasm::{init_sound_handler, handle_sounds};
 #[cfg(not(target_arch = "wasm32"))]
 use not_wasm::{init_sound_handler, handle_sounds};
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "non-web-sound"
+))]
 mod not_wasm {
     use platform_types::SFX;
 
@@ -295,7 +298,7 @@ mod not_wasm {
             while let Ok(request) = receiver.recv() {
                 let data: &[u8] = match request {
                     // TODO choose appropriate sound randomly
-                    _ => include_bytes!("../../../static/sounds/buttonPress2.ogg"),
+                    _ => include_bytes!("../../../static/sounds/buttonPress1.ogg"),
                 };
 
                 // If one sound file is messed up, don't break all the sounds.    
@@ -319,6 +322,24 @@ mod not_wasm {
             // Sound is inessential, so ignore errors.
             let _ = handler.sender.send(request);
         }
+    }
+}
+
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    not(feature = "non-web-sound")
+))]
+mod not_wasm {
+    use platform_types::SFX;
+
+    pub struct SoundHandler;
+
+    pub fn init_sound_handler() -> SoundHandler {
+        SoundHandler
+    }
+
+    pub(super) fn handle_sounds(handler: &mut SoundHandler, requests: &[SFX]) {
+        // Sound is disabled
     }
 }
 

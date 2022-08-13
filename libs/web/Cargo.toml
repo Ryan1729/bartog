@@ -26,6 +26,10 @@ path = "../platform_types"
 [dependencies.screen]
 path = "../screen"
 
+[features]
+default = []
+non-web-sound = []
+
 [profile.dev]
 opt-level = 2
 debug = true
