@@ -26,9 +26,7 @@ pub fn xs_range(xs: &mut Xs, range: Range<u32>) -> u32 {
     xs_u32(xs, range.start, range.end)
 }
 
-// TODO Use f32::MANTISSA_DIGITS once we can rely on that a new enough std.
-const MANTISSA_DIGITS: u32 = 24;
-const XS_SCALE: u32 = 1 << MANTISSA_DIGITS;
+const XS_SCALE: u32 = 1 << f32::MANTISSA_DIGITS;
 
 #[allow(unused)]
 fn xs_zero_to_one(xs: &mut Xs) -> f32 {
