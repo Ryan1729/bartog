@@ -1,7 +1,3 @@
-use web;
-
-use game;
-
 fn main() {
     run();
 }
@@ -17,7 +13,7 @@ mod wasm {
 }
 
 fn run() {
-    let params = web::get_state_params();
+    let params = platform::get_state_params();
     let state = game::BartogState::new(params);
-    web::run(state);
+    platform::run(state);
 }

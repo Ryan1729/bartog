@@ -9,13 +9,13 @@ edition = "2021"
 [dependencies.wasm-bindgen]
 version = "0.2.45"
 
-[dependencies.web]
-path = "../libs/web"
+[dependencies.platform]
+path = "../libs/platform"
 
 [dependencies.game]
 path = "../libs/game"
 
 [features]
-default = ["game/argb", "web/non-web-sound"]
+default = ["game/argb", "platform/non-web-sound"]
 invariant-checking = ["game/invariant-checking"]
 logging = ["game/logging"]

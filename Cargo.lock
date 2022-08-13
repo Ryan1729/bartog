@@ -71,8 +71,8 @@ name = "bartog"
 version = "0.2.0"
 dependencies = [
  "game",
+ "platform",
  "wasm-bindgen",
- "web",
 ]
 
 [[package]]
@@ -1241,6 +1241,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1df8c4ec4b0627e53bdf214615ad287367e482558cf84b109250b37464dc03ae"
 
 [[package]]
+name = "platform"
+version = "0.1.0"
+dependencies = [
+ "js-sys",
+ "platform_types",
+ "rodio",
+ "screen",
+ "softbuffer",
+ "spin_sleep",
+ "wasm-bindgen",
+ "web-sys",
+ "winit",
+]
+
+[[package]]
 name = "platform_types"
 version = "0.1.0"
 dependencies = [
@@ -2014,21 +2029,6 @@ dependencies = [
  "dlib",
  "lazy_static",
  "pkg-config",
-]
-
-[[package]]
-name = "web"
-version = "0.1.0"
-dependencies = [
- "js-sys",
- "platform_types",
- "rodio",
- "screen",
- "softbuffer",
- "spin_sleep",
- "wasm-bindgen",
- "web-sys",
- "winit",
 ]
 
 [[package]]
