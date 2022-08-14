@@ -100,8 +100,8 @@ pub fn run<S: State + 'static>(mut state: S) {
                 let screen_height = screen::HEIGHT.into();
 
                 let frame_cow =
-                    if width < screen::WIDTH.into()
-                    || height < screen::HEIGHT.into() {
+                    if width < screen_width
+                    || height < screen_height {
                         width = screen_width;
                         height = screen_height;
                         Cow::Borrowed(frame_buffer)
@@ -369,7 +369,7 @@ mod not_wasm {
         SoundHandler
     }
 
-    pub(super) fn handle_sounds(handler: &mut SoundHandler, requests: &[SFX]) {
+    pub(super) fn handle_sounds(_: &mut SoundHandler, _: &[SFX]) {
         // Sound is disabled
     }
 }
