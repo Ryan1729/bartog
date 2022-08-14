@@ -245,20 +245,23 @@ pub fn get_state_params() -> StateParams {
         eprintln!("{}", s);
     }
 
+    (
+        new_seed(),
+        Some(logger),
+        Some(error_logger),
+    )
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn new_seed() -> xs::Seed {
     let time = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default();
     let time = time.as_secs_f64();
 
-    let seed = unsafe {
+    unsafe {
         core::mem::transmute::<[f64; 2], [u8; 16]>([time, 1.0 / time])
-    };
-
-    (
-        seed,
-        Some(logger),
-        Some(error_logger),
-    )
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -288,7 +291,9 @@ mod not_wasm {
     pub fn init_sound_handler() -> SoundHandler {
         let (sender, receiver) = channel();
 
-        std::thread::spawn(move || {            
+        std::thread::spawn(move || {
+            let mut rng = xs::from_seed(super::new_seed());
+
             let output = match OutputStream::try_default() {
                 Ok(output) => output,
                 // No point in leaving this thread running if we can't play sounds.
@@ -296,10 +301,36 @@ mod not_wasm {
             };
 
             while let Ok(request) = receiver.recv() {
-                let data: &[u8] = match request {
-                    // TODO choose appropriate sound randomly
-                    _ => include_bytes!("../../../static/sounds/buttonPress1.ogg"),
+                macro_rules! i_b {
+                    ($name: literal) => {
+                        include_bytes!(concat!(
+                            "../../../static/sounds/",
+                            $name,
+                            ".ogg"
+                        ))
+                    }
+                }
+                let sounds: &[&[u8]] = match request {
+                    SFX::CardPlace => &[
+                        i_b!("cardPlace1"),
+                        i_b!("cardPlace2"),
+                        i_b!("cardPlace3"),
+                    ],
+                    SFX::CardSlide => &[
+                        i_b!("cardSlide1"),
+                        i_b!("cardSlide2"),
+                        i_b!("cardSlide3"),
+                    ],
+                    SFX::ButtonPress => &[
+                        i_b!("buttonPress1"),
+                        i_b!("buttonPress2"),
+                        i_b!("buttonPress3"),
+                    ],
                 };
+
+                let data: &[u8] = sounds[
+                    xs::range(&mut rng, 0..sounds.len() as u32) as usize
+                ];
 
                 // If one sound file is messed up, don't break all the sounds.    
                 if let Ok(decoder) = Decoder::new_vorbis(
