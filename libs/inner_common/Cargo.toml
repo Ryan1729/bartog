@@ -12,6 +12,9 @@ path = "../features"
 [dependencies.screen]
 path = "../screen"
 
+[dependencies.xs]
+path = "../xs"
+
 [dev-dependencies]
 quickcheck = "0.6"
 

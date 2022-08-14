@@ -28,4 +28,4 @@ pub use self::inner_common::*;
 mod english;
 pub use self::english::*;
 
-pub mod xs;
+pub use xs;
