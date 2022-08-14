@@ -2,7 +2,7 @@ use crate::{
     can_play,
     in_game,
 };
-use common::{bytes_lines, bytes_reflow, slice_until_first_0, CardFlags, UIContext, RANK_FLAGS, *};
+use common::{bytes_lines, bytes_reflow, slice_until_first_0, CardFlags, UIContext, RANK_FLAGS, xs::{Xs, Seed}, *};
 
 use std::collections::VecDeque;
 use std::cmp::min;
@@ -466,7 +466,7 @@ impl GameState {
         // not the macro.
         log(&format!("{:?}", seed));
 
-        let mut rng = xs_from_seed(seed);
+        let mut rng = xs::from_seed(seed);
 
         GameState {
             in_game: in_game::State::new(&mut rng),

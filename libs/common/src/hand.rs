@@ -1,5 +1,5 @@
 use crate::traits::AllValues;
-use inner_common::*;
+use inner_common::{*, xs::Xs};
 
 use std::cmp::{max, min};
 use std::fmt;
@@ -74,7 +74,7 @@ impl Hand {
     pub fn new_shuffled_deck(rng: &mut Xs) -> Self {
         let mut deck = fresh_deck();
 
-        xs_shuffle(rng, &mut deck);
+        xs::shuffle(rng, &mut deck);
 
         Hand {
             cards: deck,
@@ -113,13 +113,13 @@ impl Hand {
     pub fn discard_randomly_to(&mut self, other: &mut Hand, rng: &mut Xs) {
         let len = self.cards.len();
         if len > 0 {
-            let index = xs_range(rng, 0..len as _) as usize;
+            let index = xs::range(rng, 0..len as _) as usize;
             other.cards.push(self.cards.remove(index));
         }
     }
 
     pub fn shuffle(&mut self, rng: &mut Xs) {
-        xs_shuffle(rng, &mut self.cards);
+        xs::shuffle(rng, &mut self.cards);
     }
 
     pub fn len(&self) -> u8 {

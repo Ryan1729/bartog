@@ -16,42 +16,41 @@ fn xorshift(xs: &mut Xs) -> u32 {
     xs[0].0
 }
 
-fn xs_u32(xs: &mut Xs, min: u32, one_past_max: u32) -> u32 {
+use core::ops::Range;
+
+pub fn range(xs: &mut Xs, range: Range<u32>) -> u32 {
+    let min = range.start;
+    let one_past_max = range.end;
+
     (xorshift(xs) % (one_past_max - min)) + min
 }
 
-use core::ops::Range;
-
-pub fn xs_range(xs: &mut Xs, range: Range<u32>) -> u32 {
-    xs_u32(xs, range.start, range.end)
-}
-
-const XS_SCALE: u32 = 1 << f32::MANTISSA_DIGITS;
+const SCALE: u32 = 1 << f32::MANTISSA_DIGITS;
 
 #[allow(unused)]
-fn xs_zero_to_one(xs: &mut Xs) -> f32 {
-    (xs_u32(xs, 0, XS_SCALE + 1) as f32 / XS_SCALE as f32) - 1.
+fn zero_to_one(xs: &mut Xs) -> f32 {
+    (range(xs, 0..SCALE + 1) as f32 / SCALE as f32) - 1.
 }
 
 #[allow(unused)]
-fn xs_minus_one_to_one(xs: &mut Xs) -> f32 {
-    (xs_u32(xs, 0, (XS_SCALE * 2) + 1) as f32 / XS_SCALE as f32) - 1.
+fn minus_one_to_one(xs: &mut Xs) -> f32 {
+    (range(xs, 0..(SCALE * 2) + 1) as f32 / SCALE as f32) - 1.
 }
 
-pub fn xs_shuffle<A>(rng: &mut Xs, slice: &mut [A]) {
+pub fn shuffle<A>(xs: &mut Xs, slice: &mut [A]) {
     for i in 1..slice.len() as u32 {
         // This only shuffles the first u32::MAX_VALUE - 1 elements.
-        let r = xs_u32(rng, 0, i + 1) as usize;
+        let r = range(xs, 0..i + 1) as usize;
         let i = i as usize;
         slice.swap(i, r);
     }
 }
 
-pub fn new_seed(rng: &mut Xs) -> Seed {
-    let s0 = xorshift(rng).to_le_bytes();
-    let s1 = xorshift(rng).to_le_bytes();
-    let s2 = xorshift(rng).to_le_bytes();
-    let s3 = xorshift(rng).to_le_bytes();
+pub fn new_seed(xs: &mut Xs) -> Seed {
+    let s0 = xorshift(xs).to_le_bytes();
+    let s1 = xorshift(xs).to_le_bytes();
+    let s2 = xorshift(xs).to_le_bytes();
+    let s3 = xorshift(xs).to_le_bytes();
 
     [
         s0[0], s0[1], s0[2], s0[3],
@@ -61,7 +60,7 @@ pub fn new_seed(rng: &mut Xs) -> Seed {
     ]
 }
 
-pub fn xs_from_seed(mut seed: Seed) -> Xs {
+pub fn from_seed(mut seed: Seed) -> Xs {
     // 0 doesn't work as a seed, so use this one instead.
     if seed == [0; 16] {
         seed = 0xBAD_5EED_u128.to_le_bytes();

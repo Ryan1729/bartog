@@ -1,5 +1,5 @@
 use crate::game_state::Rules;
-use common::{ByteStrRowDisplay, RowDisplay, *};
+use common::{ByteStrRowDisplay, RowDisplay, *, xs::Xs};
 
 use lazy_static::lazy_static;
 use std::fmt;
@@ -59,7 +59,7 @@ impl State {
         ];
 
         //The player whose turn comes after this player will go first.
-        let current_player = xs_range(rng, 0..cpu_hands.len() as u32 + 1) as u8;
+        let current_player = xs::range(rng, 0..cpu_hands.len() as u32 + 1) as u8;
 
         invariant_assert!(current_player <= cpu_hands.len() as u8);
 
@@ -625,18 +625,6 @@ impl fmt::Display for CardMovement {
         )
     }
 }
-
-//impl Distribution<CardMovement> for Standard {
-    //#[inline]
-    //fn sample(&self, rng: &mut Xs) -> CardMovement {
-        //CardMovement {
-            //affected: rng.gen(),
-            //source: rng.gen(),
-            //target: rng.gen(),
-            //selection: rng.gen(),
-        //}
-    //}
-//}
 
 #[allow(dead_code)]
 enum RefsMut<'a, T> {

@@ -1,4 +1,4 @@
-use common::*;
+use common::{xs::Xs, *};
 use game_state::{can_play, event_push, in_game, GameState, Status, RULE_TYPES};
 
 struct CardFlagsDelta {
@@ -50,7 +50,7 @@ pub fn reset(state: &mut GameState) {
     let old_rules = state.rules.take();
 
     *state = GameState::new_with_previous(
-        new_seed(&mut state.rng),
+        xs::new_seed(&mut state.rng),
         status,
         old_rules,
         old_log,
@@ -67,7 +67,7 @@ pub fn reset(state: &mut GameState) {
 
 fn add_cpu_rule(state: &mut GameState, player: PlayerID) {
     let rule_type = {
-        let index = xs_range(&mut state.rng, 0..RULE_TYPES.len() as _) as usize;
+        let index = xs::range(&mut state.rng, 0..RULE_TYPES.len() as _) as usize;
         RULE_TYPES[index]
     };
 
@@ -90,7 +90,7 @@ fn add_cpu_when_played_change(state: &mut GameState, player: PlayerID) {
         .get_card_flags_changes(card_flags)
         .collect();
 
-    let remove_count = xs_range(&mut state.rng, 0..5);
+    let remove_count = xs::range(&mut state.rng, 0..5);
 
     for _ in 0..remove_count {
         let len = previous_changes.len();
@@ -98,11 +98,11 @@ fn add_cpu_when_played_change(state: &mut GameState, player: PlayerID) {
             break;
         }
         previous_changes.remove(
-            xs_range(&mut state.rng, 0..len as _) as usize
+            xs::range(&mut state.rng, 0..len as _) as usize
         );
     }
 
-    let add_count = xs_range(&mut state.rng, 1..3) as usize;
+    let add_count = xs::range(&mut state.rng, 1..3) as usize;
     let mut new_card_changes: Vec<in_game::Change> = previous_changes;
     new_card_changes.reserve(add_count);
     for _ in 0..add_count {

@@ -89,7 +89,7 @@ macro_rules! implement {
         impl $type {
             pub fn from_rng(rng: &mut Xs) -> $type {
                 let all = $all;
-                let i = xs_range(rng, 0..all.len() as _) as usize;
+                let i = xs::range(rng, 0..all.len() as _) as usize;
                 all[i]
             }
         }

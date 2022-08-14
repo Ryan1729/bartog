@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::xs::*;
+use crate::xs::{self, Xs};
 
 //in pixels
 pub const SCREEN_WIDTH: usize = screen::WIDTH as _;
@@ -206,7 +206,7 @@ pub fn gen_cards(rng: &mut Xs, count: usize) -> Vec<Card> {
 }
 
 pub fn gen_card(rng: &mut Xs) -> Card {
-    xs_range(rng, 0..DECK_SIZE as _) as Card
+    xs::range(rng, 0..DECK_SIZE as _) as Card
 }
 
 pub fn get_card_string(card: Card) -> String {

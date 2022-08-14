@@ -1,4 +1,4 @@
-use inner_common::*;
+use inner_common::{*, xs::Xs};
 
 use std::fmt;
 
@@ -13,17 +13,17 @@ const GENERATION_DECK: [u8; 16] = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 
 impl CardFlags {
     pub fn from_rng(rng: &mut Xs) -> CardFlags {
         let kind = GENERATION_DECK[
-            xs_range(rng, 0..GENERATION_DECK.len() as _) as usize
+            xs::range(rng, 0..GENERATION_DECK.len() as _) as usize
         ];
         match kind {
             0 => CardFlags(
-                xs_range(rng, 0..ONE_PAST_CARD_FLAGS_MAX as _) as u64
+                xs::range(rng, 0..ONE_PAST_CARD_FLAGS_MAX as _) as u64
             ),
             x => {
                 let mut output = 0;
                 for _ in 0..x {
                     output |= SPECIAL_FLAGS[
-                        xs_range(rng, 0..SPECIAL_FLAGS.len() as _) as usize
+                        xs::range(rng, 0..SPECIAL_FLAGS.len() as _) as usize
                     ];
                 }
                 CardFlags::new(output)

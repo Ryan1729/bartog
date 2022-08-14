@@ -1,5 +1,5 @@
 use choices::choose_suit;
-use common::*;
+use common::{xs::Xs, *};
 use game_state::{
     event_push,
     in_game::{self, CardMovement, Change, RelativeHand, RelativePlayer},

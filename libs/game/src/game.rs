@@ -2,7 +2,7 @@ use choices::{
     choose_can_play_graph, choose_in_game_changes, choose_play_again, choose_rule,
     choose_wild_flags, do_choices, show_rules_screen,
 };
-use common::{GLOBAL_ERROR_LOGGER, GLOBAL_LOGGER, *};
+use common::{GLOBAL_ERROR_LOGGER, GLOBAL_LOGGER, xs::Xs, *};
 use game_state::{in_game, GameState, LogHeading, Rules, Status};
 use platform_types::{Button, Input, Speaker, State, SFX};
 pub use platform_types::StateParams;
@@ -273,7 +273,7 @@ fn cpu_would_play(
     }
 
     //if we make repeated decisions with equal weight, sometimes choose differently.
-    xs_shuffle(rng, &mut indexes_and_hand_deltas);
+    xs::shuffle(rng, &mut indexes_and_hand_deltas);
 
     indexes_and_hand_deltas.sort_by_key(
         |&(_, delta)| -delta, //highest negative delta to end
@@ -342,7 +342,7 @@ fn get_sim_state(
         _ => invariant_violation!({}, "get_sim_state called with bad PlayerID"),
     }
 
-    xs_shuffle(rng, &mut pile);
+    xs::shuffle(rng, &mut pile);
 
     let mut output = in_game::State {
         current_player: state.current_player,
