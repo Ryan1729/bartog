@@ -25,6 +25,11 @@ pub fn run<S: State + 'static>(mut state: S) {
     #[cfg(target_arch = "wasm32")]
     wasm::style_canvas();
 
+    let mut output_frame_buffer = Vec::with_capacity({
+        let size = window.inner_size();
+        (size.width * size.height) as usize
+    });
+
     let mut graphics_context = unsafe { GraphicsContext::new(window) }.unwrap();
 
     let mut sound_handler = init_sound_handler();
@@ -90,7 +95,6 @@ pub fn run<S: State + 'static>(mut state: S) {
                 // Let's implement this scheme:
                 // https://rxi.github.io/cached_software_rendering.html
                 //
-                // TODO switch to cached allocation for frame Cow.
                 // TODO switch to stream of render commands, apply to buffer
                 //         Commands should store what rectangle they apply to
                 // TODO Clip commands to cells and render N * M times, resricted to
@@ -100,7 +104,7 @@ pub fn run<S: State + 'static>(mut state: S) {
                 // TODO Attempt to merge adjacent regions for cells that are
                 // adjacent and render merged regions only once each.
 
-                let (frame_buffer, sounds) = state.frame();
+                let (inner_frame_buffer, sounds) = state.frame();
 
                 handle_sounds(&mut sound_handler, sounds);
 
@@ -112,22 +116,24 @@ pub fn run<S: State + 'static>(mut state: S) {
                 let screen_width = screen::WIDTH.into();
                 let screen_height = screen::HEIGHT.into();
 
-                let frame_cow =
-                    if width < screen_width
-                    || height < screen_height {
-                        width = screen_width;
-                        height = screen_height;
-                        Cow::Borrowed(frame_buffer)
-                    } else {
-                        add_bars_if_needed(
-                            frame_buffer,
-                            (screen_width, screen_height),
-                            (width, height),
-                        )
-                    };
+                if width < screen_width
+                || height < screen_height {
+                    width = screen_width;
+                    height = screen_height;
+
+                    output_frame_buffer.clear();
+                    output_frame_buffer.extend_from_slice(&inner_frame_buffer);
+                } else {
+                    add_bars_if_needed(
+                        inner_frame_buffer,
+                        &mut output_frame_buffer,
+                        (screen_width, screen_height),
+                        (width, height),
+                    )
+                }
 
                 graphics_context.set_buffer(
-                    &frame_cow,
+                    &output_frame_buffer,
                     width,
                     height,
                 );
@@ -387,23 +393,27 @@ mod not_wasm {
     }
 }
 
-use std::borrow::Cow;
 fn add_bars_if_needed<'buffer>(
-    frame_buffer: &'buffer [u32],
+    src_frame_buffer: &'buffer [u32],
+    dst_frame_buffer: &mut Vec<u32>,
     (src_w, src_h): (u16, u16),
     (dst_w, dst_h): (u16, u16),
-) -> Cow<'buffer, [u32]> {
+) {
     let src_w = src_w as usize;
     let src_h = src_h as usize;
     let dst_w = dst_w as usize;
     let dst_h = dst_h as usize;
+
+    dst_frame_buffer.clear();
+
     let expected_length = dst_w * dst_h;
-    if frame_buffer.len() < expected_length {
+    if src_frame_buffer.len() < expected_length {
         let width_multiple = dst_w / src_w;
         let height_multiple = dst_h / src_h;
         let multiple = core::cmp::min(width_multiple, height_multiple);
         if multiple == 0 {
-            return Cow::Borrowed(frame_buffer);
+            dst_frame_buffer.extend_from_slice(&src_frame_buffer);
+            return;
         }
 
         let vertical_bars_width = dst_w - (multiple * src_w);
@@ -426,11 +436,10 @@ fn add_bars_if_needed<'buffer>(
             horizontal_bars_height / 2
         ) as usize;
 
-        let mut frame_vec = Vec::with_capacity(expected_length);
-
         // Hopefully this compiles to something not inefficent
+        dst_frame_buffer.reserve(expected_length);
         for i in 0..expected_length {
-            frame_vec.push(0);
+            dst_frame_buffer.push(0);
         }
 
         let mut src_i = 0;
@@ -439,7 +448,7 @@ fn add_bars_if_needed<'buffer>(
             let mut x_remaining = multiple;
             for x in left_bar_width..(dst_w - right_bar_width) {
                 let dst_i = y * dst_w + x;
-                frame_vec[dst_i as usize] = frame_buffer[src_i];
+                dst_frame_buffer[dst_i as usize] = src_frame_buffer[src_i];
 
                 x_remaining -= 1;
                 if x_remaining == 0 {
@@ -456,10 +465,8 @@ fn add_bars_if_needed<'buffer>(
                 src_i -= src_w;
             }
         }
-
-        Cow::Owned(frame_vec)
     } else {
-        Cow::Borrowed(frame_buffer)
+        dst_frame_buffer.extend_from_slice(&src_frame_buffer);
     }
 }
 
@@ -480,11 +487,13 @@ mod add_bars_if_needed_returns_then_expected_result {
 
     #[test]
     fn on_this_trival_example() {
-        let actual = add_bars_if_needed(
+        let mut actual = Vec::new();
+        add_bars_if_needed(
             &[
                 R, G,
                 B, C
             ],
+            &mut actual,
             (2, 2),
             (2, 2),
         );
@@ -500,8 +509,10 @@ mod add_bars_if_needed_returns_then_expected_result {
 
     #[test]
     fn on_this_small_non_trival_example() {
-        let actual = add_bars_if_needed(
+        let mut actual = Vec::new();
+        add_bars_if_needed(
             &[R, G, B, C],
+            &mut actual,
             (2, 2),
             (4, 2),
         );
@@ -517,8 +528,10 @@ mod add_bars_if_needed_returns_then_expected_result {
 
     #[test]
     fn on_this_small_size_doubling_example() {
-        let actual = add_bars_if_needed(
+        let mut actual = Vec::new();
+        add_bars_if_needed(
             &[R, G, B, C],
+            &mut actual,
             (2, 2),
             (6, 4),
         );
@@ -536,8 +549,10 @@ mod add_bars_if_needed_returns_then_expected_result {
 
     #[test]
     fn on_this_small_odd_height_example() {
-        let actual = add_bars_if_needed(
+        let mut actual = Vec::new();
+        add_bars_if_needed(
             &[R, G, B, C],
+            &mut actual,
             (2, 2),
             (6, 3),
         );
