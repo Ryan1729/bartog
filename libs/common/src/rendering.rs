@@ -6,22 +6,9 @@ pub struct Framebuffer {
     pub buffer: Vec<u32>,
 }
 
-impl PartialEq for Framebuffer {
-    fn eq(&self, other: &Framebuffer) -> bool {
-        &self.buffer[..] == &other.buffer[..]
-    }
-}
-
-impl Eq for Framebuffer {}
-
-#[allow(dead_code)]
 impl Framebuffer {
     pub fn new() -> Framebuffer {
         Framebuffer::default()
-    }
-
-    pub fn xy_to_i(x: usize, y: usize) -> usize {
-        y.saturating_mul(SCREEN_WIDTH).saturating_add(x)
     }
 
     pub fn draw_filled_rect(
@@ -789,6 +776,10 @@ impl Framebuffer {
             x,
             y,
         );
+    }
+
+    fn xy_to_i(x: usize, y: usize) -> usize {
+        y.saturating_mul(SCREEN_WIDTH).saturating_add(x)
     }
 }
 
