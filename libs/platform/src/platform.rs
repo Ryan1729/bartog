@@ -30,12 +30,12 @@ pub fn run<S: State + 'static>(mut state: S) {
     let mut sound_handler = init_sound_handler();
 
     let mut loop_helper;
-    
-    #[cfg(target_arch = "wasm32")] 
+
+    #[cfg(target_arch = "wasm32")]
     {
         loop_helper = ();
     }
-    #[cfg(not(target_arch = "wasm32"))] 
+    #[cfg(not(target_arch = "wasm32"))]
     {
         loop_helper = spin_sleep::LoopHelper::builder()
             .build_with_target_rate(60.0)
@@ -87,6 +87,19 @@ pub fn run<S: State + 'static>(mut state: S) {
                 }
             }
             Event::MainEventsCleared => {
+                // Let's implement this scheme:
+                // https://rxi.github.io/cached_software_rendering.html
+                //
+                // TODO switch to cached allocation for frame Cow.
+                // TODO switch to stream of render commands, apply to buffer
+                //         Commands should store what rectangle they apply to
+                // TODO Clip commands to cells and render N * M times, resricted to
+                // each cell in turn.
+                // TODO store hashes of previous frames render commands for each
+                // cell. Only render to cells with changed hashes.
+                // TODO Attempt to merge adjacent regions for cells that are
+                // adjacent and render merged regions only once each.
+
                 let (frame_buffer, sounds) = state.frame();
 
                 handle_sounds(&mut sound_handler, sounds);
@@ -119,7 +132,7 @@ pub fn run<S: State + 'static>(mut state: S) {
                     height,
                 );
 
-                #[cfg(not(target_arch = "wasm32"))] 
+                #[cfg(not(target_arch = "wasm32"))]
                 {
                     loop_helper.loop_sleep();
                     loop_helper.loop_start();
@@ -187,21 +200,21 @@ mod wasm {
         fn inner(request: SFX) -> Option<()> {
             use js_sys::{Function, Reflect};
             use wasm_bindgen::JsValue;
-    
+
             let window = web_sys::window()?;
-    
+
             let handler = Reflect::get(
                 &window,
                 &JsValue::from_str("soundHandler")
             ).ok()?.dyn_into::<Function>().ok()?;
-    
+
             let request_string = request.to_sound_key();
-    
+
             handler.call1(&JsValue::undefined(), &request_string.into()).ok()?;
-    
+
             Some(())
         }
-    
+
         for &request in requests {
             // Sound is inessential, so ignore errors.
             let _ = inner(request);
@@ -332,7 +345,7 @@ mod not_wasm {
                     xs::range(&mut rng, 0..sounds.len() as u32) as usize
                 ];
 
-                // If one sound file is messed up, don't break all the sounds.    
+                // If one sound file is messed up, don't break all the sounds.
                 if let Ok(decoder) = Decoder::new_vorbis(
                     std::io::Cursor::new(data)
                 ) {
