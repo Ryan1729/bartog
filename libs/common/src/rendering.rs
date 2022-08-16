@@ -20,96 +20,112 @@ impl Framebuffer {
 
 type PaletteIndex = u8;
 
-enum Sheet {
+pub enum Sheet {
     Gfx,
     Font(PaletteIndex)
 }
 
+pub struct Command {
+    pub rect: Rect,
+    pub sheet: Sheet,
+    pub sprite_x: u8,
+    pub sprite_y: u8,
+}
+
+fn blit(
+    buffer: &mut Vec<u32>,
+    Command {
+        sheet,
+        rect: Rect {
+            x: display_x,
+            y: display_y,
+            w,
+            h,
+        },
+        sprite_x,
+        sprite_y,
+    }: Command,
+) {
+    const D_WIDTH: usize = SCREEN_WIDTH as usize;
+    let w = w as usize;
+    let h = h as usize;
+
+    let s_x = sprite_x as usize;
+    let s_y = sprite_y as usize;
+
+    let d_x = display_x as usize;
+    let d_y = display_y as usize;
+
+    let d_x_max = d_x + w;
+    let d_y_max = d_y + h;
+
+    match sheet {
+        Sheet::Gfx => {
+            let mut current_s_y = s_y;
+            for y in d_y..d_y_max {
+                let mut current_s_x = s_x;
+                for x in d_x..d_x_max {
+                    let colour = GFX[
+                        current_s_x + current_s_y * GFX_WIDTH
+                    ] as usize;
+                    //make purple transparent
+                    if colour != 4 {
+                        let index = x + y * D_WIDTH;
+                        if index < buffer.len() {
+                            buffer[index] = PALETTE[colour];
+                        }
+                    }
+                    current_s_x += 1;
+                }
+                current_s_y += 1;
+            }
+        },
+        Sheet::Font(colour) => {
+            let mut current_s_y = s_y;
+            for y in d_y..d_y_max {
+                let mut current_s_x = s_x;
+                for x in d_x..d_x_max {
+                    let foxt_pixel_colour = FONT[
+                        current_s_x + current_s_y * FONT_WIDTH
+                    ] as usize;
+                    //make black transparent
+                    if foxt_pixel_colour != 0 {
+                        let index = x + y * D_WIDTH;
+                        if index < buffer.len() {
+                            buffer[index] = PALETTE[colour as usize & 15];
+                        }
+                    }
+                    current_s_x += 1;
+                }
+                current_s_y += 1;
+            }
+        },
+    };
+}
+
 impl Framebuffer {
-    fn blit(
-        &mut self,
-        sheet: Sheet,
-        sprite_x: u8,
-        sprite_y: u8,
-        sprite_w: u8,
-        sprite_h: u8,
-        display_x: u8,
-        display_y: u8,
-    ) {
-        const D_WIDTH: usize = SCREEN_WIDTH as usize;
-        let s_w = sprite_w as usize;
-        let s_h = sprite_h as usize;
-
-        let s_x = sprite_x as usize;
-        let s_y = sprite_y as usize;
-
-        let d_x = display_x as usize;
-        let d_y = display_y as usize;
-
-        let d_x_max = d_x + s_w;
-        let d_y_max = d_y + s_h;
-
-        match sheet {
-            Sheet::Gfx => {
-                let mut current_s_y = s_y;
-                for y in d_y..d_y_max {
-                    let mut current_s_x = s_x;
-                    for x in d_x..d_x_max {
-                        let colour = GFX[
-                            current_s_x + current_s_y * GFX_WIDTH
-                        ] as usize;
-                        //make purple transparent
-                        if colour != 4 {
-                            let index = x + y * D_WIDTH;
-                            if index < self.buffer.len() {
-                                self.buffer[index] = PALETTE[colour];
-                            }
-                        }
-                        current_s_x += 1;
-                    }
-                    current_s_y += 1;
-                }
-            },
-            Sheet::Font(colour) => {
-                let mut current_s_y = s_y;
-                for y in d_y..d_y_max {
-                    let mut current_s_x = s_x;
-                    for x in d_x..d_x_max {
-                        let foxt_pixel_colour = FONT[
-                            current_s_x + current_s_y * FONT_WIDTH
-                        ] as usize;
-                        //make black transparent
-                        if foxt_pixel_colour != 0 {
-                            let index = x + y * D_WIDTH;
-                            if index < self.buffer.len() {
-                                self.buffer[index] = PALETTE[colour as usize & 15];
-                            }
-                        }
-                        current_s_x += 1;
-                    }
-                    current_s_y += 1;
-                }
-            },
-        };
-    }
-
     pub fn sspr(
         &mut self,
         sprite_x: u8,
         sprite_y: u8,
-        sprite_w: u8,
-        sprite_h: u8,
+        w: u8,
+        h: u8,
         display_x: u8,
         display_y: u8,
     ) {
-        self.blit(
-            Sheet::Gfx,
-            sprite_x,
-            sprite_y,
-            sprite_w,
-            sprite_h,
-            display_x,
-            display_y,
+        blit(
+            &mut self.buffer,
+            Command {
+                sheet: Sheet::Gfx,
+                rect: Rect {
+                    x: display_x,
+                    y: display_y,
+                    w, 
+                    h,
+                },
+                sprite_x,
+                sprite_y,
+            }
         )
     }
 
@@ -117,20 +133,25 @@ impl Framebuffer {
         &mut self,
         sprite_x: u8,
         sprite_y: u8,
-        sprite_w: u8,
-        sprite_h: u8,
+        w: u8,
+        h: u8,
         display_x: u8,
         display_y: u8,
         colour: u8,
     ) {
-        self.blit(
-            Sheet::Font(colour),
-            sprite_x,
-            sprite_y,
-            sprite_w,
-            sprite_h,
-            display_x,
-            display_y,
+        blit(
+            &mut self.buffer,
+            Command {
+                sheet: Sheet::Font(colour),
+                rect: Rect {
+                    x: display_x,
+                    y: display_y,
+                    w, 
+                    h,
+                },
+                sprite_x,
+                sprite_y,
+            }
         )
     }
 
