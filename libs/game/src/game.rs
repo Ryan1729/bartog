@@ -643,7 +643,7 @@ pub fn update_and_render(
 
     invariant_assert_eq!(state.in_game.missing_cards(), vec![0; 0]);
 
-    framebuffer.clearTo(GREEN);
+    framebuffer.clearTo(1 /* green */);
 
     if state.show_rules || input.pressed_this_frame(Button::SELECT) {
         state.show_rules = true;

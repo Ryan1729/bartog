@@ -10,48 +10,36 @@ impl Framebuffer {
     pub fn new() -> Framebuffer {
         Framebuffer::default()
     }
-
-    pub fn clearTo(&mut self, colour: u32) {
-        for i in 0..self.buffer.len() {
-            self.buffer[i] = colour;
-        }
-    }
 }
 
 type PaletteIndex = u8;
 
-pub enum Sheet {
-    Gfx,
-    Font(PaletteIndex)
+pub enum Kind {
+    Gfx((u8, u8)),
+    Font((u8, u8), PaletteIndex),
+    Colour(PaletteIndex),
 }
 
 pub struct Command {
     pub rect: Rect,
-    pub sheet: Sheet,
-    pub sprite_x: u8,
-    pub sprite_y: u8,
+    pub kind: Kind,
 }
 
-fn blit(
+pub fn blit(
     buffer: &mut Vec<u32>,
     Command {
-        sheet,
+        kind,
         rect: Rect {
             x: display_x,
             y: display_y,
             w,
             h,
         },
-        sprite_x,
-        sprite_y,
     }: Command,
 ) {
     const D_WIDTH: usize = SCREEN_WIDTH as usize;
     let w = w as usize;
     let h = h as usize;
-
-    let s_x = sprite_x as usize;
-    let s_y = sprite_y as usize;
 
     let d_x = display_x as usize;
     let d_y = display_y as usize;
@@ -59,11 +47,11 @@ fn blit(
     let d_x_max = d_x + w;
     let d_y_max = d_y + h;
 
-    match sheet {
-        Sheet::Gfx => {
-            let mut current_s_y = s_y;
+    match kind {
+        Kind::Gfx((sprite_x, sprite_y)) => {
+            let mut current_s_y = sprite_y as usize;
             for y in d_y..d_y_max {
-                let mut current_s_x = s_x;
+                let mut current_s_x = sprite_x as usize;
                 for x in d_x..d_x_max {
                     let colour = GFX[
                         current_s_x + current_s_y * GFX_WIDTH
@@ -80,10 +68,10 @@ fn blit(
                 current_s_y += 1;
             }
         },
-        Sheet::Font(colour) => {
-            let mut current_s_y = s_y;
+        Kind::Font((sprite_x, sprite_y), colour) => {
+            let mut current_s_y = sprite_y as usize;
             for y in d_y..d_y_max {
-                let mut current_s_x = s_x;
+                let mut current_s_x = sprite_x as usize;
                 for x in d_x..d_x_max {
                     let foxt_pixel_colour = FONT[
                         current_s_x + current_s_y * FONT_WIDTH
@@ -100,6 +88,16 @@ fn blit(
                 current_s_y += 1;
             }
         },
+        Kind::Colour(colour) => {
+            for y in d_y..d_y_max {
+                for x in d_x..d_x_max {
+                    let index = x + y * D_WIDTH;
+                    if index < buffer.len() {
+                        buffer[index] = PALETTE[colour as usize & 15];
+                    }
+                }
+            }
+        }
     };
 }
 
@@ -116,15 +114,13 @@ impl Framebuffer {
         blit(
             &mut self.buffer,
             Command {
-                sheet: Sheet::Gfx,
+                kind: Kind::Gfx((sprite_x, sprite_y)),
                 rect: Rect {
                     x: display_x,
                     y: display_y,
                     w, 
                     h,
                 },
-                sprite_x,
-                sprite_y,
             }
         )
     }
@@ -142,15 +138,28 @@ impl Framebuffer {
         blit(
             &mut self.buffer,
             Command {
-                sheet: Sheet::Font(colour),
+                kind: Kind::Font((sprite_x, sprite_y), colour),
                 rect: Rect {
                     x: display_x,
                     y: display_y,
                     w, 
                     h,
                 },
-                sprite_x,
-                sprite_y,
+            }
+        )
+    }
+
+    pub fn clearTo(&mut self, colour: PaletteIndex) {
+        blit(
+            &mut self.buffer,
+            Command {
+                kind: Kind::Colour(colour),
+                rect: Rect {
+                    x: 0,
+                    y: 0,
+                    w: SCREEN_WIDTH,
+                    h: SCREEN_HEIGHT,
+                },
             }
         )
     }
@@ -298,10 +307,10 @@ impl Framebuffer {
 
     pub fn center_half_window(&mut self) {
         self.window(
-            SCREEN_WIDTH as u8 / 4,
-            SCREEN_HEIGHT as u8 / 4,
-            SCREEN_WIDTH as u8 / 2,
-            SCREEN_HEIGHT as u8 / 2,
+            SCREEN_WIDTH / 4,
+            SCREEN_HEIGHT / 4,
+            SCREEN_WIDTH / 2,
+            SCREEN_HEIGHT / 2,
         );
     }
 
@@ -473,7 +482,7 @@ impl Framebuffer {
     }
 
     fn xy_to_i(x: usize, y: usize) -> usize {
-        y.saturating_mul(SCREEN_WIDTH).saturating_add(x)
+        y.saturating_mul(usize::from(SCREEN_WIDTH)).saturating_add(x)
     }
 }
 
@@ -496,7 +505,10 @@ pub fn get_char_xy(sprite_number: u8) -> (u8, u8) {
 impl Default for Framebuffer {
     fn default() -> Self {
         let mut buffer = Vec::new();
-        buffer.resize(SCREEN_WIDTH * SCREEN_HEIGHT, PALETTE[0]);
+        buffer.resize(
+            usize::from(SCREEN_WIDTH) * usize::from(SCREEN_HEIGHT),
+            PALETTE[0]
+        );
 
         Framebuffer { buffer }
     }

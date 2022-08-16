@@ -3,8 +3,8 @@
 use crate::xs::{self, Xs};
 
 //in pixels
-pub const SCREEN_WIDTH: usize = screen::WIDTH as _;
-pub const SCREEN_HEIGHT: usize = screen::HEIGHT as _;
+pub const SCREEN_WIDTH: u8 = screen::WIDTH;
+pub const SCREEN_HEIGHT: u8 = screen::HEIGHT;
 pub const SCREEN_LENGTH: usize = screen::LENGTH;
 
 // reportedly colourblind friendly colours
@@ -494,20 +494,20 @@ pub fn get_pronoun(player_id: PlayerID) -> String {
     }
 }
 
-pub const PLAYER_HAND_HEIGHT: u8 = (SCREEN_HEIGHT - (card::HEIGHT * 5 / 9) as usize) as u8;
+pub const PLAYER_HAND_HEIGHT: u8 = (SCREEN_HEIGHT as u16 - (card::HEIGHT * 5 / 9) as u16) as u8;
 pub const MIDDLE_CPU_HAND_HEIGHT: u8 = card::Y_EMPTY_SPACE;
 pub const LEFT_CPU_HAND_X: u8 = card::X_EMPTY_SPACE;
 pub const RIGHT_CPU_HAND_X: u8 =
-    (SCREEN_WIDTH - (card::WIDTH as usize + card::X_EMPTY_SPACE as usize)) as u8;
+    (SCREEN_WIDTH as u16 - (card::WIDTH as u16 + card::X_EMPTY_SPACE as u16)) as u8;
 
 pub const LEFT_AND_RIGHT_HAND_EDGES: (u8, u8) = (
     card::HEIGHT + (card::Y_EMPTY_SPACE * 2),
-    SCREEN_HEIGHT as u8 - (card::HEIGHT + card::Y_EMPTY_SPACE),
+    SCREEN_HEIGHT - (card::HEIGHT + card::Y_EMPTY_SPACE),
 );
 
 pub const TOP_AND_BOTTOM_HAND_EDGES: (u8, u8) = (
     card::X_EMPTY_SPACE,
-    SCREEN_WIDTH as u8 - card::X_EMPTY_SPACE,
+    SCREEN_WIDTH - card::X_EMPTY_SPACE,
 );
 
 pub const DECK_X: u8 = 40;
@@ -518,7 +518,7 @@ pub const DISCARD_X: u8 = DECK_X + card::WIDTH + card::WIDTH / 2;
 pub const DISCARD_Y: u8 = DECK_Y;
 pub const DISCARD_XY: (u8, u8) = (DISCARD_X, DISCARD_Y);
 
-pub const NINE_SLICE_MAX_INTERIOR_SIZE: u8 = (SCREEN_WIDTH - 2 * SPRITE_SIZE as usize) as u8;
+pub const NINE_SLICE_MAX_INTERIOR_SIZE: u8 = (SCREEN_WIDTH - 2 * SPRITE_SIZE) as u8;
 
 pub const NINE_SLICE_MAX_INTERIOR_WIDTH_IN_CHARS: u8 =
     (NINE_SLICE_MAX_INTERIOR_SIZE / FONT_ADVANCE) as u8;
