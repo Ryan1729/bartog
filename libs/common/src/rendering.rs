@@ -1,104 +1,17 @@
 use crate::text::bytes_lines;
+use platform_types::{Command, Kind, PaletteIndex, Rect, FONT_WIDTH};
 use inner_common::*;
 use std::cmp::max;
 
+#[derive(Default)]
 pub struct Framebuffer {
-    pub buffer: Vec<u32>,
+    pub commands: Vec<Command>,
 }
 
 impl Framebuffer {
     pub fn new() -> Framebuffer {
         Framebuffer::default()
     }
-}
-
-type PaletteIndex = u8;
-
-pub enum Kind {
-    Gfx((u8, u8)),
-    Font((u8, u8), PaletteIndex),
-    Colour(PaletteIndex),
-}
-
-pub struct Command {
-    pub rect: Rect,
-    pub kind: Kind,
-}
-
-pub fn blit(
-    buffer: &mut Vec<u32>,
-    Command {
-        kind,
-        rect: Rect {
-            x: display_x,
-            y: display_y,
-            w,
-            h,
-        },
-    }: Command,
-) {
-    const D_WIDTH: usize = SCREEN_WIDTH as usize;
-    let w = w as usize;
-    let h = h as usize;
-
-    let d_x = display_x as usize;
-    let d_y = display_y as usize;
-
-    let d_x_max = d_x + w;
-    let d_y_max = d_y + h;
-
-    match kind {
-        Kind::Gfx((sprite_x, sprite_y)) => {
-            let mut current_s_y = sprite_y as usize;
-            for y in d_y..d_y_max {
-                let mut current_s_x = sprite_x as usize;
-                for x in d_x..d_x_max {
-                    let colour = GFX[
-                        current_s_x + current_s_y * GFX_WIDTH
-                    ] as usize;
-                    //make purple transparent
-                    if colour != 4 {
-                        let index = x + y * D_WIDTH;
-                        if index < buffer.len() {
-                            buffer[index] = PALETTE[colour];
-                        }
-                    }
-                    current_s_x += 1;
-                }
-                current_s_y += 1;
-            }
-        },
-        Kind::Font((sprite_x, sprite_y), colour) => {
-            let mut current_s_y = sprite_y as usize;
-            for y in d_y..d_y_max {
-                let mut current_s_x = sprite_x as usize;
-                for x in d_x..d_x_max {
-                    let foxt_pixel_colour = FONT[
-                        current_s_x + current_s_y * FONT_WIDTH
-                    ] as usize;
-                    //make black transparent
-                    if foxt_pixel_colour != 0 {
-                        let index = x + y * D_WIDTH;
-                        if index < buffer.len() {
-                            buffer[index] = PALETTE[colour as usize & 15];
-                        }
-                    }
-                    current_s_x += 1;
-                }
-                current_s_y += 1;
-            }
-        },
-        Kind::Colour(colour) => {
-            for y in d_y..d_y_max {
-                for x in d_x..d_x_max {
-                    let index = x + y * D_WIDTH;
-                    if index < buffer.len() {
-                        buffer[index] = PALETTE[colour as usize & 15];
-                    }
-                }
-            }
-        }
-    };
 }
 
 impl Framebuffer {
@@ -111,8 +24,7 @@ impl Framebuffer {
         display_x: u8,
         display_y: u8,
     ) {
-        blit(
-            &mut self.buffer,
+        self.commands.push(
             Command {
                 kind: Kind::Gfx((sprite_x, sprite_y)),
                 rect: Rect {
@@ -122,7 +34,7 @@ impl Framebuffer {
                     h,
                 },
             }
-        )
+        );
     }
 
     fn print_char_raw(
@@ -135,8 +47,7 @@ impl Framebuffer {
         display_y: u8,
         colour: u8,
     ) {
-        blit(
-            &mut self.buffer,
+        self.commands.push(
             Command {
                 kind: Kind::Font((sprite_x, sprite_y), colour),
                 rect: Rect {
@@ -146,12 +57,11 @@ impl Framebuffer {
                     h,
                 },
             }
-        )
+        );
     }
 
     pub fn clearTo(&mut self, colour: PaletteIndex) {
-        blit(
-            &mut self.buffer,
+        self.commands.push(
             Command {
                 kind: Kind::Colour(colour),
                 rect: Rect {
@@ -161,7 +71,7 @@ impl Framebuffer {
                     h: SCREEN_HEIGHT,
                 },
             }
-        )
+        );
     }
 
     fn spr(&mut self, sprite_number: u8, x: u8, y: u8) {
@@ -500,56 +410,6 @@ pub fn get_char_xy(sprite_number: u8) -> (u8, u8) {
         (sprite_number % SPRITES_PER_ROW) * FONT_SIZE,
         (sprite_number / SPRITES_PER_ROW) * FONT_SIZE,
     )
-}
-
-impl Default for Framebuffer {
-    fn default() -> Self {
-        let mut buffer = Vec::new();
-        buffer.resize(
-            usize::from(SCREEN_WIDTH) * usize::from(SCREEN_HEIGHT),
-            PALETTE[0]
-        );
-
-        Framebuffer { buffer }
-    }
-}
-
-use std::cmp::min;
-
-#[derive(Clone, Copy, Debug)]
-pub struct Rect {
-    pub x: u8,
-    pub y: u8,
-    pub w: u8,
-    pub h: u8,
-}
-
-impl From<((u8, u8, u8, u8))> for Rect {
-    #[inline]
-    fn from((x, y, w, h): (u8, u8, u8, u8)) -> Self {
-        Rect { x, y, w, h }
-    }
-}
-
-impl From<Rect> for (u8, u8, u8, u8) {
-    #[inline]
-    fn from(Rect { x, y, w, h }: Rect) -> Self {
-        (x, y, w, h)
-    }
-}
-
-impl From<((u8, u8), (u8, u8))> for Rect {
-    #[inline]
-    fn from(((x, y), (w, h)): ((u8, u8), (u8, u8))) -> Self {
-        Rect { x, y, w, h }
-    }
-}
-
-impl From<Rect> for ((u8, u8), (u8, u8)) {
-    #[inline]
-    fn from(Rect { x, y, w, h }: Rect) -> Self {
-        ((x, y), (w, h))
-    }
 }
 
 pub fn get_text_dimensions(bytes: &[u8]) -> (u8, u8) {

@@ -1,6 +1,65 @@
 #[macro_use]
 extern crate bitflags;
 
+pub const GFX_WIDTH: usize = 128;
+pub const GFX_HEIGHT: usize = 128;
+pub const GFX_LENGTH: usize = GFX_WIDTH * GFX_HEIGHT;
+
+pub const FONT_WIDTH: usize = 128;
+pub const FONT_HEIGHT: usize = 128;
+pub const FONT_LENGTH: usize = FONT_WIDTH * FONT_HEIGHT;
+
+pub type PaletteIndex = u8;
+
+#[derive(Clone, Copy, Debug)]
+pub enum Kind {
+    Gfx((u8, u8)),
+    Font((u8, u8), PaletteIndex),
+    Colour(PaletteIndex),
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Rect {
+    pub x: u8,
+    pub y: u8,
+    pub w: u8,
+    pub h: u8,
+}
+
+impl From<((u8, u8, u8, u8))> for Rect {
+    #[inline]
+    fn from((x, y, w, h): (u8, u8, u8, u8)) -> Self {
+        Rect { x, y, w, h }
+    }
+}
+
+impl From<Rect> for (u8, u8, u8, u8) {
+    #[inline]
+    fn from(Rect { x, y, w, h }: Rect) -> Self {
+        (x, y, w, h)
+    }
+}
+
+impl From<((u8, u8), (u8, u8))> for Rect {
+    #[inline]
+    fn from(((x, y), (w, h)): ((u8, u8), (u8, u8))) -> Self {
+        Rect { x, y, w, h }
+    }
+}
+
+impl From<Rect> for ((u8, u8), (u8, u8)) {
+    #[inline]
+    fn from(Rect { x, y, w, h }: Rect) -> Self {
+        ((x, y), (w, h))
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Command {
+    pub rect: Rect,
+    pub kind: Kind,
+}
+
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Input {
     pub gamepad: Button,
@@ -85,7 +144,7 @@ pub type Logger = Option<fn(&str) -> ()>;
 pub type StateParams = ([u8; 16], Logger, Logger);
 
 pub trait State {
-    fn frame(&mut self) -> (&[u32], &[SFX]);
+    fn frame(&mut self) -> (&[Command], &[SFX]);
 
     fn press(&mut self, button: Button);
 
