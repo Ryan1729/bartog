@@ -44,7 +44,7 @@ pub fn run<S: State + 'static>(mut state: S) {
 
     let mut output_frame_buffer = {
         let size = window.inner_size();
-            
+
         FrameBuffer {
             buffer: Vec::with_capacity(
                 (size.width * size.height) as usize
@@ -119,8 +119,6 @@ pub fn run<S: State + 'static>(mut state: S) {
                 // Let's implement this scheme:
                 // https://rxi.github.io/cached_software_rendering.html
                 //
-                // TODO switch to stream of render commands, apply to buffer
-                //         Commands should store what rectangle they apply to
                 // TODO Clip commands to cells and render N * M times, resricted to
                 // each cell in turn.
                 // TODO store hashes of previous frames render commands for each
@@ -408,6 +406,8 @@ fn render(
     frame_buffer: &mut FrameBuffer,
     commands: &[Command],
 ) {
+    use core::cmp::min;
+
     // The dimensions the commands are written in terms of.
     let src_w = screen::WIDTH.into();
     let src_h = screen::HEIGHT.into();
@@ -422,7 +422,7 @@ fn render(
 
     let width_multiple = frame_buffer.width / src_w;
     let height_multiple = frame_buffer.height / src_h;
-    let multiple = core::cmp::min(width_multiple, height_multiple);
+    let multiple = min(width_multiple, height_multiple);
     if multiple == 0 {
         debug_assert!(multiple != 0);
         return;
@@ -457,8 +457,124 @@ fn render(
         frame_buffer.buffer.push(0);
     }
 
-    for &command in commands {
-        blit(&mut frame_buffer.buffer, command);
+    for &Command {
+        kind,
+        rect: Rect {
+            x: display_x,
+            y: display_y,
+            w,
+            h,
+        },
+    } in commands {
+        let d_w = frame_buffer.width as usize;
+        let w = w as usize;
+        let h = h as usize;
+
+        let d_x = display_x as usize;
+        let d_y = display_y as usize;
+
+        let d_x_max = d_x + w;
+        let d_y_max = d_y + h;
+
+        let multiple = multiple as usize;
+
+        let left: usize = d_x * multiple + left_bar_width;
+        let one_past_right: usize = min(
+            d_x_max * multiple + left_bar_width,
+            usize::from(frame_buffer.width) - right_bar_width,
+        );
+        let top: usize = d_y * multiple + top_bar_height;
+        let one_past_bottom: usize = min(
+            d_y_max * multiple + top_bar_height,
+            usize::from(frame_buffer.height) - bottom_bar_height,
+        );
+
+        match kind {
+            Kind::Gfx((sprite_x, sprite_y)) => {
+                let sprite_x = usize::from(sprite_x);
+                let sprite_y = usize::from(sprite_y);
+
+                let src_w = GFX_WIDTH;
+
+                let mut src_i = sprite_y * src_w + sprite_x;
+                let mut y_remaining = multiple;
+                for y in top..one_past_bottom {
+                    let mut x_remaining = multiple;
+                    for x in left..one_past_right {
+                        let colour = GFX[src_i] as usize;
+                        //make purple transparent
+                        if colour != 4 {
+                            let d_i = y * d_w + x;
+                            if d_i < frame_buffer.buffer.len() {
+                                frame_buffer.buffer[d_i] = PALETTE[colour];
+                            }
+                        }
+
+                        x_remaining -= 1;
+                        if x_remaining == 0 {
+                            src_i += 1;
+                            x_remaining = multiple;
+                        }
+                    }
+
+                    // Go back to the beginning of the row.
+                    src_i -= w;
+
+                    y_remaining -= 1;
+                    if y_remaining == 0 {
+                        y_remaining = multiple;
+                        src_i += src_w;
+                    }
+                }
+            },
+            Kind::Font((sprite_x, sprite_y), colour) => {
+                let sprite_x = usize::from(sprite_x);
+                let sprite_y = usize::from(sprite_y);
+
+                let src_w = FONT_WIDTH;
+
+                let mut src_i = sprite_y * src_w + sprite_x;
+                let mut y_remaining = multiple;
+                for y in top..one_past_bottom {
+                    let mut x_remaining = multiple;
+                    for x in left..one_past_right {
+                        let font_pixel_colour = FONT[src_i] as usize;
+                        //make black transparent
+                        if font_pixel_colour != 0 {
+                            let d_i = y * d_w + x;
+                            if d_i < frame_buffer.buffer.len() {
+                                frame_buffer.buffer[d_i] = PALETTE[colour as usize & 15];
+                            }
+                        }
+
+                        x_remaining -= 1;
+                        if x_remaining == 0 {
+                            src_i += 1;
+                            x_remaining = multiple;
+                        }
+                    }
+
+                    // Go back to the beginning of the row.
+                    src_i -= w;
+
+                    y_remaining -= 1;
+                    if y_remaining == 0 {
+                        y_remaining = multiple;
+                        src_i += src_w;
+                    }
+                }
+            },
+            Kind::Colour(colour) => {
+                for y in top..one_past_bottom {
+                    for x in left..one_past_right {
+                        let index = x + y * d_w;
+                        if index < frame_buffer.buffer.len() {
+                            frame_buffer.buffer[index] = PALETTE[colour as usize & 15];
+                        }
+                    }
+                }
+            }
+        };
     }
 /*
     let mut src_i = 0;
@@ -667,82 +783,6 @@ mod add_bars_if_needed_returns_then_expected_result {
             ]
         )
     }
-}
-
-pub fn blit(
-    buffer: &mut Vec<u32>,
-    Command {
-        kind,
-        rect: Rect {
-            x: display_x,
-            y: display_y,
-            w,
-            h,
-        },
-    }: Command,
-) {
-    const D_WIDTH: usize = screen::WIDTH as usize;
-    let w = w as usize;
-    let h = h as usize;
-
-    let d_x = display_x as usize;
-    let d_y = display_y as usize;
-
-    let d_x_max = d_x + w;
-    let d_y_max = d_y + h;
-
-    match kind {
-        Kind::Gfx((sprite_x, sprite_y)) => {
-            let mut current_s_y = sprite_y as usize;
-            for y in d_y..d_y_max {
-                let mut current_s_x = sprite_x as usize;
-                for x in d_x..d_x_max {
-                    let colour = GFX[
-                        current_s_x + current_s_y * GFX_WIDTH
-                    ] as usize;
-                    //make purple transparent
-                    if colour != 4 {
-                        let index = x + y * D_WIDTH;
-                        if index < buffer.len() {
-                            buffer[index] = PALETTE[colour];
-                        }
-                    }
-                    current_s_x += 1;
-                }
-                current_s_y += 1;
-            }
-        },
-        Kind::Font((sprite_x, sprite_y), colour) => {
-            let mut current_s_y = sprite_y as usize;
-            for y in d_y..d_y_max {
-                let mut current_s_x = sprite_x as usize;
-                for x in d_x..d_x_max {
-                    let foxt_pixel_colour = FONT[
-                        current_s_x + current_s_y * FONT_WIDTH
-                    ] as usize;
-                    //make black transparent
-                    if foxt_pixel_colour != 0 {
-                        let index = x + y * D_WIDTH;
-                        if index < buffer.len() {
-                            buffer[index] = PALETTE[colour as usize & 15];
-                        }
-                    }
-                    current_s_x += 1;
-                }
-                current_s_y += 1;
-            }
-        },
-        Kind::Colour(colour) => {
-            for y in d_y..d_y_max {
-                for x in d_x..d_x_max {
-                    let index = x + y * D_WIDTH;
-                    if index < buffer.len() {
-                        buffer[index] = PALETTE[colour as usize & 15];
-                    }
-                }
-            }
-        }
-    };
 }
 
 // reportedly colourblind friendly colours
