@@ -434,21 +434,21 @@ fn render(
 
     frame_buffer.buffer.clear();
 
-    let width_multiple = frame_buffer.width / src_w;
-    let height_multiple = frame_buffer.height / src_h;
-    let multiple = min(width_multiple, height_multiple);
-    if multiple == 0 {
-        debug_assert!(multiple != 0);
+    let width_multiplier = frame_buffer.width / src_w;
+    let height_multiplier = frame_buffer.height / src_h;
+    let multiplier = min(width_multiplier, height_multiplier);
+    if multiplier == 0 {
+        debug_assert!(multiplier != 0);
         return;
     }
 
-    let vertical_bars_width: clip::W = frame_buffer.width - (multiple * src_w);
+    let vertical_bars_width: clip::W = frame_buffer.width - (multiplier * src_w);
 
     let left_bar_width: clip::W = (vertical_bars_width + 1) / 2;
 
     let right_bar_width: clip::W = vertical_bars_width / 2;
 
-    let horizontal_bars_height: clip::H = frame_buffer.height - (multiple * src_h);
+    let horizontal_bars_height: clip::H = frame_buffer.height - (multiplier * src_h);
 
     let top_bar_height: clip::H = (horizontal_bars_height + 1) / 2;
 
@@ -482,12 +482,12 @@ fn render(
         let d_y_max = d_y + h;
 
         let clip_rect = clip::Rect {
-            x: (d_x * multiple + left_bar_width)..min(
-                d_x_max * multiple + left_bar_width,
+            x: (d_x * multiplier + left_bar_width)..min(
+                d_x_max * multiplier + left_bar_width,
                 frame_buffer.width - right_bar_width,
             ),
-            y: (d_y * multiple + top_bar_height)..min(
-                d_y_max * multiple + top_bar_height,
+            y: (d_y * multiplier + top_bar_height)..min(
+                d_y_max * multiplier + top_bar_height,
                 frame_buffer.height - bottom_bar_height,
             ),
         };
@@ -500,9 +500,9 @@ fn render(
                 let src_w = GFX_WIDTH;
 
                 let mut src_i = sprite_y * src_w + sprite_x;
-                let mut y_remaining = multiple;
+                let mut y_remaining = multiplier;
                 for y in clip_rect.y {
-                    let mut x_remaining = multiple;
+                    let mut x_remaining = multiplier;
                     for x in clip_rect.x.clone() {
                         let colour = GFX[src_i] as usize;
                         //make purple transparent
@@ -518,7 +518,7 @@ fn render(
                         x_remaining -= 1;
                         if x_remaining == 0 {
                             src_i += 1;
-                            x_remaining = multiple;
+                            x_remaining = multiplier;
                         }
                     }
 
@@ -527,7 +527,7 @@ fn render(
 
                     y_remaining -= 1;
                     if y_remaining == 0 {
-                        y_remaining = multiple;
+                        y_remaining = multiplier;
                         src_i += src_w;
                     }
                 }
@@ -539,9 +539,9 @@ fn render(
                 let src_w = FONT_WIDTH;
 
                 let mut src_i = sprite_y * src_w + sprite_x;
-                let mut y_remaining = multiple;
+                let mut y_remaining = multiplier;
                 for y in clip_rect.y {
-                    let mut x_remaining = multiple;
+                    let mut x_remaining = multiplier;
                     for x in clip_rect.x.clone() {
                         let font_pixel_colour = FONT[src_i] as usize;
                         //make black transparent
@@ -557,7 +557,7 @@ fn render(
                         x_remaining -= 1;
                         if x_remaining == 0 {
                             src_i += 1;
-                            x_remaining = multiple;
+                            x_remaining = multiplier;
                         }
                     }
 
@@ -566,7 +566,7 @@ fn render(
 
                     y_remaining -= 1;
                     if y_remaining == 0 {
-                        y_remaining = multiple;
+                        y_remaining = multiplier;
                         src_i += src_w;
                     }
                 }
@@ -602,15 +602,15 @@ fn add_bars_if_needed<'buffer>(
 
     let expected_length = dst_w * dst_h;
     if src_frame_buffer.len() < expected_length {
-        let width_multiple = dst_w / src_w;
-        let height_multiple = dst_h / src_h;
-        let multiple = core::cmp::min(width_multiple, height_multiple);
-        if multiple == 0 {
+        let width_multiplier = dst_w / src_w;
+        let height_multiplier = dst_h / src_h;
+        let multiplier = core::cmp::min(width_multiplier, height_multiplier);
+        if multiplier == 0 {
             dst_frame_buffer.extend_from_slice(&src_frame_buffer);
             return;
         }
 
-        let vertical_bars_width = dst_w - (multiple * src_w);
+        let vertical_bars_width = dst_w - (multiplier * src_w);
 
         let left_bar_width = (
             (vertical_bars_width + 1) / 2
@@ -620,7 +620,7 @@ fn add_bars_if_needed<'buffer>(
             vertical_bars_width / 2
         ) as usize;
 
-        let horizontal_bars_height = dst_h - (multiple * src_h);
+        let horizontal_bars_height = dst_h - (multiplier * src_h);
 
         let top_bar_height = (
             (horizontal_bars_height + 1) / 2
@@ -637,9 +637,9 @@ fn add_bars_if_needed<'buffer>(
         }
 
         let mut src_i = 0;
-        let mut y_remaining = multiple;
+        let mut y_remaining = multiplier;
         for y in top_bar_height..(dst_h - bottom_bar_height) {
-            let mut x_remaining = multiple;
+            let mut x_remaining = multiplier;
             for x in left_bar_width..(dst_w - right_bar_width) {
                 let dst_i = y * dst_w + x;
                 dst_frame_buffer[dst_i as usize] = src_frame_buffer[src_i];
@@ -647,13 +647,13 @@ fn add_bars_if_needed<'buffer>(
                 x_remaining -= 1;
                 if x_remaining == 0 {
                     src_i += 1;
-                    x_remaining = multiple;
+                    x_remaining = multiplier;
                 }
             }
 
             y_remaining -= 1;
             if y_remaining == 0 {
-                y_remaining = multiple;
+                y_remaining = multiplier;
             } else {
                 // Go back to the beginning of the row.
                 src_i -= src_w;
