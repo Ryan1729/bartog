@@ -11,10 +11,16 @@ pub const FONT_LENGTH: usize = FONT_WIDTH * FONT_HEIGHT;
 
 pub type PaletteIndex = u8;
 
+pub mod command {
+    pub type X = u8;
+    pub type Y = u8;
+    pub type XY = (X, Y);
+}
+
 #[derive(Clone, Copy, Debug)]
 pub enum Kind {
-    Gfx((u8, u8)),
-    Font((u8, u8), PaletteIndex),
+    Gfx(command::XY),
+    Font(command::XY, PaletteIndex),
     Colour(PaletteIndex),
 }
 

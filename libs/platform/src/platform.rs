@@ -19,10 +19,24 @@ use winit::{
     window::WindowBuilder,
 };
 
+
+mod clip {
+    use core::ops::Range;
+    pub type X = u16;
+    pub type Y = u16;
+    pub type W = u16;
+    pub type H = u16;
+    
+    pub struct Rect {
+        pub x: Range<X>,
+        pub y: Range<Y>,
+    }
+}
+
 struct FrameBuffer {
     buffer: Vec<u32>,
-    width: u16,
-    height: u16,
+    width: clip::W,
+    height: clip::H,
 }
 
 pub fn run<S: State + 'static>(mut state: S) {
@@ -428,25 +442,17 @@ fn render(
         return;
     }
 
-    let vertical_bars_width = frame_buffer.width - (multiple * src_w);
+    let vertical_bars_width: clip::W = frame_buffer.width - (multiple * src_w);
 
-    let left_bar_width = (
-        (vertical_bars_width + 1) / 2
-    ) as usize;
+    let left_bar_width: clip::W = (vertical_bars_width + 1) / 2;
 
-    let right_bar_width = (
-        vertical_bars_width / 2
-    ) as usize;
+    let right_bar_width: clip::W = vertical_bars_width / 2;
 
-    let horizontal_bars_height = frame_buffer.height - (multiple * src_h);
+    let horizontal_bars_height: clip::H = frame_buffer.height - (multiple * src_h);
 
-    let top_bar_height = (
-        (horizontal_bars_height + 1) / 2
-    ) as usize;
+    let top_bar_height: clip::H = (horizontal_bars_height + 1) / 2;
 
-    let bottom_bar_height = (
-        horizontal_bars_height / 2
-    ) as usize;
+    let bottom_bar_height: clip::H = horizontal_bars_height / 2;
 
     let expected_length = usize::from(frame_buffer.width)
     * usize::from(frame_buffer.height);
@@ -457,37 +463,34 @@ fn render(
         frame_buffer.buffer.push(0);
     }
 
+    let d_w = frame_buffer.width;
     for &Command {
         kind,
         rect: Rect {
-            x: display_x,
-            y: display_y,
+            x: d_x,
+            y: d_y,
             w,
             h,
         },
     } in commands {
-        let d_w = frame_buffer.width as usize;
-        let w = w as usize;
-        let h = h as usize;
-
-        let d_x = display_x as usize;
-        let d_y = display_y as usize;
+        let d_x = clip::X::from(d_x);
+        let d_y = clip::Y::from(d_y);
+        let w = clip::W::from(w);
+        let h = clip::H::from(h);
 
         let d_x_max = d_x + w;
         let d_y_max = d_y + h;
 
-        let multiple = multiple as usize;
-
-        let left: usize = d_x * multiple + left_bar_width;
-        let one_past_right: usize = min(
-            d_x_max * multiple + left_bar_width,
-            usize::from(frame_buffer.width) - right_bar_width,
-        );
-        let top: usize = d_y * multiple + top_bar_height;
-        let one_past_bottom: usize = min(
-            d_y_max * multiple + top_bar_height,
-            usize::from(frame_buffer.height) - bottom_bar_height,
-        );
+        let clip_rect = clip::Rect {
+            x: (d_x * multiple + left_bar_width)..min(
+                d_x_max * multiple + left_bar_width,
+                frame_buffer.width - right_bar_width,
+            ),
+            y: (d_y * multiple + top_bar_height)..min(
+                d_y_max * multiple + top_bar_height,
+                frame_buffer.height - bottom_bar_height,
+            ),
+        };
 
         match kind {
             Kind::Gfx((sprite_x, sprite_y)) => {
@@ -498,13 +501,15 @@ fn render(
 
                 let mut src_i = sprite_y * src_w + sprite_x;
                 let mut y_remaining = multiple;
-                for y in top..one_past_bottom {
+                for y in clip_rect.y {
                     let mut x_remaining = multiple;
-                    for x in left..one_past_right {
+                    for x in clip_rect.x.clone() {
                         let colour = GFX[src_i] as usize;
                         //make purple transparent
                         if colour != 4 {
-                            let d_i = y * d_w + x;
+                            let d_i = usize::from(y)
+                            * usize::from(d_w)
+                            + usize::from(x);
                             if d_i < frame_buffer.buffer.len() {
                                 frame_buffer.buffer[d_i] = PALETTE[colour];
                             }
@@ -518,7 +523,7 @@ fn render(
                     }
 
                     // Go back to the beginning of the row.
-                    src_i -= w;
+                    src_i -= usize::from(w);
 
                     y_remaining -= 1;
                     if y_remaining == 0 {
@@ -535,13 +540,15 @@ fn render(
 
                 let mut src_i = sprite_y * src_w + sprite_x;
                 let mut y_remaining = multiple;
-                for y in top..one_past_bottom {
+                for y in clip_rect.y {
                     let mut x_remaining = multiple;
-                    for x in left..one_past_right {
+                    for x in clip_rect.x.clone() {
                         let font_pixel_colour = FONT[src_i] as usize;
                         //make black transparent
                         if font_pixel_colour != 0 {
-                            let d_i = y * d_w + x;
+                            let d_i = usize::from(y)
+                            * usize::from(d_w)
+                            + usize::from(x);
                             if d_i < frame_buffer.buffer.len() {
                                 frame_buffer.buffer[d_i] = PALETTE[colour as usize & 15];
                             }
@@ -555,7 +562,7 @@ fn render(
                     }
 
                     // Go back to the beginning of the row.
-                    src_i -= w;
+                    src_i -= usize::from(w);
 
                     y_remaining -= 1;
                     if y_remaining == 0 {
@@ -565,9 +572,11 @@ fn render(
                 }
             },
             Kind::Colour(colour) => {
-                for y in top..one_past_bottom {
-                    for x in left..one_past_right {
-                        let index = x + y * d_w;
+                for y in clip_rect.y {
+                    for x in clip_rect.x.clone() {
+                        let index = usize::from(x)
+                        + usize::from(y)
+                        * usize::from(d_w);
                         if index < frame_buffer.buffer.len() {
                             frame_buffer.buffer[index] = PALETTE[colour as usize & 15];
                         }
@@ -576,38 +585,6 @@ fn render(
             }
         };
     }
-/*
-    let mut src_i = 0;
-    let mut y_remaining = multiple;
-    for y in top_bar_height..(dst_h - bottom_bar_height) {
-        let mut x_remaining = multiple;
-        for x in left_bar_width..(dst_w - right_bar_width) {
-            let dst_i = y * dst_w + x;
-            dst_frame_buffer[dst_i as usize] = src_frame_buffer[src_i];
-
-            x_remaining -= 1;
-            if x_remaining == 0 {
-                src_i += 1;
-                x_remaining = multiple;
-            }
-        }
-
-        y_remaining -= 1;
-        if y_remaining == 0 {
-            y_remaining = multiple;
-        } else {
-            // Go back to the beginning of the row.
-            src_i -= src_w;
-        }
-    }
-
-    add_bars_if_needed(
-        inner_frame_buffer,
-        &mut output_frame_buffer,
-        (screen_width, screen_height),
-        (width, height),
-    )
-*/
 }
 
 fn add_bars_if_needed<'buffer>(
