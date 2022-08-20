@@ -26,17 +26,55 @@ mod clip {
     pub type Y = u16;
     pub type W = u16;
     pub type H = u16;
-    
+
+    #[derive(Clone, Debug)]
     pub struct Rect {
         pub x: Range<X>,
         pub y: Range<Y>,
     }
+
+    impl Rect {
+        pub fn width(&self) -> W {
+            self.x.end - self.x.start
+        }
+
+        pub fn height(&self) -> H {
+            self.y.end - self.y.start
+        }
+    }
+
+    pub fn to(clipped: &mut Rect, clipper: &Rect) {
+        use core::cmp::{max, min};
+
+        clipped.x = max(clipped.x.start, clipper.x.start)
+            ..min(clipped.x.end, clipper.x.end);
+
+        clipped.y = max(clipped.y.start, clipper.y.start)
+            ..min(clipped.y.end, clipper.y.end);
+    }
+}
+
+const CELLS_X: u8 = 16;
+const CELLS_Y: u8 = 16;
+const CELLS_LENGTH: usize = CELLS_X as usize * CELLS_Y as usize;
+
+type CellHash = u32;
+
+type Cells = [CellHash; CELLS_LENGTH];
+
+#[derive(Copy, Clone)]
+enum CurrentCells {
+    A,
+    B
 }
 
 struct FrameBuffer {
     buffer: Vec<u32>,
     width: clip::W,
     height: clip::H,
+    current_cells: CurrentCells,
+    cells_a: Cells,
+    cells_b: Cells,
 }
 
 pub fn run<S: State + 'static>(mut state: S) {
@@ -63,8 +101,11 @@ pub fn run<S: State + 'static>(mut state: S) {
             buffer: Vec::with_capacity(
                 (size.width * size.height) as usize
             ),
-            width: size.width as u16,
-            height: size.height as u16,
+            width: size.width as clip::W,
+            height: size.height as clip::H,
+            current_cells: CurrentCells::A,
+            cells_a: [0; CELLS_LENGTH],
+            cells_b: [0; CELLS_LENGTH],
         }
     };
 
@@ -420,7 +461,10 @@ fn render(
     frame_buffer: &mut FrameBuffer,
     commands: &[Command],
 ) {
-    use core::cmp::min;
+    // TODO actual hashing logic with these
+    //for i in 0..CELLS_LENGTH {
+        //*frame_buffer.cells()[i] = 0;
+    //}
 
     // The dimensions the commands are written in terms of.
     let src_w = screen::WIDTH.into();
@@ -436,7 +480,7 @@ fn render(
 
     let width_multiplier = frame_buffer.width / src_w;
     let height_multiplier = frame_buffer.height / src_h;
-    let multiplier = min(width_multiplier, height_multiplier);
+    let multiplier = core::cmp::min(width_multiplier, height_multiplier);
     if multiplier == 0 {
         debug_assert!(multiplier != 0);
         return;
@@ -454,6 +498,22 @@ fn render(
 
     let bottom_bar_height: clip::H = horizontal_bars_height / 2;
 
+    let d_w = frame_buffer.width;
+
+    let outer_clip_rect = clip::Rect {
+        x: left_bar_width..(
+            frame_buffer.width - right_bar_width
+        ),
+        y: top_bar_height..(
+            frame_buffer.height - bottom_bar_height
+        ),
+    };
+
+    let cells_size = core::cmp::max(
+        (outer_clip_rect.width() + 1) / clip::W::from(CELLS_X),
+        (outer_clip_rect.height() + 1) / clip::H::from(CELLS_Y),
+    );
+
     let expected_length = usize::from(frame_buffer.width)
     * usize::from(frame_buffer.height);
 
@@ -463,127 +523,142 @@ fn render(
         frame_buffer.buffer.push(0);
     }
 
-    let d_w = frame_buffer.width;
-    for &Command {
-        kind,
-        rect: Rect {
-            x: d_x,
-            y: d_y,
-            w,
-            h,
-        },
-    } in commands {
-        let d_x = clip::X::from(d_x);
-        let d_y = clip::Y::from(d_y);
-        let w = clip::W::from(w);
-        let h = clip::H::from(h);
+    for cell_y in 0..CELLS_Y {
+        for cell_x in 0..CELLS_X {
+            let cell_x = clip::X::from(cell_x);
+            let cell_y = clip::Y::from(cell_y);
+            let cell_clip_rect = clip::Rect {
+                //x: cell_x * cells_size..(cell_x + 1) * cells_size,
+                //y: cell_y * cells_size..(cell_y + 1) * cells_size,
+                // TODO Properly account for the clipping below such that the above
+                // version prodcues the expected visual result
+                x: 0..clip::X::MAX,
+                y: 0..clip::Y::MAX,
+            };
 
-        let d_x_max = d_x + w;
-        let d_y_max = d_y + h;
+            for &Command {
+                kind,
+                rect: Rect {
+                    x: d_x,
+                    y: d_y,
+                    w,
+                    h,
+                },
+            } in commands {
+                let d_x = clip::X::from(d_x);
+                let d_y = clip::Y::from(d_y);
+                let w = clip::W::from(w);
+                let h = clip::H::from(h);
 
-        let clip_rect = clip::Rect {
-            x: (d_x * multiplier + left_bar_width)..min(
-                d_x_max * multiplier + left_bar_width,
-                frame_buffer.width - right_bar_width,
-            ),
-            y: (d_y * multiplier + top_bar_height)..min(
-                d_y_max * multiplier + top_bar_height,
-                frame_buffer.height - bottom_bar_height,
-            ),
-        };
+                let d_x_max = d_x + w;
+                let d_y_max = d_y + h;
 
-        match kind {
-            Kind::Gfx((sprite_x, sprite_y)) => {
-                let sprite_x = usize::from(sprite_x);
-                let sprite_y = usize::from(sprite_y);
+                let mut clip_rect = clip::Rect {
+                    x: (d_x * multiplier + left_bar_width)..(
+                        d_x_max * multiplier + left_bar_width
+                    ),
+                    y: (d_y * multiplier + top_bar_height)..(
+                        d_y_max * multiplier + top_bar_height
+                    ),
+                };
 
-                let src_w = GFX_WIDTH;
+                clip::to(&mut clip_rect, &outer_clip_rect);
+                clip::to(&mut clip_rect, &cell_clip_rect);
 
-                let mut src_i = sprite_y * src_w + sprite_x;
-                let mut y_remaining = multiplier;
-                for y in clip_rect.y {
-                    let mut x_remaining = multiplier;
-                    for x in clip_rect.x.clone() {
-                        let colour = GFX[src_i] as usize;
-                        //make purple transparent
-                        if colour != 4 {
-                            let d_i = usize::from(y)
-                            * usize::from(d_w)
-                            + usize::from(x);
-                            if d_i < frame_buffer.buffer.len() {
-                                frame_buffer.buffer[d_i] = PALETTE[colour];
+                match kind {
+                    Kind::Gfx((sprite_x, sprite_y)) => {
+                        let sprite_x = usize::from(sprite_x);
+                        let sprite_y = usize::from(sprite_y);
+
+                        let src_w = GFX_WIDTH;
+
+                        let mut src_i = sprite_y * src_w + sprite_x;
+                        let mut y_remaining = multiplier;
+                        for y in clip_rect.y {
+                            let mut x_remaining = multiplier;
+                            for x in clip_rect.x.clone() {
+                                let colour = GFX[src_i] as usize;
+                                //make purple transparent
+                                if colour != 4 {
+                                    let d_i = usize::from(y)
+                                    * usize::from(d_w)
+                                    + usize::from(x);
+                                    if d_i < frame_buffer.buffer.len() {
+                                        frame_buffer.buffer[d_i] = PALETTE[colour];
+                                    }
+                                }
+
+                                x_remaining -= 1;
+                                if x_remaining == 0 {
+                                    src_i += 1;
+                                    x_remaining = multiplier;
+                                }
+                            }
+
+                            // Go back to the beginning of the row.
+                            src_i -= usize::from(w);
+
+                            y_remaining -= 1;
+                            if y_remaining == 0 {
+                                y_remaining = multiplier;
+                                src_i += src_w;
                             }
                         }
+                    },
+                    Kind::Font((sprite_x, sprite_y), colour) => {
+                        let sprite_x = usize::from(sprite_x);
+                        let sprite_y = usize::from(sprite_y);
 
-                        x_remaining -= 1;
-                        if x_remaining == 0 {
-                            src_i += 1;
-                            x_remaining = multiplier;
-                        }
-                    }
+                        let src_w = FONT_WIDTH;
 
-                    // Go back to the beginning of the row.
-                    src_i -= usize::from(w);
+                        let mut src_i = sprite_y * src_w + sprite_x;
+                        let mut y_remaining = multiplier;
+                        for y in clip_rect.y {
+                            let mut x_remaining = multiplier;
+                            for x in clip_rect.x.clone() {
+                                let font_pixel_colour = FONT[src_i] as usize;
+                                //make black transparent
+                                if font_pixel_colour != 0 {
+                                    let d_i = usize::from(y)
+                                    * usize::from(d_w)
+                                    + usize::from(x);
+                                    if d_i < frame_buffer.buffer.len() {
+                                        frame_buffer.buffer[d_i] = PALETTE[colour as usize & 15];
+                                    }
+                                }
 
-                    y_remaining -= 1;
-                    if y_remaining == 0 {
-                        y_remaining = multiplier;
-                        src_i += src_w;
-                    }
-                }
-            },
-            Kind::Font((sprite_x, sprite_y), colour) => {
-                let sprite_x = usize::from(sprite_x);
-                let sprite_y = usize::from(sprite_y);
+                                x_remaining -= 1;
+                                if x_remaining == 0 {
+                                    src_i += 1;
+                                    x_remaining = multiplier;
+                                }
+                            }
 
-                let src_w = FONT_WIDTH;
+                            // Go back to the beginning of the row.
+                            src_i -= usize::from(w);
 
-                let mut src_i = sprite_y * src_w + sprite_x;
-                let mut y_remaining = multiplier;
-                for y in clip_rect.y {
-                    let mut x_remaining = multiplier;
-                    for x in clip_rect.x.clone() {
-                        let font_pixel_colour = FONT[src_i] as usize;
-                        //make black transparent
-                        if font_pixel_colour != 0 {
-                            let d_i = usize::from(y)
-                            * usize::from(d_w)
-                            + usize::from(x);
-                            if d_i < frame_buffer.buffer.len() {
-                                frame_buffer.buffer[d_i] = PALETTE[colour as usize & 15];
+                            y_remaining -= 1;
+                            if y_remaining == 0 {
+                                y_remaining = multiplier;
+                                src_i += src_w;
                             }
                         }
-
-                        x_remaining -= 1;
-                        if x_remaining == 0 {
-                            src_i += 1;
-                            x_remaining = multiplier;
+                    },
+                    Kind::Colour(colour) => {
+                        for y in clip_rect.y {
+                            for x in clip_rect.x.clone() {
+                                let index = usize::from(x)
+                                + usize::from(y)
+                                * usize::from(d_w);
+                                if index < frame_buffer.buffer.len() {
+                                    frame_buffer.buffer[index] = PALETTE[colour as usize & 15];
+                                }
+                            }
                         }
                     }
-
-                    // Go back to the beginning of the row.
-                    src_i -= usize::from(w);
-
-                    y_remaining -= 1;
-                    if y_remaining == 0 {
-                        y_remaining = multiplier;
-                        src_i += src_w;
-                    }
-                }
-            },
-            Kind::Colour(colour) => {
-                for y in clip_rect.y {
-                    for x in clip_rect.x.clone() {
-                        let index = usize::from(x)
-                        + usize::from(y)
-                        * usize::from(d_w);
-                        if index < frame_buffer.buffer.len() {
-                            frame_buffer.buffer[index] = PALETTE[colour as usize & 15];
-                        }
-                    }
-                }
+                };
             }
-        };
+        }
     }
 }
 
