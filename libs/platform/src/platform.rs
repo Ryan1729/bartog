@@ -41,6 +41,13 @@ mod clip {
         pub fn height(&self) -> H {
             self.y.end - self.y.start
         }
+
+        pub fn contains(&self, x: X, y: Y) -> bool {
+            self.x.start <= x 
+            && x < self.x.end
+            && self.y.start <= y 
+            && y < self.y.end
+        }
     }
 
     pub fn to(clipped: &mut Rect, clipper: &Rect) {
@@ -528,12 +535,8 @@ fn render(
             let cell_x = clip::X::from(cell_x);
             let cell_y = clip::Y::from(cell_y);
             let cell_clip_rect = clip::Rect {
-                //x: cell_x * cells_size..(cell_x + 1) * cells_size,
-                //y: cell_y * cells_size..(cell_y + 1) * cells_size,
-                // TODO Properly account for the clipping below such that the above
-                // version prodcues the expected visual result
-                x: 0..clip::X::MAX,
-                y: 0..clip::Y::MAX,
+                x: cell_x * cells_size + left_bar_width..(cell_x + 1) * cells_size + left_bar_width,
+                y: cell_y * cells_size + top_bar_height..(cell_y + 1) * cells_size + top_bar_height,
             };
 
             for &Command {
@@ -563,7 +566,6 @@ fn render(
                 };
 
                 clip::to(&mut clip_rect, &outer_clip_rect);
-                clip::to(&mut clip_rect, &cell_clip_rect);
 
                 match kind {
                     Kind::Gfx((sprite_x, sprite_y)) => {
@@ -578,8 +580,12 @@ fn render(
                             let mut x_remaining = multiplier;
                             for x in clip_rect.x.clone() {
                                 let colour = GFX[src_i] as usize;
-                                //make purple transparent
-                                if colour != 4 {
+                                
+                                if 
+                                //make purple transparent 
+                                colour != 4 
+                                && cell_clip_rect.contains(x, y)
+                                {
                                     let d_i = usize::from(y)
                                     * usize::from(d_w)
                                     + usize::from(x);
@@ -617,8 +623,11 @@ fn render(
                             let mut x_remaining = multiplier;
                             for x in clip_rect.x.clone() {
                                 let font_pixel_colour = FONT[src_i] as usize;
+                                
+                                if 
                                 //make black transparent
-                                if font_pixel_colour != 0 {
+                                font_pixel_colour != 0
+                                && cell_clip_rect.contains(x, y) {
                                     let d_i = usize::from(y)
                                     * usize::from(d_w)
                                     + usize::from(x);
@@ -647,11 +656,13 @@ fn render(
                     Kind::Colour(colour) => {
                         for y in clip_rect.y {
                             for x in clip_rect.x.clone() {
-                                let index = usize::from(x)
-                                + usize::from(y)
-                                * usize::from(d_w);
-                                if index < frame_buffer.buffer.len() {
-                                    frame_buffer.buffer[index] = PALETTE[colour as usize & 15];
+                                if cell_clip_rect.contains(x, y) {
+                                    let index = usize::from(x)
+                                    + usize::from(y)
+                                    * usize::from(d_w);
+                                    if index < frame_buffer.buffer.len() {
+                                        frame_buffer.buffer[index] = PALETTE[colour as usize & 15];
+                                    }
                                 }
                             }
                         }
