@@ -124,8 +124,9 @@ mod hash {
 
 type Cells = [hash::Cell; CELLS_LENGTH];
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 enum CurrentCells {
+    #[default]
     A,
     B
 }
@@ -137,6 +138,7 @@ struct FrameBuffer {
     cells: HashCells,
 }
 
+#[derive(Default)]
 struct HashCells {
     current_cells: CurrentCells,
     cells_a: Cells,
@@ -164,7 +166,84 @@ impl HashCells {
             CurrentCells::B => CurrentCells::A,
         };
     }
+
+    fn reset_then_hash_commands(
+        &mut self,
+        commands: &[Command],
+        cells_size: u16,
+        multiplier: u16,
+    ) {
+        let cells = self.current_mut();
+        *cells = [<_>::default(); CELLS_LENGTH];
+    
+        for command in commands {
+            let mut hash = <_>::default();
+            hash::command(&mut hash, &command);
+    
+            // update hash of overlapping cells
+            let r = &command.rect;
+            let r_x = clip::X::from(r.x) * multiplier;
+            let r_y = clip::Y::from(r.y) * multiplier;
+            let r_w = clip::W::from(r.w) * multiplier;
+            let r_h = clip::H::from(r.h) * multiplier;
+    
+            for y in r_y / cells_size..(r_y + r_h) / cells_size {
+                for x in r_x / cells_size..(r_x + r_w) / cells_size {
+                    hash::hash(
+                        &mut cells[
+                            usize::from(y)
+                            * usize::from(CELLS_X)
+                            + usize::from(x)
+                        ],
+                        hash
+                    );
+                }
+            }
+        }
+    }
 }
+
+#[cfg(test)]
+mod reset_then_hash_commands_around_a_swap_produces_identical_current_and_prev_cells {
+    use super::*;
+
+    #[test]
+    fn on_the_empty_slice() {
+        let mut h_c = HashCells::default();
+
+        h_c.reset_then_hash_commands(&[], 1, 1);
+        h_c.swap();
+        h_c.reset_then_hash_commands(&[], 1, 1);
+
+        let (current, prev) = h_c.current_and_prev();
+
+        assert_eq!(current, prev);
+    }
+
+    #[test]
+    fn on_this_one_element_slice() {
+        let mut h_c = HashCells::default();
+
+        let commands = &[Command {
+            rect: Rect {
+                x: 0,
+                y: 0,
+                w: CELLS_X,
+                h: CELLS_Y,
+            },
+            kind: Kind::Colour(0),
+        }];
+
+        h_c.reset_then_hash_commands(commands, 1, 1);
+        h_c.swap();
+        h_c.reset_then_hash_commands(commands, 1, 1);
+
+        let (current, prev) = h_c.current_and_prev();
+
+        assert_eq!(current, prev);
+    }
+}
+
 
 pub fn run<S: State + 'static>(mut state: S) {
     let event_loop = EventLoop::new();
@@ -598,36 +677,11 @@ fn render(
         (outer_clip_rect.height() + 1) / clip::H::from(CELLS_Y),
     );
 
-    let cells = frame_buffer.cells.current_mut();
-    for i in 0..CELLS_LENGTH {
-        cells[i] = <_>::default();
-    }
-
-    for command in commands {
-        let mut hash = <_>::default();
-        hash::command(&mut hash, &command);
-
-        // update hash of overlapping cells
-        let r = &command.rect;
-        let r_x = clip::X::from(r.x) * multiplier;
-        let r_y = clip::Y::from(r.y) * multiplier;
-        let r_w = clip::W::from(r.w) * multiplier;
-        let r_h = clip::H::from(r.h) * multiplier;
-
-        for y in r_y / cells_size..(r_y + r_h) / cells_size {
-            for x in r_x / cells_size..(r_x + r_w) / cells_size {
-                hash::hash(
-                    &mut cells[
-                        usize::from(y)
-                        * usize::from(CELLS_X)
-                        + usize::from(x)
-                    ],
-                    hash
-                );
-            }
-        }
-    }
-    drop(cells);
+    frame_buffer.cells.reset_then_hash_commands(
+        commands,
+        cells_size,
+        multiplier
+    );
 
     let expected_length = usize::from(frame_buffer.width)
     * usize::from(frame_buffer.height);
