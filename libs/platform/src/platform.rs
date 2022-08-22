@@ -361,7 +361,7 @@ pub fn run<S: State + 'static>(mut state: S) {
 
                 render(
                     &mut output_frame_buffer,
-                    dbg!(&commands[0..1]),
+                    &commands,
                 );
 
                 graphics_context.set_buffer(
