@@ -43,9 +43,9 @@ mod clip {
         }
 
         pub fn contains(&self, x: X, y: Y) -> bool {
-            self.x.start <= x 
+            self.x.start <= x
             && x < self.x.end
-            && self.y.start <= y 
+            && self.y.start <= y
             && y < self.y.end
         }
     }
@@ -61,13 +61,68 @@ mod clip {
     }
 }
 
-const CELLS_X: u8 = 16;
-const CELLS_Y: u8 = 16;
+const CELLS_X: u8 = 4;
+const CELLS_Y: u8 = 4;
 const CELLS_LENGTH: usize = CELLS_X as usize * CELLS_Y as usize;
 
-type CellHash = u32;
+/// Implements a 32 bit FNV-1a hash
+mod hash {
+    use super::*;
 
-type Cells = [CellHash; CELLS_LENGTH];
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct Cell(u32);
+
+    impl Default for Cell {
+        fn default() -> Cell {
+            Cell(0x811c9dc5)
+        }
+    }
+
+    pub fn byte(hash: &mut Cell, byte: u8) {
+        hash.0 ^= byte as u32;
+        hash.0 = hash.0.wrapping_mul(0x01000193);
+    }
+
+    pub fn bytes(hash: &mut Cell, bytes: &[u8]) {
+        for &b in bytes {
+            byte(hash, b);
+        }
+    }
+
+    pub fn command(hash: &mut Cell, command: &Command) {
+        use Kind::*;
+
+        // Pattern match so we get a compile error if the fields change.
+        let &Command {
+            rect: Rect {
+                x,
+                y,
+                w,
+                h,
+            },
+            kind,
+        } = command;
+
+        byte(hash, x);
+        byte(hash, y);
+        byte(hash, w);
+        byte(hash, h);
+
+        match kind {
+            Gfx((x, y)) => { bytes(hash, &[0, x, y]); },
+            Font((x, y), i) => { bytes(hash, &[1, x, y, i]); },
+            Colour(i) => { bytes(hash, &[2, i]); },
+        };
+    }
+
+    pub fn hash(hash: &mut Cell, hashed: Cell) {
+        // We prioritize speed over portablilty of hashes between architechtures,
+        // which we expect wouldn't come up anyway. Hence `to_ne_bytes`.
+        bytes(hash, &hashed.0.to_ne_bytes());
+    }
+}
+
+type Cells = [hash::Cell; CELLS_LENGTH];
 
 #[derive(Copy, Clone)]
 enum CurrentCells {
@@ -79,9 +134,36 @@ struct FrameBuffer {
     buffer: Vec<u32>,
     width: clip::W,
     height: clip::H,
+    cells: HashCells,
+}
+
+struct HashCells {
     current_cells: CurrentCells,
     cells_a: Cells,
     cells_b: Cells,
+}
+
+impl HashCells {
+    fn current_mut(&mut self) -> &mut Cells {
+        match self.current_cells {
+            CurrentCells::A => &mut self.cells_a,
+            CurrentCells::B => &mut self.cells_b,
+        }
+    }
+
+    fn current_and_prev(&self) -> (&Cells, &Cells) {
+        match self.current_cells {
+            CurrentCells::A => (&self.cells_a, &self.cells_b),
+            CurrentCells::B => (&self.cells_b, &self.cells_a),
+        }
+    }
+
+    fn swap(&mut self) {
+        self.current_cells = match self.current_cells {
+            CurrentCells::A => CurrentCells::B,
+            CurrentCells::B => CurrentCells::A,
+        };
+    }
 }
 
 pub fn run<S: State + 'static>(mut state: S) {
@@ -110,9 +192,11 @@ pub fn run<S: State + 'static>(mut state: S) {
             ),
             width: size.width as clip::W,
             height: size.height as clip::H,
-            current_cells: CurrentCells::A,
-            cells_a: [0; CELLS_LENGTH],
-            cells_b: [0; CELLS_LENGTH],
+            cells: HashCells {
+                current_cells: CurrentCells::A,
+                cells_a: [hash::Cell::default(); CELLS_LENGTH],
+                cells_b: [hash::Cell::default(); CELLS_LENGTH],
+            },
         }
     };
 
@@ -181,8 +265,6 @@ pub fn run<S: State + 'static>(mut state: S) {
                 // Let's implement this scheme:
                 // https://rxi.github.io/cached_software_rendering.html
                 //
-                // TODO Clip commands to cells and render N * M times, resricted to
-                // each cell in turn.
                 // TODO store hashes of previous frames render commands for each
                 // cell. Only render to cells with changed hashes.
                 // TODO Attempt to merge adjacent regions for cells that are
@@ -468,11 +550,6 @@ fn render(
     frame_buffer: &mut FrameBuffer,
     commands: &[Command],
 ) {
-    // TODO actual hashing logic with these
-    //for i in 0..CELLS_LENGTH {
-        //*frame_buffer.cells()[i] = 0;
-    //}
-
     // The dimensions the commands are written in terms of.
     let src_w = screen::WIDTH.into();
     let src_h = screen::HEIGHT.into();
@@ -521,6 +598,37 @@ fn render(
         (outer_clip_rect.height() + 1) / clip::H::from(CELLS_Y),
     );
 
+    let cells = frame_buffer.cells.current_mut();
+    for i in 0..CELLS_LENGTH {
+        cells[i] = <_>::default();
+    }
+
+    for command in commands {
+        let mut hash = <_>::default();
+        hash::command(&mut hash, &command);
+
+        // update hash of overlapping cells
+        let r = &command.rect;
+        let r_x = clip::X::from(r.x) * multiplier;
+        let r_y = clip::Y::from(r.y) * multiplier;
+        let r_w = clip::W::from(r.w) * multiplier;
+        let r_h = clip::H::from(r.h) * multiplier;
+
+        for y in r_y / cells_size..(r_y + r_h) / cells_size {
+            for x in r_x / cells_size..(r_x + r_w) / cells_size {
+                hash::hash(
+                    &mut cells[
+                        usize::from(y)
+                        * usize::from(CELLS_X)
+                        + usize::from(x)
+                    ],
+                    hash
+                );
+            }
+        }
+    }
+    drop(cells);
+
     let expected_length = usize::from(frame_buffer.width)
     * usize::from(frame_buffer.height);
 
@@ -530,8 +638,17 @@ fn render(
         frame_buffer.buffer.push(0);
     }
 
+    let (cells, cells_prev) = frame_buffer.cells.current_and_prev();
     for cell_y in 0..CELLS_Y {
         for cell_x in 0..CELLS_X {
+            let i = usize::from(cell_y)
+            * usize::from(CELLS_X)
+            + usize::from(cell_x);
+
+            if cells[i] == cells_prev[i] {
+                continue
+            }
+
             let cell_x = clip::X::from(cell_x);
             let cell_y = clip::Y::from(cell_y);
             let cell_clip_rect = clip::Rect {
@@ -580,10 +697,10 @@ fn render(
                             let mut x_remaining = multiplier;
                             for x in clip_rect.x.clone() {
                                 let colour = GFX[src_i] as usize;
-                                
-                                if 
-                                //make purple transparent 
-                                colour != 4 
+
+                                if
+                                //make purple transparent
+                                colour != 4
                                 && cell_clip_rect.contains(x, y)
                                 {
                                     let d_i = usize::from(y)
@@ -623,8 +740,8 @@ fn render(
                             let mut x_remaining = multiplier;
                             for x in clip_rect.x.clone() {
                                 let font_pixel_colour = FONT[src_i] as usize;
-                                
-                                if 
+
+                                if
                                 //make black transparent
                                 font_pixel_colour != 0
                                 && cell_clip_rect.contains(x, y) {
@@ -671,6 +788,8 @@ fn render(
             }
         }
     }
+
+    frame_buffer.cells.swap();
 }
 
 fn add_bars_if_needed<'buffer>(
