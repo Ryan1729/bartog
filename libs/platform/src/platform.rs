@@ -361,7 +361,7 @@ pub fn run<S: State + 'static>(mut state: S) {
 
                 render(
                     &mut output_frame_buffer,
-                    &commands,
+                    dbg!(&commands[0..1]),
                 );
 
                 graphics_context.set_buffer(
@@ -639,8 +639,6 @@ fn render(
         frame_buffer.height = src_h;
     }
 
-    frame_buffer.buffer.clear();
-
     let width_multiplier = frame_buffer.width / src_w;
     let height_multiplier = frame_buffer.height / src_h;
     let multiplier = core::cmp::min(width_multiplier, height_multiplier);
@@ -686,10 +684,13 @@ fn render(
     let expected_length = usize::from(frame_buffer.width)
     * usize::from(frame_buffer.height);
 
-    // Hopefully this compiles to something not inefficent
-    frame_buffer.buffer.reserve(expected_length);
-    for i in 0..expected_length {
-        frame_buffer.buffer.push(0);
+    if frame_buffer.buffer.len() != expected_length {
+        frame_buffer.buffer.clear();
+        // Hopefully this compiles to something not inefficent
+        frame_buffer.buffer.reserve(expected_length);
+        for i in 0..expected_length {
+            frame_buffer.buffer.push(0);
+        }
     }
 
     let (cells, cells_prev) = frame_buffer.cells.current_and_prev();
