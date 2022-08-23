@@ -39,6 +39,7 @@ impl BartogState {
 
 impl State for BartogState {
     fn frame(&mut self) -> (&[platform_types::Command], &[SFX]) {
+        self.framebuffer.commands.clear();
         self.speaker.clear();
         update_and_render(
             &mut self.framebuffer,
