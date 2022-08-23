@@ -178,6 +178,8 @@ impl HashCells {
     
         for command in commands {
             let mut hash = <_>::default();
+            hash::bytes(&mut hash, &multiplier.to_ne_bytes());
+            hash::bytes(&mut hash, &cells_size.to_ne_bytes());
             hash::command(&mut hash, &command);
     
             // update hash of overlapping cells
