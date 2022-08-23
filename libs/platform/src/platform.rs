@@ -170,11 +170,22 @@ impl HashCells {
     fn reset_then_hash_commands(
         &mut self,
         commands: &[Command],
+        (w, h): (u16, u16),
         cells_size: u16,
         multiplier: u16,
     ) {
         let cells = self.current_mut();
         *cells = [<_>::default(); CELLS_LENGTH];
+
+        for y in 0..CELLS_Y {
+            for x in 0..CELLS_Y {
+                let i = usize::from(y)
+                        * usize::from(CELLS_X)
+                        + usize::from(x);
+                hash::bytes(&mut cells[i], &w.to_ne_bytes());
+                hash::bytes(&mut cells[i], &h.to_ne_bytes());
+            }
+        }
     
         for command in commands {
             let mut hash = <_>::default();
@@ -213,9 +224,9 @@ mod reset_then_hash_commands_around_a_swap_produces_identical_current_and_prev_c
     fn on_the_empty_slice() {
         let mut h_c = HashCells::default();
 
-        h_c.reset_then_hash_commands(&[], 1, 1);
+        h_c.reset_then_hash_commands(&[], (CELLS_X.into(), CELLS_Y.into()), 1, 1);
         h_c.swap();
-        h_c.reset_then_hash_commands(&[], 1, 1);
+        h_c.reset_then_hash_commands(&[], (CELLS_X.into(), CELLS_Y.into()), 1, 1);
 
         let (current, prev) = h_c.current_and_prev();
 
@@ -236,9 +247,9 @@ mod reset_then_hash_commands_around_a_swap_produces_identical_current_and_prev_c
             kind: Kind::Colour(0),
         }];
 
-        h_c.reset_then_hash_commands(commands, 1, 1);
+        h_c.reset_then_hash_commands(commands, (CELLS_X.into(), CELLS_Y.into()), 1, 1);
         h_c.swap();
-        h_c.reset_then_hash_commands(commands, 1, 1);
+        h_c.reset_then_hash_commands(commands, (CELLS_X.into(), CELLS_Y.into()), 1, 1);
 
         let (current, prev) = h_c.current_and_prev();
 
@@ -679,6 +690,7 @@ fn render(
 
     frame_buffer.cells.reset_then_hash_commands(
         commands,
+        (frame_buffer.width, frame_buffer.height),
         cells_size,
         multiplier
     );
