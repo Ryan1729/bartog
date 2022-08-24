@@ -33,7 +33,7 @@ const COMMANDS_8: [Command; 1] = [
         Command {
             rect: Rect {
                 x: 98,
-                y: 6,
+                y: 56,
                 w: 20,
                 h: 30,
             },
@@ -50,7 +50,7 @@ const COMMANDS_9: [Command; 1] = [
     Command {
         rect: Rect {
             x: 96,
-            y: 5,
+            y: 55,
             w: 20,
             h: 30,
         },
@@ -67,7 +67,7 @@ const COMMANDS_10: [Command; 1] = [
     Command {
         rect: Rect {
             x: 94,
-            y: 4,
+            y: 54,
             w: 20,
             h: 30,
         },
