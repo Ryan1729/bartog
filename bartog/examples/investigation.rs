@@ -28,10 +28,16 @@ impl StateWrapper {
 
 fn main() {
     let seed = [10, 56, 42, 75, 1, 190, 216, 65, 6, 119, 65, 160, 129, 177, 4, 62];
-    let state = StateWrapper::new((
+    let mut state = StateWrapper::new((
         seed,
         None,
         None,
     ));
+
+    state.frame();
+    state.press(Button::A);
+    state.frame();
+    state.release(Button::A);
+
     platform::run(state);
 }
