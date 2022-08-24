@@ -15,6 +15,9 @@ path = "../libs/platform"
 [dependencies.game]
 path = "../libs/game"
 
+[dev-dependencies.platform_types]
+path = "../libs/platform_types"
+
 [features]
 default = ["platform/non-web-sound"]
 invariant-checking = ["game/invariant-checking"]
