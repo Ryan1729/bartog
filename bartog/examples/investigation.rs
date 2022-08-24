@@ -1,4 +1,5 @@
 use platform_types::{Button, Command, SFX, State, StateParams};
+use game::*;
 
 struct StateWrapper {
     state: game::BartogState,
@@ -12,9 +13,9 @@ impl State for StateWrapper {
         if self.stashed.len() > 0 {
             (&self.stashed, &[])
         } else if self.frame_count < 10 {
-            self.state.frame()
+            do_frame(&mut self.state)
         } else {
-            let (commands, _) = self.state.frame();
+            let (commands, _) = do_frame(&mut self.state);
             self.stashed.extend_from_slice(commands);
             (&self.stashed, &[])
         }
@@ -38,6 +39,11 @@ impl StateWrapper {
         }
     }
 }
+
+fn do_frame(state: &mut game::BartogState) -> (&[Command], &[SFX]) {
+    state.frame()
+}
+
 
 fn main() {
     let seed = [10, 56, 42, 75, 1, 190, 216, 65, 6, 119, 65, 160, 129, 177, 4, 62];
