@@ -1,68 +1,32 @@
-use platform_types::{Button, Command, SFX, State, StateParams, Rect, Kind::*};
+use platform_types::{Button, Command, SFX, State, Rect, Kind::*};
 
 struct StateWrapper {
-    state: game::BartogState,
     frame_count: u64,
-    stashed: Vec<Command>,
 }
 
 impl State for StateWrapper {
     fn frame(&mut self) -> (&[Command], &[SFX]) {
         self.frame_count += 1;
-        if self.stashed.len() > 0 {
-            (&self.stashed, &[])
-        } else {
-            do_frame(&mut self.state, self.frame_count)
+        if self.frame_count <= 1 {
+            (&COMMANDS_8, &[])
+        } else if self.frame_count == 2 {
+            (&COMMANDS_9, &[])
+        } else  {
+            (&COMMANDS_10, &[])
         }
     }
 
-    fn press(&mut self, button: Button) {
-        self.state.press(button)
+    fn press(&mut self, _: Button) {
     }
 
-    fn release(&mut self, button: Button) {
-        self.state.release(button)
+    fn release(&mut self, _: Button) {
     }
 }
-
-impl StateWrapper {
-    fn new(params: StateParams) -> Self {
-        Self {
-            state: game::BartogState::new(params),
-            frame_count: 7,
-            stashed: Vec::new(),
-        }
-    }
-}
-
-fn do_frame(state: &mut game::BartogState, frame_count: u64) -> (&[Command], &[SFX]) {
-    if frame_count == 2 {
-        state.press(Button::A);
-        state.frame()
-    } else if frame_count == 3 {
-        state.release(Button::A);
-        state.frame()
-    } else if frame_count == 8 {
-        (&COMMANDS_8, &[])
-    } else if frame_count == 9 {
-        (&COMMANDS_9, &[])
-    } else if frame_count >= 10 {
-        (&COMMANDS_10, &[])
-    } else {
-        state.frame()
-    }
-}
-
 
 fn main() {
-    let seed = [10, 56, 42, 75, 1, 190, 216, 65, 6, 119, 65, 160, 129, 177, 4, 62];
-    let state = StateWrapper::new((
-        seed,
-        None,
-        None,
-    ));
-
-    platform::run(state);
+    platform::run(StateWrapper{
+        frame_count: 0,
+    });
 }
 
 const COMMANDS_8: [Command; 50] = [
