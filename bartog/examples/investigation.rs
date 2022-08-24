@@ -2,11 +2,22 @@ use platform_types::{Button, Command, SFX, State, StateParams};
 
 struct StateWrapper {
     state: game::BartogState,
+    frame_count: u64,
+    stashed: Vec<Command>,
 }
 
 impl State for StateWrapper {
     fn frame(&mut self) -> (&[Command], &[SFX]) {
-        self.state.frame()
+        self.frame_count += 1;
+        if self.stashed.len() > 0 {
+            (&self.stashed, &[])
+        } else if self.frame_count < 10 {
+            self.state.frame()
+        } else {
+            let (commands, _) = self.state.frame();
+            self.stashed.extend_from_slice(commands);
+            (&self.stashed, &[])
+        }
     }
 
     fn press(&mut self, button: Button) {
@@ -22,6 +33,8 @@ impl StateWrapper {
     fn new(params: StateParams) -> Self {
         Self {
             state: game::BartogState::new(params),
+            frame_count: 0,
+            stashed: Vec::new(),
         }
     }
 }
