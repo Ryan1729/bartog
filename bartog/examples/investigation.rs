@@ -27,7 +27,11 @@ impl StateWrapper {
 }
 
 fn main() {
-    let params = platform::get_state_params();
-    let state = StateWrapper::new(params);
+    let seed = [10, 56, 42, 75, 1, 190, 216, 65, 6, 119, 65, 160, 129, 177, 4, 62];
+    let state = StateWrapper::new((
+        seed,
+        None,
+        None,
+    ));
     platform::run(state);
 }
