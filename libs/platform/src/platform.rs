@@ -186,20 +186,20 @@ impl HashCells {
                 hash::bytes(&mut cells[i], &h.to_ne_bytes());
             }
         }
-    
+
         for command in commands {
             let mut hash = <_>::default();
             hash::bytes(&mut hash, &multiplier.to_ne_bytes());
             hash::bytes(&mut hash, &cells_size.to_ne_bytes());
             hash::command(&mut hash, &command);
-    
+
             // update hash of overlapping cells
             let r = &command.rect;
             let r_x = clip::X::from(r.x) * multiplier;
             let r_y = clip::Y::from(r.y) * multiplier;
             let r_w = clip::W::from(r.w) * multiplier;
             let r_h = clip::H::from(r.h) * multiplier;
-    
+
             for y in r_y / cells_size..(r_y + r_h) / cells_size {
                 for x in r_x / cells_size..(r_x + r_w) / cells_size {
                     hash::hash(
@@ -255,6 +255,101 @@ mod reset_then_hash_commands_around_a_swap_produces_identical_current_and_prev_c
 
         assert_eq!(current, prev);
     }
+}
+
+#[cfg(test)]
+mod reset_then_hash_commands_produces_the_hash_of_the_final_commands {
+    use super::*;
+    use Kind::*;
+
+    const COMMANDS_0: [Command; 1] = [
+        Command {
+            rect: Rect {
+                x: 98,
+                y: 56,
+                w: 20,
+                h: 30,
+            },
+            kind: Gfx(
+                (
+                    2,
+                    1,
+                ),
+            ),
+        },
+    ];
+
+    const COMMANDS_1: [Command; 1] = [
+        Command {
+            rect: Rect {
+                x: 96,
+                y: 55,
+                w: 20,
+                h: 30,
+            },
+            kind: Gfx(
+                (
+                    2,
+                    1,
+                ),
+            ),
+        },
+    ];
+
+    const COMMANDS_2: [Command; 1] = [
+        Command {
+            rect: Rect {
+                x: 94,
+                y: 54,
+                w: 20,
+                h: 30,
+            },
+            kind: Gfx(
+                (
+                    2,
+                    1,
+                ),
+            ),
+        },
+    ];
+
+    /// These were found by reducing a problematic case that reproducably came up.
+    #[test]
+    fn on_these_found_lists_of_commands() {
+        let (w, h) = (screen::WIDTH.into(), screen::HEIGHT.into());
+
+        let cells_size = core::cmp::max(
+            (w + 1) / clip::W::from(CELLS_X),
+            (h + 1) / clip::H::from(CELLS_Y),
+        );
+
+        let mut h_c = HashCells::default();
+
+        h_c.reset_then_hash_commands(&COMMANDS_0, (w, h), cells_size, 1);
+        h_c.swap();
+        h_c.reset_then_hash_commands(&COMMANDS_1, (w, h), cells_size, 1);
+        h_c.swap();
+        h_c.reset_then_hash_commands(&COMMANDS_2, (w, h), cells_size, 1);
+
+
+        let mut final_only = HashCells::default();
+
+        final_only.reset_then_hash_commands(
+            &COMMANDS_2,
+            (w, h),
+            cells_size,
+            1
+        );
+
+        let (actual, _) = h_c.current_and_prev();
+
+        let (expected, _) = final_only.current_and_prev();
+
+        assert_eq!(actual, expected);
+    }
+
+    // TODO: if we still have the call not getting redrawn bug, test that the exact
+    // cells that we expect to be redrawn have different hashes.
 }
 
 
