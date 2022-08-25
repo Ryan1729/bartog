@@ -309,6 +309,8 @@ pub fn run<S: State + 'static>(mut state: S) {
             .build_with_target_rate(60.0)
     }
 
+    let mut just_gained_focus = true;
+
     event_loop.run(move |event, _, control_flow| {
         let window = graphics_context.window();
 
@@ -354,12 +356,16 @@ pub fn run<S: State + 'static>(mut state: S) {
                     ElementState::Released => state.release(button),
                 }
             }
+            Event::WindowEvent {
+                event: WindowEvent::Focused(true),
+                window_id,
+            } if window_id == window.id() => {
+                just_gained_focus = true;
+            }
             Event::MainEventsCleared => {
                 // Let's implement this scheme:
                 // https://rxi.github.io/cached_software_rendering.html
                 //
-                // TODO store hashes of previous frames render commands for each
-                // cell. Only render to cells with changed hashes.
                 // TODO Attempt to merge adjacent regions for cells that are
                 // adjacent and render merged regions only once each.
 
@@ -373,16 +379,21 @@ pub fn run<S: State + 'static>(mut state: S) {
                     output_frame_buffer.height = size.height as u16;
                 }
 
-                render(
+                let needs_redraw = render(
                     &mut output_frame_buffer,
                     &commands,
                 );
 
-                graphics_context.set_buffer(
-                    &output_frame_buffer.buffer,
-                    output_frame_buffer.width,
-                    output_frame_buffer.height,
-                );
+                if NeedsRedraw::Yes == needs_redraw
+                || just_gained_focus {
+                    graphics_context.set_buffer(
+                        &output_frame_buffer.buffer,
+                        output_frame_buffer.width,
+                        output_frame_buffer.height,
+                    );
+                }
+
+                just_gained_focus = false;
 
                 #[cfg(not(target_arch = "wasm32"))]
                 {
@@ -639,10 +650,18 @@ mod not_wasm {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum NeedsRedraw {
+    No,
+    Yes
+}
+
 fn render(
     frame_buffer: &mut FrameBuffer,
     commands: &[Command],
-) {
+) -> NeedsRedraw {
+    let mut output = NeedsRedraw::No;
+
     // The dimensions the commands are written in terms of.
     let src_w = screen::WIDTH.into();
     let src_h = screen::HEIGHT.into();
@@ -658,7 +677,7 @@ fn render(
     let multiplier = core::cmp::min(width_multiplier, height_multiplier);
     if multiplier == 0 {
         debug_assert!(multiplier != 0);
-        return;
+        return output;
     }
 
     let vertical_bars_width: clip::W = frame_buffer.width - (multiplier * src_w);
@@ -718,6 +737,7 @@ fn render(
             if cells[i] == cells_prev[i] {
                 continue
             }
+            output = NeedsRedraw::Yes;
 
             let cell_x = clip::X::from(cell_x);
             let cell_y = clip::Y::from(cell_y);
@@ -860,6 +880,8 @@ fn render(
     }
 
     frame_buffer.cells.swap();
+
+    output
 }
 
 fn add_bars_if_needed<'buffer>(
