@@ -200,16 +200,18 @@ impl HashCells {
             let r_w = clip::W::from(r.w) * multiplier;
             let r_h = clip::H::from(r.h) * multiplier;
 
-            for y in r_y / cells_size..(r_y + r_h) / cells_size {
-                for x in r_x / cells_size..(r_x + r_w) / cells_size {
-                    hash::hash(
-                        &mut cells[
-                            usize::from(y)
+            for y in r_y / cells_size..=(r_y + r_h) / cells_size {
+                for x in r_x / cells_size..=(r_x + r_w) / cells_size {
+                    let i = usize::from(y)
                             * usize::from(CELLS_X)
-                            + usize::from(x)
-                        ],
-                        hash
-                    );
+                            + usize::from(x);
+                    // We want to allow drawing things that are partially offscreen.
+                    if i < cells.len() {
+                        hash::hash(
+                            &mut cells[i],
+                            hash
+                        );
+                    }
                 }
             }
         }
