@@ -32,7 +32,7 @@ pub struct Rect {
     pub h: u8,
 }
 
-impl From<((u8, u8, u8, u8))> for Rect {
+impl From<(u8, u8, u8, u8)> for Rect {
     #[inline]
     fn from((x, y, w, h): (u8, u8, u8, u8)) -> Self {
         Rect { x, y, w, h }
@@ -110,13 +110,15 @@ pub struct Speaker {
     requests: Vec<SFX>,
 }
 
-impl Speaker {
-    pub fn new() -> Self {
+impl Default for Speaker {
+    fn default() -> Self {
         Speaker {
             requests: Vec::with_capacity(8),
         }
     }
+}
 
+impl Speaker {
     pub fn clear(&mut self) {
         self.requests.clear();
     }

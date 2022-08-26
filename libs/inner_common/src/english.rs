@@ -3,8 +3,8 @@ pub fn get_sentence_list<T: AsRef<str>>(elements: &[T]) -> String {
 
     let len = elements.len();
     if len >= 2 {
-        for i in 0..len {
-            text.push_str(elements[i].as_ref());
+        for (i, e) in elements.iter().enumerate() {
+            text.push_str(e.as_ref());
 
             if i == len - 2 {
                 text.push_str(", and ");
@@ -27,8 +27,8 @@ where
 
     let len = elements.len();
     if len >= 2 {
-        for i in 0..len {
-            text.push_str(mapper(&elements[i]).as_ref());
+        for (i, e) in elements.iter().enumerate() {
+            text.push_str(mapper(e).as_ref());
 
             if i == len - 2 {
                 text.push_str(", and ");

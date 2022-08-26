@@ -32,7 +32,7 @@ impl BartogState {
             game_state: GameState::new(seed),
             framebuffer,
             input: Input::new(),
-            speaker: Speaker::new(),
+            speaker: Speaker::default(),
         }
     }
 }

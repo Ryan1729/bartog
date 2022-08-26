@@ -237,7 +237,7 @@ where
         ModOffset {
             modulus: 1u8.into(),
             current: 0u8.into(),
-            offset: 1u8.into(),
+            offset: 1,
         }
     }
 }

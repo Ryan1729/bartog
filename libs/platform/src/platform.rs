@@ -19,7 +19,6 @@ use winit::{
     window::WindowBuilder,
 };
 
-
 mod clip {
     use core::ops::Range;
     pub type X = u16;
@@ -889,181 +888,6 @@ fn render(
     output
 }
 
-fn add_bars_if_needed<'buffer>(
-    src_frame_buffer: &'buffer [u32],
-    dst_frame_buffer: &mut Vec<u32>,
-    (src_w, src_h): (u16, u16),
-    (dst_w, dst_h): (u16, u16),
-) {
-    let src_w = src_w as usize;
-    let src_h = src_h as usize;
-    let dst_w = dst_w as usize;
-    let dst_h = dst_h as usize;
-
-    dst_frame_buffer.clear();
-
-    let expected_length = dst_w * dst_h;
-    if src_frame_buffer.len() < expected_length {
-        let width_multiplier = dst_w / src_w;
-        let height_multiplier = dst_h / src_h;
-        let multiplier = core::cmp::min(width_multiplier, height_multiplier);
-        if multiplier == 0 {
-            dst_frame_buffer.extend_from_slice(&src_frame_buffer);
-            return;
-        }
-
-        let vertical_bars_width = dst_w - (multiplier * src_w);
-
-        let left_bar_width = (
-            (vertical_bars_width + 1) / 2
-        ) as usize;
-
-        let right_bar_width = (
-            vertical_bars_width / 2
-        ) as usize;
-
-        let horizontal_bars_height = dst_h - (multiplier * src_h);
-
-        let top_bar_height = (
-            (horizontal_bars_height + 1) / 2
-        ) as usize;
-
-        let bottom_bar_height = (
-            horizontal_bars_height / 2
-        ) as usize;
-
-        // Hopefully this compiles to something not inefficent
-        dst_frame_buffer.reserve(expected_length);
-        for i in 0..expected_length {
-            dst_frame_buffer.push(0);
-        }
-
-        let mut src_i = 0;
-        let mut y_remaining = multiplier;
-        for y in top_bar_height..(dst_h - bottom_bar_height) {
-            let mut x_remaining = multiplier;
-            for x in left_bar_width..(dst_w - right_bar_width) {
-                let dst_i = y * dst_w + x;
-                dst_frame_buffer[dst_i as usize] = src_frame_buffer[src_i];
-
-                x_remaining -= 1;
-                if x_remaining == 0 {
-                    src_i += 1;
-                    x_remaining = multiplier;
-                }
-            }
-
-            y_remaining -= 1;
-            if y_remaining == 0 {
-                y_remaining = multiplier;
-            } else {
-                // Go back to the beginning of the row.
-                src_i -= src_w;
-            }
-        }
-    } else {
-        dst_frame_buffer.extend_from_slice(&src_frame_buffer);
-    }
-}
-
-#[cfg(test)]
-mod add_bars_if_needed_returns_then_expected_result {
-    use super::add_bars_if_needed;
-
-    const R: u32 = 0xFFFF0000;
-    const G: u32 = 0xFF00FF00;
-    const B: u32 = 0xFF0000FF;
-    const C: u32 = 0xFF00FFFF;
-
-    macro_rules! a {
-        ($actual: expr, $expected: expr) => {
-            assert_eq!(<&[u32] as From<_>>::from(&$actual), &$expected)
-        }
-    }
-
-    #[test]
-    fn on_this_trival_example() {
-        let mut actual = Vec::new();
-        add_bars_if_needed(
-            &[
-                R, G,
-                B, C
-            ],
-            &mut actual,
-            (2, 2),
-            (2, 2),
-        );
-
-        a!(
-            actual,
-            [
-                R, G,
-                B, C
-            ]
-        )
-    }
-
-    #[test]
-    fn on_this_small_non_trival_example() {
-        let mut actual = Vec::new();
-        add_bars_if_needed(
-            &[R, G, B, C],
-            &mut actual,
-            (2, 2),
-            (4, 2),
-        );
-
-        a!(
-            actual,
-            [
-                0, R, G, 0,
-                0, B, C, 0,
-            ]
-        )
-    }
-
-    #[test]
-    fn on_this_small_size_doubling_example() {
-        let mut actual = Vec::new();
-        add_bars_if_needed(
-            &[R, G, B, C],
-            &mut actual,
-            (2, 2),
-            (6, 4),
-        );
-
-        a!(
-            actual,
-            [
-                0, R, R, G, G, 0,
-                0, R, R, G, G, 0,
-                0, B, B, C, C, 0,
-                0, B, B, C, C, 0,
-            ]
-        )
-    }
-
-    #[test]
-    fn on_this_small_odd_height_example() {
-        let mut actual = Vec::new();
-        add_bars_if_needed(
-            &[R, G, B, C],
-            &mut actual,
-            (2, 2),
-            (6, 3),
-        );
-
-        a!(
-            actual,
-            [
-                0, 0, 0, 0, 0, 0,
-                0, 0, R, G, 0, 0,
-                0, 0, B, C, 0, 0,
-            ]
-        )
-    }
-}
-
 // reportedly colourblind friendly colours
 // https://twitter.com/ea_accessible/status/968595073184092160
 
@@ -1089,7 +913,7 @@ mod colours {
 
 use colours::*;
 
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 pub const PALETTE: [u32; 8] = [
     BLUE,
     GREEN,
@@ -1113,7 +937,7 @@ pub const PALETTE: [u32; 8] = [
     all instances of `index`, leaving just the indices. Format further as needed.
 */
 
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 pub const GFX: [u8; GFX_LENGTH] = [
 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 4, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 6, 6, 6, 6, 6, 6, 4,
@@ -1245,7 +1069,7 @@ pub const GFX: [u8; GFX_LENGTH] = [
 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 7, 6, 5, 4, 3, 2, 1, 0,
 ];
 
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 pub const FONT: [u8; FONT_LENGTH] = [
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 6, 6, 0, 6, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 6, 6, 0, 6, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
