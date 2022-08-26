@@ -1,0 +1,15 @@
+[package]
+name = "render"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/render.rs"
+
+[dependencies]
+
+[dependencies.platform_types]
+path = "../platform_types"
+
+[dependencies.screen]
+path = "../screen"

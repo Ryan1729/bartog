@@ -24,6 +24,9 @@ xs = { path = "../xs" }
 [dependencies.platform_types]
 path = "../platform_types"
 
+[dependencies.render]
+path = "../render"
+
 [dependencies.screen]
 path = "../screen"
 
