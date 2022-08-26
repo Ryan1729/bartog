@@ -363,12 +363,6 @@ pub fn run<S: State + 'static>(mut state: S) {
                 just_gained_focus = true;
             }
             Event::MainEventsCleared => {
-                // Let's implement this scheme:
-                // https://rxi.github.io/cached_software_rendering.html
-                //
-                // TODO Attempt to merge adjacent regions for cells that are
-                // adjacent and render merged regions only once each.
-
                 let (commands, sounds) = state.frame();
 
                 handle_sounds(&mut sound_handler, sounds);
@@ -707,6 +701,17 @@ fn render(
         (outer_clip_rect.width() + 1) / clip::W::from(CELLS_X),
         (outer_clip_rect.height() + 1) / clip::H::from(CELLS_Y),
     );
+
+    // Cached software rendering based on:
+    // https://rxi.github.io/cached_software_rendering.html
+    //
+    // TODO Attempt to merge adjacent regions for cells that are
+    // adjacent and render merged regions only once each.
+    //   Compute boolean mask of cells that need redrawing (`[bool; CELLS_LENGTH]`)
+    //   Scan through mask until we find a true, then try to expand a rectangle by
+    //     going right and down from that point alternately.
+    //   Render once with expanded cell_clip_rect
+    //   Mark the rendered cells as false, keep scanning.
 
     frame_buffer.cells.reset_then_hash_commands(
         commands,
