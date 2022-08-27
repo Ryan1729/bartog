@@ -1,11 +1,12 @@
 ///! This crate is essentially the one suggested by rargo-run-wam, but inlined, and
-///! with the small change of using our own custom html etc. from the static folder.
+///! with some small changes, like using our own custom html etc. from the static
+///! folder.
 ///! So, we include the licenses from that repo as they were there.
 ///! Based on https://github.com/rukai/cargo-run-wasm @ 05c37ac3
 
 use pico_args::Arguments;
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use std::{io, fs};
@@ -20,6 +21,7 @@ OPTIONS:
   --features <FEATURES>...     Comma separated list of features to activate
   --host <HOST>                Makes the dev server listen on host (default 'localhost')
   --port <PORT>                Makes the dev server listen on port (default '8000')
+  --cut-release <FOLDER>       Cut a release by copying the built code and assets to the given folder after building, instead of serving.
 NAME:
   Name of the package (crate) within the workspace to run.
 ";
@@ -31,6 +33,7 @@ struct Args {
     features: Option<String>,
     host: Option<String>,
     port: Option<String>,
+    cut_release_target: Option<String>,
 }
 
 impl Args {
@@ -42,6 +45,7 @@ impl Args {
         let features: Option<String> = args.opt_value_from_str("--features").unwrap();
         let host: Option<String> = args.opt_value_from_str("--host").unwrap();
         let port: Option<String> = args.opt_value_from_str("--port").unwrap();
+        let cut_release_target: Option<String> = args.opt_value_from_str("--cut-release").unwrap();
 
         let mut unused_args: Vec<String> = args
             .finish()
@@ -64,6 +68,7 @@ impl Args {
                 features,
                 host,
                 port,
+                cut_release_target,
             }),
             len => Err(format!(
                 "Expected exactly one free arg, but there was {} free args: {:?}",
@@ -81,7 +86,14 @@ fn main() {
             return;
         }
     };
-    let profile = if args.release { "release" } else { "debug" };
+
+    let cut_release_target = args.cut_release_target;
+
+    let profile = if args.release || cut_release_target.is_some() {
+        "release"
+    } else {
+        "debug"
+    };
 
     // build wasm example via cargo
     let cargo = env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
@@ -151,22 +163,35 @@ fn main() {
         &example_dest,
     ).unwrap();
 
-    let host = args.host.unwrap_or_else(|| "localhost".into());
-    let port = args
-        .port
-        .unwrap_or_else(|| "8000".into())
-        .parse()
-        .expect("Port should be an integer");
+    if let Some(folder) = cut_release_target {
+        let folder_path = PathBuf::from(folder);
 
-    // run webserver on destination folder
-    println!("\nServing `{}` on http://{}:{}", args.name, host, port);
-    devserver_lib::run(
-        &host,
-        port,
-        example_dest.as_os_str().to_str().unwrap(),
-        false,
-        "",
-    );
+        std::fs::create_dir_all(&folder_path).unwrap();
+
+        copy_dir_all(
+            &example_dest,
+            &folder_path,
+        ).unwrap();
+
+        println!("Copied all from {} to {}", example_dest.display(), folder_path.display());
+    } else {
+        let host = args.host.unwrap_or_else(|| "localhost".into());
+        let port = args
+            .port
+            .unwrap_or_else(|| "8000".into())
+            .parse()
+            .expect("Port should be an integer");
+
+        // run webserver on destination folder
+        println!("\nServing `{}` on http://{}:{}", args.name, host, port);
+        devserver_lib::run(
+            &host,
+            port,
+            example_dest.as_os_str().to_str().unwrap(),
+            false,
+            "",
+        );
+    }
 }
 
 // https://stackoverflow.com/a/65192210
