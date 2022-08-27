@@ -122,7 +122,7 @@
     <title>Some WASM thing</title>
 </head>
 <body>
-    <canvas id="viewport" width="128" height="128" class="hidden"></canvas>
+    <canvas id="viewport"></canvas>
     <div id="horizontal-container">
         <!--
          <div id="side-text">
@@ -133,16 +133,9 @@
             </p>
         </div>
         -->
-        <div id="loading">Loading...</div>
         <div id="unsupported" class="hidden">
             <h1>Sorry, your browser is unsupported!</h1>
             <p>Maybe try something newer which supports WebAssembly?</p>
-        </div>
-        <div id="error" class="hidden">
-            <h1>Encountered an error!</h1>
-            <p>The error message is as follows:</p>
-            <p id="error-description"></p>
-            <p>Sorry about that!</p>
         </div>
     </div>
     <audio id="buttonPress1" src="sounds/buttonPress1.ogg" preload="auto" controls="none" style="display: none;" volume="0.375"></audio>
@@ -190,7 +183,12 @@
         }
     }
     </script>
-    <script src="bartog.js"></script>
+    <script type="module">
+        import init from "./bartog.js";
+        window.addEventListener("load", () => {
+          init();
+        });
+    </script>
     <script>
         if( typeof Module !== "object" ) { // If not running under Emscripten.
             var webassembly_supported = typeof WebAssembly === "object" && typeof WebAssembly.instantiate === "function";
