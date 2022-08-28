@@ -63,7 +63,7 @@ fn button_press(context: &mut UIContext, input: Input, speaker: &mut Speaker, id
 
 // Add the extra bit to `y` because the current graphics looks better that way.
 // In particular, it centers the character vertically within the tile.
-const TEXT_HEIGHT_OFFSET: u8 = (FONT_SIZE / 4);
+const TEXT_HEIGHT_OFFSET: u8 = FONT_SIZE / 4;
 
 pub struct ButtonSpec {
     pub text: String,

@@ -2,7 +2,7 @@ use inner_common::{*, xs::Xs};
 
 use std::fmt;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct CardFlags(u64);
 
 pub const ONE_PAST_CARD_FLAGS_MAX: u64 = 1 << DECK_SIZE as u64;
@@ -98,6 +98,10 @@ impl CardFlags {
     pub fn len(&self) -> u32 {
         self.size()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 impl Iterator for CardFlags {
@@ -135,12 +139,6 @@ impl BitOr<CardFlags> for u64 {
     type Output = CardFlags;
     fn bitor(self, other: CardFlags) -> Self::Output {
         CardFlags(self | other.0)
-    }
-}
-
-impl Default for CardFlags {
-    fn default() -> Self {
-        CardFlags(0)
     }
 }
 
@@ -2395,14 +2393,13 @@ fn get_special_subsets(all_special_flags: &[u64], card_flags: CardFlags) -> Vec<
         subsets.push(0);
     } else {
         for &f in all_special_flags.iter() {
-            if tracking_flags & f != f {
-                if original_flags & f == f {
-                    tracking_flags |= f;
-                    subsets.push(f);
+            if tracking_flags & f != f
+            && original_flags & f == f {
+                tracking_flags |= f;
+                subsets.push(f);
 
-                    if tracking_flags & original_flags == original_flags {
-                        break;
-                    }
+                if tracking_flags & original_flags == original_flags {
+                    break;
                 }
             }
         }
@@ -2448,7 +2445,7 @@ fn get_unchosen_sets(all_special_flags: &[u64], universe: u64) -> Vec<u64> {
 }
 
 //the set from `sets` that covers the most extra area of `target`.
-fn maximally_covering_subset(sets: &Vec<u64>, target: u64) -> Option<usize> {
+fn maximally_covering_subset(sets: &[u64], target: u64) -> Option<usize> {
     let mut previously_covered: u64 = 0;
     let mut previously_covered_index = None;
     for (i, set) in sets.iter().enumerate() {
@@ -2485,7 +2482,7 @@ impl fmt::Display for CardFlags {
     }
 }
 
-const CARD_FLAGS_DISPLAY_FALLBACK: &'static str = "the selected cards";
+const CARD_FLAGS_DISPLAY_FALLBACK: &str = "the selected cards";
 
 use std::borrow::Cow;
 fn write_card_set_str<'f, 's>(flags: &'f u64) -> Cow<'s, str> {

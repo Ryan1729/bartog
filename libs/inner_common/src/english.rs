@@ -4,12 +4,17 @@ pub fn get_sentence_list<T: AsRef<str>>(elements: &[T]) -> String {
     let len = elements.len();
     if len >= 2 {
         for (i, e) in elements.iter().enumerate() {
+            use std::cmp::Ordering::*;
             text.push_str(e.as_ref());
 
-            if i == len - 2 {
-                text.push_str(", and ");
-            } else if i < len - 2 {
-                text.push_str(", ");
+            match i.cmp(&(len - 2)) {
+                Equal => {
+                    text.push_str(", and ");
+                },
+                Less => {
+                    text.push_str(", ");
+                },
+                Greater => (),
             }
         }
     } else if len == 1 {
@@ -28,12 +33,18 @@ where
     let len = elements.len();
     if len >= 2 {
         for (i, e) in elements.iter().enumerate() {
+            use std::cmp::Ordering::*;
+
             text.push_str(mapper(e).as_ref());
 
-            if i == len - 2 {
-                text.push_str(", and ");
-            } else if i < len - 2 {
-                text.push_str(", ");
+            match i.cmp(&(len - 2)) {
+                Equal => {
+                    text.push_str(", and ");
+                },
+                Less => {
+                    text.push_str(", ");
+                },
+                Greater => (),
             }
         }
     } else if len == 1 {
@@ -87,11 +98,11 @@ use std::fmt;
 pub fn ordinal_display(n: u8, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     let s = n.to_string();
 
-    let suffix = if s.ends_with("1") && !s.ends_with("11") {
+    let suffix = if s.ends_with('1') && !s.ends_with("11") {
         "st"
-    } else if s.ends_with("2") && !s.ends_with("12") {
+    } else if s.ends_with('2') && !s.ends_with("12") {
         "nd"
-    } else if s.ends_with("3") && !s.ends_with("13") {
+    } else if s.ends_with('3') && !s.ends_with("13") {
         "rd"
     } else {
         "th"

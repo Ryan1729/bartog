@@ -39,17 +39,14 @@ impl Framebuffer {
 
     fn print_char_raw(
         &mut self,
-        sprite_x: u8,
-        sprite_y: u8,
-        w: u8,
-        h: u8,
-        display_x: u8,
-        display_y: u8,
-        colour: u8,
+        sprite_xy: (u8, u8),
+        (w, h): (u8, u8),
+        (display_x, display_y): (u8, u8),
+        colour: PaletteIndex,
     ) {
         self.commands.push(
             Command {
-                kind: Kind::Font((sprite_x, sprite_y), colour),
+                kind: Kind::Font(sprite_xy, colour),
                 rect: Rect {
                     x: display_x,
                     y: display_y,
@@ -96,11 +93,21 @@ impl Framebuffer {
 
                     if rank == TEN_CHAR {
                         x = x.saturating_add(FONT_ADVANCE / 4);
-                        self.print_char_raw(sprite_x, sprite_y, FONT_SIZE, FONT_SIZE, x, y, colour);
+                        self.print_char_raw(
+                            (sprite_x, sprite_y),
+                            (FONT_SIZE, FONT_SIZE),
+                            (x, y),
+                            colour
+                        );
                         x = x.saturating_add(FONT_ADVANCE * 3 / 4);
                     } else {
                         x = x.saturating_add(FONT_ADVANCE);
-                        self.print_char_raw(sprite_x, sprite_y, FONT_SIZE, FONT_SIZE, x, y, colour);
+                        self.print_char_raw(
+                            (sprite_x, sprite_y),
+                            (FONT_SIZE, FONT_SIZE),
+                            (x, y),
+                            colour
+                        );
                     }
 
                     x = x.saturating_add(FONT_ADVANCE);
@@ -109,7 +116,12 @@ impl Framebuffer {
                         let (sprite_x, sprite_y) = get_char_xy(suit);
 
                         x = x.saturating_add(FONT_ADVANCE / 4);
-                        self.print_char_raw(sprite_x, sprite_y, FONT_SIZE, FONT_SIZE, x, y, colour);
+                        self.print_char_raw(
+                            (sprite_x, sprite_y),
+                            (FONT_SIZE, FONT_SIZE),
+                            (x, y),
+                            colour
+                        );
                         x = x.saturating_add(FONT_ADVANCE * 3 / 4);
                     } else {
                         x = x.saturating_add(FONT_ADVANCE);
@@ -124,7 +136,12 @@ impl Framebuffer {
             }
 
             let (sprite_x, sprite_y) = get_char_xy(c);
-            self.print_char_raw(sprite_x, sprite_y, FONT_SIZE, FONT_SIZE, x, y, colour);
+            self.print_char_raw(
+                (sprite_x, sprite_y),
+                (FONT_SIZE, FONT_SIZE),
+                (x, y),
+                colour
+            );
             x = x.saturating_add(FONT_ADVANCE);
         }
     }
@@ -132,7 +149,12 @@ impl Framebuffer {
     fn print_line_raw(&mut self, bytes: &[u8], mut x: u8, y: u8, colour: u8) {
         for &c in bytes {
             let (sprite_x, sprite_y) = get_char_xy(c);
-            self.print_char_raw(sprite_x, sprite_y, FONT_SIZE, FONT_SIZE, x, y, colour);
+            self.print_char_raw(
+                (sprite_x, sprite_y),
+                (FONT_SIZE, FONT_SIZE),
+                (x, y),
+                colour
+            );
             x = x.saturating_add(FONT_ADVANCE);
         }
     }
@@ -143,7 +165,12 @@ impl Framebuffer {
 
     pub fn print_char(&mut self, character: u8, x: u8, y: u8, colour: u8) {
         let (sprite_x, sprite_y) = get_char_xy(character);
-        self.print_char_raw(sprite_x, sprite_y, FONT_SIZE, FONT_SIZE, x, y, colour);
+        self.print_char_raw(
+            (sprite_x, sprite_y),
+            (FONT_SIZE, FONT_SIZE),
+            (x, y),
+            colour
+        );
     }
 
     pub fn draw_card(&mut self, card: Card, x: u8, y: u8) {
@@ -389,10 +416,6 @@ impl Framebuffer {
             x,
             y,
         );
-    }
-
-    fn xy_to_i(x: usize, y: usize) -> usize {
-        y.saturating_mul(usize::from(SCREEN_WIDTH)).saturating_add(x)
     }
 }
 

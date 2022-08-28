@@ -118,7 +118,7 @@ pub fn run<S: State + 'static>(mut state: S) {
 
                 let needs_redraw = render::render(
                     &mut output_frame_buffer,
-                    &commands,
+                    commands,
                 );
 
                 if NeedsRedraw::Yes == needs_redraw

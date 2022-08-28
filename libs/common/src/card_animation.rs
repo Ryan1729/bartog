@@ -25,29 +25,12 @@ const DELAY_FACTOR: u8 = 16;
 
 impl CardAnimation {
     pub fn new(card: PositionedCard, x: u8, y: u8, completion_action: Action) -> Self {
-        let (x_diff, y_diff) = (
-            if x == card.x {
-                0
-            } else if card.x > x {
-                card.x - x
-            } else {
-                x - card.x
-            },
-            if y == card.y {
-                0
-            } else if card.y > y {
-                card.y - y
-            } else {
-                y - card.y
-            },
-        );
-
         CardAnimation {
             card,
             x,
             y,
-            x_rate: max(x_diff / DELAY_FACTOR, 1),
-            y_rate: max(y_diff / DELAY_FACTOR, 1),
+            x_rate: max(x.abs_diff(card.x) / DELAY_FACTOR, 1),
+            y_rate: max(y.abs_diff(card.y) / DELAY_FACTOR, 1),
             completion_action,
         }
     }
