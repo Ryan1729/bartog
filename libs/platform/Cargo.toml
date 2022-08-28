@@ -17,7 +17,7 @@ wasm-bindgen = "0.2.45"
 web-sys = { version = "0.3.22", features = ["HtmlCanvasElement"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rodio = "0.15.0"
+rodio = { version = "0.15.0", features=["vorbis"], default-features = false }
 spin_sleep = "1.1.1"
 xs = { path = "../xs" }
 

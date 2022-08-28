@@ -6,8 +6,8 @@ edition = "2021"
 
 [dependencies]
 
-[dependencies.wasm-bindgen]
-version = "0.2.45"
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2.45"
 
 [dependencies.platform]
 path = "../libs/platform"
