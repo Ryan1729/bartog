@@ -4,13 +4,16 @@ members = [
     "run-wasm"
 ]
 
+# We aim for fast to compile, with the dev profile. At this time, `opt-level = 2`
+# seems to help with that goal.
+#
+# If we need to, we can make a "debugging" profile with `debug = true`.
 [profile.dev]
-opt-level = 2
-debug = true
+opt-level = 3
+debug = false
 rpath = false
 lto = false
 debug-assertions = true
-codegen-units = 4
 
 [profile.release]
 strip = true
@@ -19,4 +22,5 @@ debug = false
 rpath = false
 lto = true
 debug-assertions = false
+# This noticably decreases code size
 codegen-units = 1

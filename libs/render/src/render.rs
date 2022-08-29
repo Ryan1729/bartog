@@ -136,7 +136,7 @@ impl FrameBuffer {
     pub fn from_size((width, height): (clip::W, clip::H)) -> Self {
         Self {
             buffer: Vec::with_capacity(
-                (width * height) as usize
+                usize::from(width) * usize::from(height)
             ),
             width,
             height,
