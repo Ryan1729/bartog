@@ -171,7 +171,7 @@ impl Hand {
 
         let mut max_count = 0;
         let mut result = [None; 4];
-        for (i, &(suit, count)) in counts.into_iter().enumerate() {
+        for (i, (suit, count)) in counts.into_iter().enumerate() {
             if count > max_count {
                 result[i] = Some(suit);
             } else {

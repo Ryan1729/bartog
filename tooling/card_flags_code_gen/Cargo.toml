@@ -2,6 +2,6 @@
 name = "card_flags_code_gen"
 version = "0.1.0"
 authors = ["Ryan1729 <Ryan1729@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]

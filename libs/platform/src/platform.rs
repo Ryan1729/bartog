@@ -40,17 +40,9 @@ pub fn run<S: State + 'static>(mut state: S) {
 
     let mut sound_handler = init_sound_handler();
 
-    let mut loop_helper;
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        loop_helper = ();
-    }
     #[cfg(not(target_arch = "wasm32"))]
-    {
-        loop_helper = spin_sleep::LoopHelper::builder()
-            .build_with_target_rate(60.0)
-    }
+    let mut loop_helper = spin_sleep::LoopHelper::builder()
+            .build_with_target_rate(60.0);
 
     let mut just_gained_focus = true;
 
@@ -146,8 +138,7 @@ pub fn run<S: State + 'static>(mut state: S) {
 #[cfg(target_arch = "wasm32")]
 mod wasm {
     use winit::{
-        event::Event,
-        window::{Window, WindowBuilder},
+        window::WindowBuilder,
         platform::web::WindowBuilderExtWebSys,
     };
     use wasm_bindgen::JsCast;

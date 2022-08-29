@@ -356,7 +356,7 @@ impl fmt::Display for RelativePlayer {
         }
         write!(f, "{:?}\n", self)?;
 
-        for &id in all_player_ids().into_iter() {
+        for id in all_player_ids() {
             write!(
                 f,
                 "{}->{}",

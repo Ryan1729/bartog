@@ -1,4 +1,4 @@
-use common::{xs::Xs, *};
+use common::*;
 use game_state::{can_play, event_push, in_game, GameState, Status, RULE_TYPES};
 
 struct CardFlagsDelta {
@@ -299,7 +299,7 @@ pub fn apply_can_play_graph_changes(
 
     add_rule_change_log_header(state, player);
 
-    for possible_change in flattened_changes.into_iter() {
+    for possible_change in flattened_changes {
         if let Some(change) = possible_change {
             let new_card = change.card();
             let new_edges = change.edges();
