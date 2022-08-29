@@ -77,6 +77,12 @@ mod hash {
         }
     }
 
+    pub fn u16(hash: &mut Cell, u16: u16) {
+        // We prioritize speed over portablilty of hashes between architechtures,
+        // which we expect wouldn't come up anyway. Hence `to_ne_bytes`.
+        bytes(hash, &u16.to_ne_bytes());
+    }
+
     pub fn command(hash: &mut Cell, command: &Command) {
         use Kind::*;
 
@@ -183,15 +189,15 @@ impl HashCells {
                 let i = usize::from(y)
                         * usize::from(CELLS_X)
                         + usize::from(x);
-                hash::bytes(&mut cells[i], &w.to_ne_bytes());
-                hash::bytes(&mut cells[i], &h.to_ne_bytes());
+                hash::u16(&mut cells[i], w);
+                hash::u16(&mut cells[i], h);
             }
         }
 
         for command in commands {
             let mut hash = <_>::default();
-            hash::bytes(&mut hash, &multiplier.to_ne_bytes());
-            hash::bytes(&mut hash, &cells_size.to_ne_bytes());
+            hash::u16(&mut hash, multiplier);
+            hash::u16(&mut hash, cells_size);
             hash::command(&mut hash, command);
 
             // update hash of overlapping cells
@@ -485,9 +491,9 @@ pub fn render(
                         for y in clip_rect.y {
                             for x in clip_rect.x.clone() {
                                 if cell_clip_rect.contains(x, y) {
-                                    let index = usize::from(x)
-                                    + usize::from(y)
-                                    * usize::from(d_w);
+                                    let index = usize::from(y)
+                                    * usize::from(d_w)
+                                    + usize::from(x);
                                     if index < frame_buffer.buffer.len() {
                                         frame_buffer.buffer[index] = PALETTE[colour as usize & 15];
                                     }
