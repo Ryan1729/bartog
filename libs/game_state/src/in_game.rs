@@ -1,5 +1,6 @@
 use crate::game_state::Rules;
 use common::{ByteStrRowDisplay, RowDisplay, *, xs::Xs};
+use core::cmp::Ordering::{Less, Equal, Greater};
 
 use lazy_static::lazy_static;
 use std::fmt;
@@ -103,29 +104,29 @@ impl State {
 
     pub fn get_hand(&self, playerId: PlayerID) -> &Hand {
         let index = playerId as usize;
-        let len = self.cpu_hands.len();
-        if index < len {
-            &self.cpu_hands[index]
-        } else if index == len {
-            &self.hand
-        } else {
-            invariant_violation!({ &self.discard }, "Could not find hand for {:?}", playerId)
+        
+        match index.cmp(&self.cpu_hands.len()) {
+            Less => &self.cpu_hands[index],
+            Equal => &self.hand,
+            Greater => invariant_violation!(
+                { &self.discard },
+                "Could not find hand for {:?}",
+                playerId
+            ),
         }
     }
 
     pub fn get_hand_mut(&mut self, playerId: PlayerID) -> &mut Hand {
         let index = playerId as usize;
-        let len = self.cpu_hands.len();
-        if index < len {
-            &mut self.cpu_hands[index]
-        } else if index == len {
-            &mut self.hand
-        } else {
-            invariant_violation!(
+        
+        match index.cmp(&self.cpu_hands.len()) {
+            Less => &mut self.cpu_hands[index],
+            Equal => &mut self.hand,
+            Greater => invariant_violation!(
                 { &mut self.discard },
                 "Could not find hand for {:?}",
                 playerId
-            )
+            ),
         }
     }
 
@@ -166,19 +167,19 @@ impl State {
             .chain(self.hand.iter())
             .chain(self.card_animations.iter().map(|a| &a.card.card));
 
-        for c in card_iter {
-            observed_deck.insert(c.clone());
+        for &c in card_iter {
+            observed_deck.insert(c);
         }
 
         example_deck.difference(&observed_deck).cloned().collect()
     }
 
     pub fn animations_settled(&self) -> bool {
-        self.card_animations.len() == 0
+        self.card_animations.is_empty()
     }
 
     pub fn no_winners_yet(&self) -> bool {
-        self.winners.len() == 0
+        self.winners.is_empty()
     }
 
     pub fn round_is_over(&self) -> bool {
@@ -200,11 +201,11 @@ impl State {
         get_card_position(hand.spread, len + 1, len)
     }
 
-    pub fn get_relative_hand_mut<'a>(
-        &'a mut self,
+    pub fn get_relative_hand_mut(
+        &mut self,
         hand: RelativeHand,
         player: PlayerID,
-    ) -> &'a mut Hand {
+    ) -> &mut Hand {
         match hand {
             RelativeHand::Deck => &mut self.deck,
             RelativeHand::Discard => &mut self.discard,
@@ -459,7 +460,7 @@ impl Iterator for RelativePlayerSet {
 
 impl RelativePlayerSet {
     pub fn absolute_players(&self, player: PlayerID) -> Vec<PlayerID> {
-        self.clone().map(|p| p.apply(player)).collect()
+        self.map(|p| p.apply(player)).collect()
     }
 }
 
@@ -633,12 +634,12 @@ enum RefsMut<'a, T> {
 }
 
 #[allow(dead_code)]
-fn get_refs_mut<'a>(
-    state: &'a mut State,
+fn get_refs_mut(
+    state: &mut State,
     h1: RelativeHand,
     h2: RelativeHand,
     player: PlayerID,
-) -> RefsMut<'a, Hand> {
+) -> RefsMut<'_, Hand> {
     if h1 == h2 {
         RefsMut::Same(state.get_relative_hand_mut(h1, player))
     } else {
@@ -777,8 +778,8 @@ impl<'a> CardFlagsSubChoice for ChoiceStateAndRules<'a> {
     }
     fn reset(&mut self) {
         self.choice_state.changes.clear();
-        for c in self.choice_state.reset_changes.iter() {
-            self.choice_state.changes.push(c.clone())
+        for &c in self.choice_state.reset_changes.iter() {
+            self.choice_state.changes.push(c)
         }
     }
     fn get_status_lines(&self) -> StatusLines {

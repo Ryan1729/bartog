@@ -28,11 +28,11 @@ impl Default for Graph {
         // A♣, 2♣, ... K♣, A♦, ..., A♥, ..., A♠, ..., K♠.
         let mut nodes = [CardFlags::default(); DECK_SIZE as usize];
 
-        for suit in 0..SUIT_COUNT as usize {
-            for rank in 0..RANK_COUNT as usize {
-                let i = rank + suit * RANK_COUNT as usize;
+        for (suit_i, suit) in SUIT_FLAGS.iter().enumerate() {
+            for (rank_i, rank) in RANK_FLAGS.iter().enumerate() {
+                let i = suit_i * RANK_COUNT as usize + rank_i;
 
-                nodes[i] = CardFlags::new(SUIT_FLAGS[suit] | RANK_FLAGS[rank]);
+                nodes[i] = CardFlags::new(suit | rank);
             }
         }
 

@@ -325,7 +325,7 @@ pub fn do_in_game_changes_choice(
                                 .get_card_flags_changes(choice_state.card_set);
                             choice_state.changes.clear();
                             for change in card_changes {
-                                choice_state.changes.push(change.clone());
+                                choice_state.changes.push(change);
                             }
                         }
                         in_game::Layer::Done | in_game::Layer::Card => {}
@@ -481,12 +481,12 @@ fn in_game_changes_choose_changes(
         }
 
         if let Some(index) = addition {
-            if let Some(change) = in_game::ALL_CHANGES.get(index) {
+            if let Some(&change) = in_game::ALL_CHANGES.get(index) {
                 let i = min(
                     choice_state.right_scroll as usize + choice_state.marker_y as usize,
                     choice_state.changes.len(),
                 );
-                choice_state.changes.insert(i, change.clone());
+                choice_state.changes.insert(i, change);
             }
         }
     }
@@ -559,54 +559,50 @@ fn in_game_changes_choose_changes(
         {
             context.set_next_hot(FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT - 1);
         }
-    } else {
-        if input.pressed_this_frame(Button::RIGHT) {
-            let next = if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
-                context.hot + SCROLL_ROW_COUNT
-            } else {
-                1
-            };
-            context.set_next_hot(next);
-        } else if input.pressed_this_frame(Button::LEFT) {
-            let next = if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
-                1
-            } else {
-                context.hot - SCROLL_ROW_COUNT
-            };
-            context.set_next_hot(next);
+    } else if input.pressed_this_frame(Button::RIGHT) {
+        let next = if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
+            context.hot + SCROLL_ROW_COUNT
         } else {
-            if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
-                let left_scroll = &mut choice_state.left_scroll;
-                *left_scroll = handle_scroll_movement(
-                    context,
-                    input,
-                    left_id_range.clone(),
-                    ModOffset {
-                        modulus: left_modulus,
-                        current: *left_scroll,
-                        ..d!()
-                    },
-                );
-            } else {
-                if input.pressed_this_frame(Button::UP) {
-                    choice_state.marker_y = choice_state.marker_y.saturating_sub(1);
-                } else if input.pressed_this_frame(Button::DOWN) {
-                    choice_state.marker_y = min(choice_state.marker_y + 1, SCROLL_ROW_COUNT);
-                }
-
-                let right_scroll = &mut choice_state.right_scroll;
-                *right_scroll = handle_scroll_movement(
-                    context,
-                    input,
-                    right_id_range.clone(),
-                    ModOffset {
-                        modulus: right_modulus,
-                        current: *right_scroll,
-                        ..d!()
-                    },
-                );
-            }
+            1
+        };
+        context.set_next_hot(next);
+    } else if input.pressed_this_frame(Button::LEFT) {
+        let next = if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
+            1
+        } else {
+            context.hot - SCROLL_ROW_COUNT
+        };
+        context.set_next_hot(next);
+    } else if context.hot < FIRST_SCROLL_START_ID + SCROLL_ROW_COUNT {
+        let left_scroll = &mut choice_state.left_scroll;
+        *left_scroll = handle_scroll_movement(
+            context,
+            input,
+            left_id_range,
+            ModOffset {
+                modulus: left_modulus,
+                current: *left_scroll,
+                ..d!()
+            },
+        );
+    } else {
+        if input.pressed_this_frame(Button::UP) {
+            choice_state.marker_y = choice_state.marker_y.saturating_sub(1);
+        } else if input.pressed_this_frame(Button::DOWN) {
+            choice_state.marker_y = min(choice_state.marker_y + 1, SCROLL_ROW_COUNT);
         }
+
+        let right_scroll = &mut choice_state.right_scroll;
+        *right_scroll = handle_scroll_movement(
+            context,
+            input,
+            right_id_range.clone(),
+            ModOffset {
+                modulus: right_modulus,
+                current: *right_scroll,
+                ..d!()
+            },
+        );
     }
 
     if outside_range(&right_id_range, context.hot)
@@ -745,12 +741,14 @@ fn do_card_flags_sub_choice<C: CardFlagsSubChoice>(
     const FIRST_CHECKBOX_ID: UIId = 5;
 
     do_scrolling_card_checkbox(
-        framebuffer,
-        context,
+        (
+            framebuffer,
+            context,
+            speaker,
+            scroll_card,
+            flags,
+        ),
         input,
-        speaker,
-        scroll_card,
-        flags,
         FIRST_CHECKBOX_ID,
         max_heading_y,
     );
@@ -903,26 +901,24 @@ fn do_card_sub_choice<C: CardSubChoice>(
             let next = (FIRST_SCROLL_ID - 1) + context.hot;
             context.set_next_hot(next);
         }
+    } else if input.pressed_this_frame(Button::RIGHT) || input.pressed_this_frame(Button::LEFT) {
+        let next = min(
+            context.hot.saturating_sub(FIRST_SCROLL_ID) + 1,
+            FIRST_SCROLL_ID - 1,
+        );
+        context.set_next_hot(next);
     } else {
-        if input.pressed_this_frame(Button::RIGHT) || input.pressed_this_frame(Button::LEFT) {
-            let next = min(
-                context.hot.saturating_sub(FIRST_SCROLL_ID) + 1,
-                FIRST_SCROLL_ID - 1,
-            );
-            context.set_next_hot(next);
-        } else {
-            let card = choice_state.borrow_mut();
-            *card = handle_scroll_movement(
-                context,
-                input,
-                id_range,
-                ModOffset {
-                    modulus: DECK_SIZE,
-                    current: *card,
-                    ..d!()
-                },
-            );
-        }
+        let card = choice_state.borrow_mut();
+        *card = handle_scroll_movement(
+            context,
+            input,
+            id_range,
+            ModOffset {
+                modulus: DECK_SIZE,
+                current: *card,
+                ..d!()
+            },
+        );
     }
 
     output
@@ -993,12 +989,20 @@ fn heading_y(i: i8) -> u8 {
 }
 
 fn do_scrolling_card_checkbox(
-    framebuffer: &mut Framebuffer,
-    context: &mut UIContext,
+    (
+        framebuffer,
+        context,
+        speaker,
+        scroll_card,
+        card_flags,
+    ) : (
+        &mut Framebuffer,
+        &mut UIContext,
+        &mut Speaker,
+        &mut Card,
+        &mut CardFlags,
+    ),
     input: Input,
-    speaker: &mut Speaker,
-    scroll_card: &mut Card,
-    card_flags: &mut CardFlags,
     first_checkbox_id: UIId,
     max_heading_y: u8,
 ) {
@@ -1056,41 +1060,36 @@ fn do_scrolling_card_checkbox(
                 context.set_next_hot(first_checkbox_id + 3 * SCROLL_COLS_COUNT + 1);
             }
         }
-    } else {
-        if input.pressed_this_frame(Button::LEFT) {
-            if context.hot & 1 == first_checkbox_id & 1 {
-                if context.hot > first_checkbox_id + 3 * SCROLL_COLS_COUNT {
-                    context.set_next_hot(first_checkbox_id - 1);
-                } else {
-                    context.set_next_hot(first_checkbox_id - 2);
-                }
+    } else if input.pressed_this_frame(Button::LEFT) {
+        if context.hot & 1 == first_checkbox_id & 1 {
+            if context.hot > first_checkbox_id + 3 * SCROLL_COLS_COUNT {
+                context.set_next_hot(first_checkbox_id - 1);
             } else {
-                let next = context.hot - 1;
-                context.set_next_hot(next);
-            }
-        } else if input.pressed_this_frame(Button::RIGHT) {
-            if context.hot & 1 == first_checkbox_id & 1 {
-                let next = context.hot + 1;
-                context.set_next_hot(next);
-            } else {
-                if context.hot > first_checkbox_id + 3 * SCROLL_COLS_COUNT {
-                    context.set_next_hot(first_checkbox_id - 1);
-                } else {
-                    context.set_next_hot(first_checkbox_id - 2);
-                }
+                context.set_next_hot(first_checkbox_id - 2);
             }
         } else {
-            *scroll_card = handle_scroll_movement(
-                context,
-                input,
-                first_checkbox_id..first_checkbox_id + (SCROLL_ROWS_COUNT * SCROLL_COLS_COUNT),
-                ModOffset {
-                    modulus: DECK_SIZE,
-                    current: *scroll_card,
-                    offset: SCROLL_COLS_COUNT,
-                },
-            );
+            let next = context.hot - 1;
+            context.set_next_hot(next);
         }
+    } else if input.pressed_this_frame(Button::RIGHT) {
+        context.set_next_hot(if context.hot & 1 == first_checkbox_id & 1 {
+            context.hot + 1
+        } else if context.hot > first_checkbox_id + 3 * SCROLL_COLS_COUNT {
+            first_checkbox_id - 1
+        } else {
+            first_checkbox_id - 2
+        });
+    } else {
+        *scroll_card = handle_scroll_movement(
+            context,
+            input,
+            first_checkbox_id..first_checkbox_id + (SCROLL_ROWS_COUNT * SCROLL_COLS_COUNT),
+            ModOffset {
+                modulus: DECK_SIZE,
+                current: *scroll_card,
+                offset: SCROLL_COLS_COUNT,
+            },
+        );
     }
 }
 

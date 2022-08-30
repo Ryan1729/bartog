@@ -136,21 +136,21 @@ fn get_edits<T: Eq + Copy>(old_changes: &[T], new_changes: &[T]) -> Vec<Edit<T>>
     let old = if let Some(i) = tighter_start {
         &old_changes[i..]
     } else {
-        &old_changes
+        old_changes
     };
 
     for &c in old.iter() {
-        removals.push(c.clone());
+        removals.push(c);
     }
 
     let new = if let Some(i) = tighter_start {
         &new_changes[i..]
     } else {
-        &new_changes
+        new_changes
     };
 
     for &c in new.iter() {
-        additions.push(c.clone());
+        additions.push(c);
     }
 
     removals
@@ -219,9 +219,9 @@ pub fn apply_wild_change(state: &mut GameState, new_wild: CardFlags, player: Pla
 
     let pronoun = get_pronoun(player);
 
-    match (additions.len() > 0, removals.len() > 0) {
-        (false, false) => {}
-        (true, false) => {
+    match (additions.is_empty(), removals.is_empty()) {
+        (true, true) => {}
+        (false, true) => {
             event_push!(
                 state.event_log,
                 pronoun.as_bytes(),
@@ -230,7 +230,7 @@ pub fn apply_wild_change(state: &mut GameState, new_wild: CardFlags, player: Pla
                 b".",
             );
         }
-        (false, true) => {
+        (true, false) => {
             event_push!(
                 state.event_log,
                 pronoun.as_bytes(),
@@ -239,7 +239,7 @@ pub fn apply_wild_change(state: &mut GameState, new_wild: CardFlags, player: Pla
                 b".",
             );
         }
-        (true, true) => {
+        (false, false) => {
             event_push!(
                 state.event_log,
                 pronoun.as_bytes(),
@@ -289,76 +289,74 @@ pub fn apply_can_play_graph_changes(
 ) {
     //TODO enforce a single strongly connected component in the graph
 
-    let mut flattened_changes = [None; DECK_SIZE as usize];
+    let mut unflattened_changes = [None; DECK_SIZE as usize];
 
     for &change in changes.iter() {
         let index = change.card() as usize;
 
-        flattened_changes[index] = Some(change);
+        unflattened_changes[index] = Some(change);
     }
 
     add_rule_change_log_header(state, player);
 
-    for possible_change in flattened_changes {
-        if let Some(change) = possible_change {
-            let new_card = change.card();
-            let new_edges = change.edges();
+    for change in unflattened_changes.into_iter().flatten() {
+        let new_card = change.card();
+        let new_edges = change.edges();
 
-            //logging
-            let previous_edges = state.rules.can_play_graph.get_edges(new_card);
-            let CardFlagsDelta {
-                additions,
-                removals,
-            } = CardFlagsDelta::new(previous_edges, new_edges);
+        //logging
+        let previous_edges = state.rules.can_play_graph.get_edges(new_card);
+        let CardFlagsDelta {
+            additions,
+            removals,
+        } = CardFlagsDelta::new(previous_edges, new_edges);
 
-            let pronoun = get_pronoun(player);
-            let card_string = get_card_string(new_card);
+        let pronoun = get_pronoun(player);
+        let card_string = get_card_string(new_card);
 
-            match (additions.len() > 0, removals.len() > 0) {
-                (false, false) => {}
-                (true, false) => {
-                    event_push!(
-                        state.event_log,
-                        pronoun.as_bytes(),
-                        b" allowed the ",
-                        card_string.as_bytes(),
-                        b" to be played on the following cards: ",
-                        additions.to_string().as_bytes(),
-                        b".",
-                    );
-                }
-                (false, true) => {
-                    event_push!(
-                        state.event_log,
-                        pronoun.as_bytes(),
-                        b" prevented the ",
-                        card_string.as_bytes(),
-                        b" from being played on the following cards: ",
-                        removals.to_string().as_bytes(),
-                        b".",
-                    );
-                }
-                (true, true) => {
-                    event_push!(
-                        state.event_log,
-                        pronoun.as_bytes(),
-                        b" allowed the ",
-                        card_string.as_bytes(),
-                        b" to be played on the following cards: ",
-                        additions.to_string().as_bytes(),
-                        b". but ",
-                        pronoun.as_bytes(),
-                        b" also prevented it from being played on the following cards: ",
-                        removals.to_string().as_bytes(),
-                        b".",
-                    );
-                }
-            };
+        match (additions.is_empty(), removals.is_empty()) {
+            (true, true) => {}
+            (false, true) => {
+                event_push!(
+                    state.event_log,
+                    pronoun.as_bytes(),
+                    b" allowed the ",
+                    card_string.as_bytes(),
+                    b" to be played on the following cards: ",
+                    additions.to_string().as_bytes(),
+                    b".",
+                );
+            }
+            (true, false) => {
+                event_push!(
+                    state.event_log,
+                    pronoun.as_bytes(),
+                    b" prevented the ",
+                    card_string.as_bytes(),
+                    b" from being played on the following cards: ",
+                    removals.to_string().as_bytes(),
+                    b".",
+                );
+            }
+            (false, false) => {
+                event_push!(
+                    state.event_log,
+                    pronoun.as_bytes(),
+                    b" allowed the ",
+                    card_string.as_bytes(),
+                    b" to be played on the following cards: ",
+                    additions.to_string().as_bytes(),
+                    b". but ",
+                    pronoun.as_bytes(),
+                    b" also prevented it from being played on the following cards: ",
+                    removals.to_string().as_bytes(),
+                    b".",
+                );
+            }
+        };
 
-            /////////
+        /////////
 
-            state.rules.can_play_graph.set_edges(new_card, new_edges);
-        }
+        state.rules.can_play_graph.set_edges(new_card, new_edges);
     }
 }
 

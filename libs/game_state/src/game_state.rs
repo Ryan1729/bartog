@@ -342,7 +342,6 @@ impl CardChangeTable {
         self
             .map
             .get(&card_flags)
-            .clone()
             .into_iter()
             .flat_map(|c| c.changes.iter())
             .cloned()
@@ -357,7 +356,7 @@ impl CardChangeTable {
         );
         self.next_generation += 1;
 
-        for card in card_flags.clone() {
+        for card in card_flags {
             let flag_vec = self.index.entry(card).or_default();
             let map = &self.map;
             let search_result = flag_vec.binary_search_by_key(
@@ -373,7 +372,7 @@ impl CardChangeTable {
     }
 
     fn get_flag_sort_key(map: &HashMap<CardFlags, CardChanges>, flags: &CardFlags) -> Generation {
-        map.get(&flags)
+        map.get(flags)
             .map(|ch| ch.generation)
             .unwrap_or(Generation::max_value())
     }
