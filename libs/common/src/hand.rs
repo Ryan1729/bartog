@@ -132,11 +132,15 @@ impl Hand {
         }
     }
 
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a Card> {
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Card> {
         self.cards.iter()
     }
 
-    pub fn drain<'a>(&'a mut self) -> impl Iterator<Item = Card> + 'a {
+    pub fn drain(&mut self) -> impl Iterator<Item = Card> + '_ {
         self.cards.drain(..)
     }
 

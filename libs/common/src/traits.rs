@@ -39,9 +39,11 @@ pub type StatusLines = [StatusLine; 2];
 pub fn bytes_to_status_line(bytes: &[u8]) -> StatusLine {
     use std::cmp::min;
     let mut output = [0; 8];
-    for i in 0..min(bytes.len(), 8) {
-        output[i] = bytes[i];
-    }
+
+    let end = min(bytes.len(), 8);
+
+    output[..end].copy_from_slice(&bytes[..end]);
+
     output
 }
 

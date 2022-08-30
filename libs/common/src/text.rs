@@ -212,10 +212,10 @@ pub fn is_byte_whitespace(byte: u8) -> bool {
 }
 
 //See NOTE above.
-pub fn bytes_split_whitespace<'a>(bytes: &'a [u8]) -> impl Iterator<Item = &'a [u8]> {
+pub fn bytes_split_whitespace(bytes: &[u8]) -> impl Iterator<Item = &[u8]> {
     bytes
         .split(|&b| is_byte_whitespace(b))
-        .filter(|word| word.len() > 0)
+        .filter(|word| !word.is_empty())
 }
 
 #[cfg(test)]

@@ -4,7 +4,7 @@ use platform_types::{Button, Input, Speaker, SFX};
 
 pub type UIId = u8;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct UIContext {
     pub hot: UIId,
     pub active: UIId,
@@ -12,14 +12,6 @@ pub struct UIContext {
 }
 
 impl UIContext {
-    pub fn new() -> Self {
-        UIContext {
-            hot: 0,
-            active: 0,
-            next_hot: 0,
-        }
-    }
-
     pub fn set_not_active(&mut self) {
         self.active = 0;
     }
@@ -169,9 +161,9 @@ where
         use std::cmp::min;
         let mut output: RowLabel = Default::default();
         let label = self.byte_str_row_label();
-        for i in 0..min(ROW_WIDTH_IN_CHARS as usize, label.len()) {
-            output[i] = label[i];
-        }
+
+        let end = min(ROW_WIDTH_IN_CHARS as usize, label.len());
+        output[..end].copy_from_slice(&label[..end]);
         output
     }
 }

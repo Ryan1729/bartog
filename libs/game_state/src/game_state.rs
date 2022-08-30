@@ -13,6 +13,16 @@ pub struct EventLog {
     pub top_index: usize,
 }
 
+impl Default for EventLog {
+    fn default() -> EventLog {
+        let buffer = VecDeque::with_capacity(EventLog::BUFFER_SIZE);
+        EventLog {
+            buffer,
+            top_index: 0,
+        }
+    }
+}
+
 type EventLine = [u8; EventLog::WIDTH];
 
 impl EventLog {
@@ -21,16 +31,12 @@ impl EventLog {
 
     const BUFFER_SIZE: usize = 1 << 11;
 
-    pub fn new() -> Self {
-        let buffer = VecDeque::with_capacity(EventLog::BUFFER_SIZE);
-        EventLog {
-            buffer,
-            top_index: 0,
-        }
-    }
-
     pub fn len(&self) -> usize {
         self.buffer.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn clear(&mut self) {
@@ -52,13 +58,11 @@ impl EventLog {
 
         let next = self.next_mut();
 
-        for i in 0..next.len() {
-            next[i] = 0;
+        for e in next.iter_mut() {
+            *e = 0;
         }
 
-        for i in 0..bytes.len() {
-            next[i] = bytes[i];
-        }
+        next[..bytes.len()].copy_from_slice(bytes);
     }
 
     pub fn push_hr(&mut self) {
@@ -66,7 +70,9 @@ impl EventLog {
     }
 
     pub fn next_mut(&mut self) -> &mut EventLine {
-        debug_assert!(EventLog::BUFFER_SIZE > 0);
+        #[allow(unknown_lints, clippy::assertions_on_constants)]
+        const _: () = assert!(EventLog::BUFFER_SIZE > 0);
+
         debug_assert!(self.buffer.len() <= EventLog::BUFFER_SIZE);
 
         if self.is_full() {
@@ -82,11 +88,11 @@ impl EventLog {
         self.buffer.len() >= EventLog::BUFFER_SIZE
     }
 
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a [u8]> {
+    pub fn iter(&self) -> impl Iterator<Item = &[u8]> {
         self.buffer.iter().map(|line| slice_until_first_0(line))
     }
 
-    pub fn get_window_slice<'a>(&'a self) -> impl Iterator<Item = &'a [u8]> {
+    pub fn get_window_slice(&self) -> impl Iterator<Item = &[u8]> {
         self.iter().skip(self.top_index).take(EventLog::HEIGHT)
     }
 
@@ -206,10 +212,7 @@ pub enum Choice {
 
 impl Choice {
     pub fn is_idle(&self) -> bool {
-        match *self {
-            Choice::NoChoice | Choice::Already(_) => true,
-            _ => false,
-        }
+        matches!(*self, Choice::NoChoice | Choice::Already(_))
     }
 }
 
@@ -286,18 +289,10 @@ impl Rules {
 
 type Generation = u32;
 
+#[derive(Default)]
 pub struct CardChanges {
     changes: Vec<in_game::Change>,
     generation: Generation,
-}
-
-impl Default for CardChanges {
-    fn default() -> Self {
-        CardChanges {
-            changes: d!(),
-            generation: d!(),
-        }
-    }
 }
 
 use std::collections::HashMap;
@@ -310,7 +305,6 @@ pub struct CardChangeTable {
 
 impl Default for CardChangeTable {
     fn default() -> Self {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
         CardChangeTable{
             map: HashMap::new(),
             index: HashMap::with_capacity(DECK_SIZE as usize),
@@ -320,7 +314,7 @@ impl Default for CardChangeTable {
 }
 
 impl CardChangeTable {
-    pub fn get_card_changes<'a>(&'a self, card: Card) -> impl Iterator<Item = in_game::Change> {
+    pub fn get_card_changes(&self, card: Card) -> impl Iterator<Item = in_game::Change> {
         let output: Vec<in_game::Change> = self
             .index
             .get(&card)
@@ -331,7 +325,6 @@ impl CardChangeTable {
                     .flat_map(|f| {
                         self.map
                             .get(f)
-                            .clone()
                             .into_iter()
                             .flat_map(|c| c.changes.iter())
                     })
@@ -345,17 +338,14 @@ impl CardChangeTable {
     pub fn get_card_flags_changes(
         &self,
         card_flags: CardFlags,
-    ) -> impl Iterator<Item = in_game::Change> {
-        let output: Vec<in_game::Change> = self
+    ) -> impl Iterator<Item = in_game::Change> + '_ {
+        self
             .map
             .get(&card_flags)
             .clone()
             .into_iter()
             .flat_map(|c| c.changes.iter())
             .cloned()
-            .collect::<Vec<_>>();
-
-        output.into_iter()
     }
     pub fn set_changes(&mut self, card_flags: CardFlags, changes: Vec<in_game::Change>) {
         self.map.insert(
@@ -450,8 +440,7 @@ pub struct GameState {
 
 impl GameState {
     pub fn new(seed: Seed) -> GameState {
-        let event_log = EventLog::new();
-        GameState::new_with_previous(seed, d!(), d!(), event_log, 0, true)
+        GameState::new_with_previous(seed, d!(), d!(), d!(), 0, true)
     }
 
     pub fn new_with_previous(
@@ -473,7 +462,7 @@ impl GameState {
             choice: Choice::NoChoice,
             rules,
             status,
-            context: UIContext::new(),
+            context: UIContext::default(),
             rng,
             event_log,
             log_heading: LogHeading::Up,

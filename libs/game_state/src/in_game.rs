@@ -354,7 +354,7 @@ impl fmt::Display for RelativePlayer {
                 RelativePlayer::Previous => write!(f, "p"),
             };
         }
-        write!(f, "{:?}\n", self)?;
+        writeln!(f, "{:?}", self)?;
 
         for id in all_player_ids() {
             write!(
