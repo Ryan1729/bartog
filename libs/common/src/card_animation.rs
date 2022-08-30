@@ -44,35 +44,40 @@ impl CardAnimation {
 
         self.card.x = match d_x {
             x if x > 0 => self.card.x.saturating_add(x as u8),
-            x if x < 0 => self.card.x.saturating_sub(x.abs() as u8),
+            x if x < 0 => self.card.x.saturating_sub(x.unsigned_abs()),
             _ => self.card.x,
         };
         self.card.y = match d_y {
             y if y > 0 => self.card.y.saturating_add(y as u8),
-            y if y < 0 => self.card.y.saturating_sub(y.abs() as u8),
+            y if y < 0 => self.card.y.saturating_sub(y.unsigned_abs()),
             _ => self.card.y,
         };
     }
 
     fn get_delta(&self) -> (i8, i8) {
+        use core::cmp::Ordering::*;
         (
-            if self.x == self.card.x {
-                0
-            } else if self.card.x > self.x {
-                let x_diff = self.card.x - self.x;
-                -(min(x_diff, self.x_rate) as i8)
-            } else {
-                let x_diff = self.x - self.card.x;
-                min(x_diff, self.x_rate) as i8
+            match self.card.x.cmp(&self.x) {
+                Equal => 0,
+                Greater => {
+                    let x_diff = self.card.x - self.x;
+                    -(min(x_diff, self.x_rate) as i8)
+                },
+                Less => {
+                    let x_diff = self.x - self.card.x;
+                    min(x_diff, self.x_rate) as i8
+                },
             },
-            if self.y == self.card.y {
-                0
-            } else if self.card.y > self.y {
-                let y_diff = self.card.y - self.y;
-                -(min(y_diff, self.y_rate) as i8)
-            } else {
-                let y_diff = self.y - self.card.y;
-                min(y_diff, self.y_rate) as i8
+            match self.card.y.cmp(&self.y) {
+                Equal => 0,
+                Greater => {
+                    let y_diff = self.card.y - self.y;
+                    -(min(y_diff, self.y_rate) as i8)
+                },
+                Less => {
+                    let y_diff = self.y - self.card.y;
+                    min(y_diff, self.y_rate) as i8
+                },
             },
         )
     }

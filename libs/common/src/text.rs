@@ -9,12 +9,12 @@ macro_rules! bytes_concat {
     }}
 }
 
-pub fn bytes_lines<'a>(bytes: &'a [u8]) -> impl Iterator<Item = &'a [u8]> {
+pub fn bytes_lines(bytes: &[u8]) -> impl Iterator<Item = &[u8]> {
     bytes.split(|&b| b == b'\n')
 }
 
 pub fn reflow(s: &str, width: usize) -> String {
-    if width == 0 || s.len() == 0 {
+    if width == 0 || s.is_empty() {
         return String::new();
     }
     let mut output = String::with_capacity(s.len() + s.len() / width);
@@ -44,7 +44,7 @@ pub fn reflow(s: &str, width: usize) -> String {
 }
 
 pub fn bytes_reflow(bytes: &[u8], width: usize) -> Vec<u8> {
-    if width == 0 || bytes.len() == 0 {
+    if width == 0 || bytes.is_empty() {
         return Vec::new();
     }
     test_log!(width);
@@ -77,8 +77,8 @@ pub fn bytes_reflow(bytes: &[u8], width: usize) -> Vec<u8> {
 }
 
 pub fn bytes_reflow_in_place(bytes: &mut Vec<u8>, width: usize) {
-    if width == 0 || bytes.len() == 0 {
-        test_log!("width == 0 || bytes.len() == 0");
+    if width == 0 || bytes.is_empty() {
+        test_log!("width == 0 || bytes.is_empty()");
         return;
     }
     test_log!("start");
@@ -114,7 +114,7 @@ pub fn bytes_reflow_in_place(bytes: &mut Vec<u8>, width: usize) {
         //scan from the start of the (moved) used portion and copy it back to the front
         //inserting newlines where appropiate.
         let mut x = 0;
-        while let Some((w_i, len)) = bytes_next_word(&bytes, &mut next_i) {
+        while let Some((w_i, len)) = bytes_next_word(bytes, &mut next_i) {
             test_log!((w_i, len));
             test_log!(&bytes[w_i..w_i + len]);
             x += len;
@@ -164,6 +164,9 @@ fn bytes_next_word(bytes: &[u8], in_i: &mut usize) -> Option<(usize, usize)> {
             let out_i = index;
             let mut len = 0;
 
+            // The suggestion that includes `.take(end + 1)` changes the behaviour 
+            // because `end == bytes.len()`, so it loops one less time.
+            #[allow(clippy::needless_range_loop)]
             for i in index + 1..=end {
                 *in_i = i;
                 if i == end || is_byte_whitespace(bytes[i]) {
@@ -182,11 +185,11 @@ fn bytes_next_word(bytes: &[u8], in_i: &mut usize) -> Option<(usize, usize)> {
     None
 }
 
-pub fn slice_until_first_0<'a>(bytes: &'a [u8]) -> &'a [u8] {
+pub fn slice_until_first_0(bytes: &[u8]) -> &[u8] {
     let mut usable_len = 255;
 
-    for i in 0..bytes.len() {
-        if bytes[i] == 0 {
+    for (i, &byte) in bytes.iter().enumerate() {
+        if byte == 0 {
             usable_len = i;
             break;
         }
