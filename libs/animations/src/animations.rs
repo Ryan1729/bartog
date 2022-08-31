@@ -55,7 +55,7 @@ impl ApplyToState for CardMovement {
             let card = {
                 if self.source == RelativeHand::Deck {
                     let source: &Hand = state.get_relative_hand_mut(self.source, player);
-                    if source.len() == 0 {
+                    if source.is_empty() {
                         state.reshuffle_discard(rng);
                     }
                 }
@@ -244,17 +244,15 @@ pub fn advance(state: &mut GameState, speaker: &mut Speaker) {
                         };
                         log_wild_selection(state, player_id);
                         play_to_discard(state, card);
+                    } else if let Some(suit) = choose_suit(state) {
+                        state.in_game.top_wild_declared_as = Some(suit);
+                        log_wild_selection(state, player_id);
+                        play_to_discard(state, card);
                     } else {
-                        if let Some(suit) = choose_suit(state) {
-                            state.in_game.top_wild_declared_as = Some(suit);
-                            log_wild_selection(state, player_id);
-                            play_to_discard(state, card);
-                        } else {
-                            //wait until they choose
-                            animation.card.x = last_pos.0;
-                            animation.card.y = last_pos.1;
-                            state.in_game.card_animations.push(animation);
-                        }
+                        //wait until they choose
+                        animation.card.x = last_pos.0;
+                        animation.card.y = last_pos.1;
+                        state.in_game.card_animations.push(animation);
                     }
                 }
                 Action::MoveToDeck => {

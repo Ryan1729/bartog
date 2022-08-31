@@ -431,7 +431,7 @@ fn take_turn(game_state: &mut GameState, input: Input, speaker: &mut Speaker) {
                     state
                         .hand
                         .get(index)
-                        .map(|card| can_play(&state, rules, card))
+                        .map(|card| can_play(state, rules, card))
                         .unwrap_or(false)
                 };
 
@@ -453,7 +453,7 @@ fn take_turn(game_state: &mut GameState, input: Input, speaker: &mut Speaker) {
 
     let winners: Vec<PlayerID> = all_player_ids()
         .iter()
-        .filter(|&&player| state.get_hand(player).len() == 0)
+        .filter(|&&player| state.get_hand(player).is_empty())
         .cloned()
         .collect();
 
@@ -478,7 +478,7 @@ fn update_when_played(state: &mut GameState) {
             card_set,
             ref changes,
             ..
-        } if changes.len() > 0 => {
+        } if !changes.is_empty() => {
             apply_when_played_changes(state, card_set, changes.clone(), PLAYER_ID);
             state.start_new_round();
         }
@@ -502,7 +502,7 @@ fn update_wild(state: &mut GameState) {
 
 fn update_can_play_graph(state: &mut GameState) {
     match choose_can_play_graph(state) {
-        ref x if x.len() == 0 => {
+        ref x if x.is_empty() => {
             //wait until they choose
         }
         changes => {
@@ -606,11 +606,12 @@ pub fn render_in_game(framebuffer: &mut Framebuffer, state: &in_game::State) {
         None => {}
     }
 
-    state
+    if let Some(&c) = state
         .discard
         .iter()
-        .last()
-        .map(|&c| framebuffer.draw_card(c, DISCARD_X, DISCARD_Y));
+        .last() {
+        framebuffer.draw_card(c, DISCARD_X, DISCARD_Y);
+    }
 
     print_number_below_card(framebuffer, state.discard.len(), DISCARD_X, DISCARD_Y);
 
@@ -663,7 +664,7 @@ pub fn update_and_render(
     }
 
     if state.log_height > 0 {
-        draw_event_log(framebuffer, &state);
+        draw_event_log(framebuffer, state);
     } else {
         do_choices(framebuffer, state, input, speaker);
     }
