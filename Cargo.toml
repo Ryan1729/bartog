@@ -6,14 +6,17 @@ members = [
 
 # We aim for fast to compile, with the dev profile. At this time, `opt-level = 2`
 # seems to help with that goal.
-#
-# If we need to, we can make a "debugging" profile with `debug = true`.
 [profile.dev]
 opt-level = 3
 debug = false
 rpath = false
 lto = false
 debug-assertions = true
+
+[profile.debugging]
+inherits = "dev"
+opt-level = 0
+debug = true
 
 [profile.release]
 strip = true
